@@ -31,7 +31,7 @@ jobs:
       - name: Shellcheck
         run: shellcheck deploy/install.sh scripts/assemble-release.sh
       - name: systemd unit
-        run: systemd-analyze verify deploy/xonotic-webui.service 2>&1 | grep -v 'is not executable' || true
+        run: systemd-analyze verify deploy/*.service 2>&1 | grep -v 'is not executable' || true
 
   frontend:
     runs-on: ubuntu-latest

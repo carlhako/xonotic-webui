@@ -24,6 +24,8 @@ set -euo pipefail
 
 # --- constants (single place; rename here only, see design D16) -----------------
 APP_NAME="xonotic-webui"
+PKG_NAME="${APP_NAME//-/_}"          # the Python package / wheel name
+ENV_PREFIX="XONOTIC_WEBUI_"          # prefix of the panel's (and this script's) variables
 GITHUB_REPO="carlhako/xonotic-webui"
 
 # Pinned game release (design D13). Digest computed over the complete archive.
@@ -51,7 +53,11 @@ CACHE_DIR="${DESTDIR}/var/cache/${APP_NAME}"
 SERVICE_USER="${APP_NAME}"
 OS_RELEASE_FILE="${OS_RELEASE_FILE:-/etc/os-release}"
 
-REPO="${XONOTIC_WEBUI_REPO:-$GITHUB_REPO}"
+# opt NAME: the value of ${ENV_PREFIX}NAME from the environment, or empty.
+opt() { local v="${ENV_PREFIX}$1"; printf '%s' "${!v:-}"; }
+
+REPO="$(opt REPO)"
+REPO="${REPO:-$GITHUB_REPO}"
 RELEASE_TAG="${RELEASE_TAG:-latest}"
 
 log()  { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
@@ -242,10 +248,12 @@ env_value() {  # env_value KEY DEFAULT
 WORK=""
 fetch_release() {
   WORK="$(mktemp -d)"
-  if [ -n "${XONOTIC_WEBUI_TARBALL:-}" ]; then
-    [ -f "$XONOTIC_WEBUI_TARBALL" ] || die "XONOTIC_WEBUI_TARBALL does not exist: $XONOTIC_WEBUI_TARBALL"
-    log "using local release tarball $XONOTIC_WEBUI_TARBALL"
-    tar -xzf "$XONOTIC_WEBUI_TARBALL" -C "$WORK"
+  local tarball
+  tarball="$(opt TARBALL)"
+  if [ -n "$tarball" ]; then
+    [ -f "$tarball" ] || die "${ENV_PREFIX}TARBALL does not exist: $tarball"
+    log "using local release tarball $tarball"
+    tar -xzf "$tarball" -C "$WORK"
   else
     local base
     if [ "$RELEASE_TAG" = "latest" ]; then
@@ -261,11 +269,11 @@ fetch_release() {
   SRC="$WORK/${APP_NAME}"
   WHEEL=""
   local candidate
-  for candidate in "$SRC"/dist/xonotic_webui-*-py3-none-any.whl; do
+  for candidate in "$SRC"/dist/"${PKG_NAME}"-*-py3-none-any.whl; do
     [ -f "$candidate" ] && { WHEEL="$candidate"; break; }
   done
   [ -n "$WHEEL" ] || die "the release tarball has no ${APP_NAME} wheel"
-  NEW_VERSION="$(basename "$WHEEL" | sed -E 's/^xonotic_webui-([^-]+)-.*/\1/')"
+  NEW_VERSION="$(basename "$WHEEL" | sed -E "s/^${PKG_NAME}-([^-]+)-.*/\\1/")"
 }
 
 # Build the new virtualenv beside the live one so a failed build leaves the running
@@ -278,9 +286,11 @@ build_venv() {
   "$NEW_VENV/bin/python" -m pip install --quiet --upgrade pip
   # Installed by path, never by bare name. --only-binary=:all: is the "no compiler on
   # this host" guarantee: every dependency is a prebuilt wheel or the install fails.
-  if [ -n "${XONOTIC_WEBUI_WHEELHOUSE:-}" ]; then
+  local wheelhouse
+  wheelhouse="$(opt WHEELHOUSE)"
+  if [ -n "$wheelhouse" ]; then
     "$NEW_VENV/bin/python" -m pip install --quiet --only-binary=:all: --no-index \
-      --find-links "$XONOTIC_WEBUI_WHEELHOUSE" "$WHEEL"
+      --find-links "$wheelhouse" "$WHEEL"
   else
     "$NEW_VENV/bin/python" -m pip install --quiet --only-binary=:all: "$WHEEL"
   fi
@@ -288,7 +298,7 @@ build_venv() {
 
 wait_healthy() {
   local port url state
-  port="$(env_value XONOTIC_WEBUI_PORT 80)"
+  port="$(env_value "${ENV_PREFIX}PORT" 80)"
   url="http://127.0.0.1:${port}/health"
   for _ in $(seq 1 60); do
     if curl -fsS --max-time 2 "$url" 2>/dev/null | grep -q "\"version\":\"${NEW_VERSION}\""; then
@@ -349,8 +359,8 @@ report() {
   local ip port game_port url
   ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
   ip="${ip:-$(hostname)}"
-  port="$(env_value XONOTIC_WEBUI_PORT 80)"
-  game_port="$(env_value XONOTIC_WEBUI_GAME_PORT 26000)"
+  port="$(env_value "${ENV_PREFIX}PORT" 80)"
+  game_port="$(env_value "${ENV_PREFIX}GAME_PORT" 26000)"
   if [ "$port" = "80" ]; then url="http://${ip}/"; else url="http://${ip}:${port}/"; fi
   log "done: ${APP_NAME} ${NEW_VERSION} is running"
   log "web interface:  ${url}"

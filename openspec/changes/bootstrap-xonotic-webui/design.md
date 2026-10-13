@@ -201,6 +201,14 @@ LXC.
 from one place in each of the installer, settings and `pyproject.toml`, so a rename
 is mechanical.
 
+As built, the places that carry the name are: `deploy/install.sh` (`APP_NAME`, `ENV_PREFIX`;
+the wheel and tarball names derive from them), `src/<package>/settings.py` (`APP_NAME`,
+`ENV_PREFIX`; the logger root, the wrapper config name and the uvicorn import path derive
+from these or from the package), `pyproject.toml` (`name`, the script), and then three
+inherently literal spots: the package directory, `deploy/<name>.service` (a static systemd
+file, so its paths are written out), and the repository name in the installer's
+`GITHUB_REPO`. Everything else derives.
+
 ## Risks / Trade-offs
 
 - **Event-log format differs from what is assumed** → Spike first; patterns live in one

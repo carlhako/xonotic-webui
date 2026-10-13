@@ -1,4 +1,4 @@
-"""Logging setup for xonotic-webui."""
+"""Logging setup."""
 
 from __future__ import annotations
 
@@ -6,7 +6,8 @@ import logging
 import sys
 
 _CONFIGURED = False
-_ROOT = "xonotic_webui"
+# The package name, so a rename needs no edit here.
+_ROOT = __package__ or __name__.split(".")[0]
 
 
 def configure_logging(level: int = logging.INFO) -> None:

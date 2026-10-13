@@ -30,7 +30,7 @@ from pathlib import Path
 from xonotic_webui.console.buffer import ConsoleBuffer
 from xonotic_webui.events import GameStart, is_loaded_map, is_map_line, parse_event
 from xonotic_webui.logging import get_logger
-from xonotic_webui.settings import Settings
+from xonotic_webui.settings import APP_NAME, Settings
 from xonotic_webui.supervisor.process import XonoticProcess
 from xonotic_webui.supervisor.state import RunState, StateListener, StateMachine
 
@@ -55,9 +55,9 @@ LineSink = Callable[[str], None]
 # The panel-owned config the server is launched with (design D3). It runs the operator's
 # server.cfg and then forces the settings the panel depends on, so a user config cannot
 # turn the event log off or the console colours back into ANSI escapes.
-WRAPPER_CONFIG_NAME = "xonotic-webui.cfg"
-_WRAPPER_CONFIG = """\
-// Managed by xonotic-webui: rewritten on every start, do not edit.
+WRAPPER_CONFIG_NAME = f"{APP_NAME}.cfg"
+_WRAPPER_CONFIG = f"""\
+// Managed by {APP_NAME}: rewritten on every start, do not edit.
 // Run the operator's configuration, then force what the panel depends on (design D3).
 exec server.cfg
 sv_eventlog 1

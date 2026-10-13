@@ -34,7 +34,7 @@ def main() -> None:
     configure_logging()
     settings = get_settings()
     config = uvicorn.Config(
-        "xonotic_webui.app:create_app",
+        f"{__package__}.app:create_app",
         factory=True,
         host=settings.host,
         port=settings.port,

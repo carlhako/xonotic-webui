@@ -2,7 +2,7 @@
 
 ## 1. Repository
 
-- [ ] 1.1 Confirm the final project name with the user (default `xonotic-webui`) and record it in the single constants spots named in design D16; verify the chosen name appears nowhere else hard-coded after the scaffold task
+- [x] 1.1 Confirm the final project name with the user (default `xonotic-webui`) and record it in the single constants spots named in design D16; verify the chosen name appears nowhere else hard-coded after the scaffold task
 - [x] 1.2 `git init` this directory with branch `main`; add `.gitignore` (venv, `__pycache__`, `node_modules`, `dist`, `src/*/static`, caches) and decide whether `.claude/` and `.pi/` are committed or ignored; verify `git status` is clean of generated files
 - [x] 1.3 Add an MIT `LICENSE` and a stub `README.md` (what it is, requirements, one-line install placeholder); verify both files are committed
 - [x] 1.4 Confirm the repo name and public visibility with the user, then create the **public** GitHub repository under `carlhako` and push `main` (`gh repo create carlhako/<name> --public --source . --push --description "<one line>"`); verify `gh repo view carlhako/<name> --json visibility,url` reports `PUBLIC` and the openspec directory is visible on GitHub

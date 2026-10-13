@@ -50,7 +50,7 @@ jobs:
         with:
           name: release-assets
           path: |
-            release/xonotic-webui.tar.gz
+            release/*.tar.gz
             release/install.sh
           if-no-files-found: error
 
@@ -60,6 +60,6 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            release/xonotic-webui.tar.gz
+            release/*.tar.gz
             release/install.sh
           fail_on_unmatched_files: true
