@@ -12,9 +12,10 @@ Constraints that shape this design:
 - Target is a Debian 12/13 LXC, amd64 only, installed by root, run unprivileged.
 - Xonotic 0.8.6 is the only supported game version. The upstream project has not
   shipped a stable release since 2023, so version management is out of scope.
-- Nothing about the Xonotic console or event log has been verified against a live
-  server yet. The format details in this document come from prior knowledge and are
-  treated as hypotheses until the spike (task group 2) confirms them.
+- The Xonotic console and event log were verified against a live 0.8.6 dedicated
+  server in the spike (task group 2). The facts it established are recorded under
+  **Spike findings** below and supersede anything assumed earlier in this document;
+  the captured output lives in `tests/fixtures/xonotic/`.
 - LAN-only, no authentication (same stance as cobble).
 
 ## Goals / Non-Goals
@@ -62,10 +63,16 @@ The app launches the server with the event log enabled and routed to the console
 changes, match start and match end. Matching runs on colour-stripped text; raw lines
 are retained for display.
 
-The setting is passed on the command line **and** re-asserted over stdin when the
-server reports ready, because a user `server.cfg` executed after the command line
-could otherwise silently turn the event log off and blind the status tracker. The
-seeded `server.cfg` also sets it.
+A command-line setting is **not** enough: the spike confirmed that `server.cfg`
+executes after command-line `+set` arguments and overrides them (`sv_eventlog` was `0`
+at runtime although `+sv_eventlog 1` was passed). So the supervisor launches the server
+with `+serverconfig xonotic-webui.cfg`, a panel-owned file it writes into
+`<userdir>/data/` that does `exec server.cfg` and then forces the event-log cvars and
+`sys_colortranslation 2`. Because it runs after the user's config but before the map
+loads, even the first match's `:gamestart:` is logged. The setting is additionally
+re-asserted over stdin when the server reports ready, as a belt-and-braces measure; a
+re-assert alone cannot recover the current match's `:gamestart:`, which is why the
+wrapper is the primary mechanism. The seeded `server.cfg` also sets it.
 
 *Alternative:* poll the `status` command on a timer (kept only as a reconcile query,
 see D4; polling alone misses short sessions and match boundaries).
@@ -74,7 +81,7 @@ see D4; polling alone misses short sessions and match boundaries).
 
 The tracker applies event-log lines to an in-memory model. When the server becomes
 ready, or when a gap is suspected (parser error, reconnect of the log), the tracker
-issues one console query (`status`) and rebuilds the player list from its output. The
+issues one console query (`status 1`) and rebuilds the player list from its output. The
 console exposes a `query(matcher, timeout)` helper (as cobble's does) for this.
 
 ### D5. Filesystem layout
@@ -84,6 +91,7 @@ console exposes a `query(matcher, timeout)` helper (as cobble's does) for this.
 /opt/xonotic/<version>/              extracted game tree, root-owned, read-only
 /var/lib/xonotic-webui/              panel state (state.json: intended run state)
 /var/lib/xonotic-webui/userdir/      passed as -userdir; data/server.cfg, logs, saves
+/var/lib/xonotic-webui/userdir/data/xonotic-webui.cfg  generated wrapper config (D3); never edited by hand
 /etc/xonotic-webui/xonotic-webui.env optional overrides (EnvironmentFile)
 /etc/systemd/system/xonotic-webui.service
 ```
@@ -113,8 +121,13 @@ change intended state.
 
 ### D8. Readiness from a startup-complete line, with a fallback
 
-Primary signal: a specific console line observed during startup (exact text decided by
-the spike). Fallback: a successful `status` query reply. A timeout is a failed start.
+Primary signal: the first `:gamestart:` event-log line (the spike found no other
+explicit startup-complete line; `Server listening on address` is printed *before*
+`server.cfg` runs and again after the map loads, so it is not usable). Fallback, for
+when the event log is unavailable: a `status` reply whose `map:` is anything other than
+`_init/_init` (the placeholder the server reports until the first real map loads). The
+fallback probe starts only after a few seconds without `:gamestart:` so it does not
+clutter the console in the normal case. A timeout is a failed start.
 
 ### D9. Transport: HTTP JSON for commands, SSE for streams
 
@@ -129,6 +142,13 @@ Xonotic colour codes (`^0`..`^9`, `^xRGB`, `^^` for literal caret) are parsed by
 small front-end utility into styled spans. The backend keeps raw lines and exposes a
 stripped form used for matching and for plain-text fields (e.g. player names in
 status), so the same code works for later features.
+
+By default a dedicated server translates colour codes to ANSI escapes on stdout and
+loses `^xRGB` information in the process, so the supervisor sets
+`sys_colortranslation 2` (on the command line and in the wrapper config) to receive the
+raw codes. Every raw line then starts with `^7`. The stripper also removes ANSI SGR
+sequences defensively so a user config that re-enables translation cannot break
+matching.
 
 ### D11. Front end: React + Vite, section registry, bundle shipped in the wheel
 
@@ -148,9 +168,16 @@ no host addresses); the repo carries an MIT licence like cobble.
 
 ### D13. Game archive: pinned zip with a pinned SHA-256
 
-The installer downloads `xonotic-0.8.6.zip` (about 1.2 GB) from dl.xonotic.org and
-verifies a SHA-256 constant in the script. The digest is computed during the spike
-and committed. No mirror fallback in v1 beyond a local-archive path.
+The installer downloads `xonotic-0.8.6.zip` (1,238,439,495 bytes) from
+`https://dl.xonotic.org/xonotic-0.8.6.zip` and verifies a SHA-256 constant in the
+script. Computed over a complete, integrity-tested download in the spike:
+
+```
+50850f8d800e7499722f6ea61e478e96464a375494b5a24da93aa0598cbe964d  xonotic-0.8.6.zip
+```
+
+The archive's single top-level directory is `Xonotic/`. No mirror fallback in v1
+beyond a local-archive path.
 
 *Alternative:* Debian's `xonotic-server` package (not verified; couples to the distro's
 version and layout). Not chosen as the default; can be added later behind a flag.
@@ -201,6 +228,64 @@ on the target LXC. Rollback of a bad release is automatic via D14, or by pinning
 
 ## Open Questions
 
-- Final project name (affects only D16 constants and the repo name).
-- Exact top-level directory inside the Xonotic zip and whether the unused client music
-  can be pruned at install to save disk (spike will show; no spec impact).
+- None. The project name is `xonotic-webui` (decided at task 1.1) and the zip layout
+  and pruning questions were answered by the spike (see below).
+
+## Spike findings
+
+Established against the unmodified 0.8.6 dedicated server, with real clients and bots.
+These are facts, not hypotheses.
+
+**Process control**
+
+- Stdin works as an ordinary pipe; no pty is needed. `quit` on stdin exits with status 0
+  within about a second. Commands written before startup finishes are not lost: they are
+  queued and run once `server.cfg` has executed (about 2.5 s in), in order.
+- Launch: `xonotic-linux64-dedicated -userdir <dir> +port <p> +sys_colortranslation 2
+  +serverconfig xonotic-webui.cfg`, with the game tree as the working directory.
+  `-userdir` makes `<dir>/data/server.cfg` the user config. No `rcon` is involved.
+- The binary links only `libstdc++6`, `zlib1g`, `libm`, `libc`, `libgcc_s`. A minimal LXC
+  may lack `libstdc++6` and `zlib1g`, so the installer installs both with apt.
+
+**Game files and disk (task 2.5)**
+
+- The dedicated server runs from just the binary, `key_0.d0pk` and `data/*.pk3`. Of the
+  1.3 GB extracted tree only `data/` matters (1.2 GB). `xonotic-*-music.pk3` (110 MB)
+  and the client binaries, `.exe`/`.dll`, `source/`, `Xonotic.app` and `misc/` are not
+  needed; a tree of binary + `key_0.d0pk` + `data.pk3` + `maps.pk3` (913 MB) started and
+  loaded maps. The installer extracts the binary, `key_0.d0pk` and `data/` minus the
+  music pack (about 1.1 GB; the compat packs are kept so nothing user-visible differs).
+- Archive (1.24 GB) plus extracted tree (about 1.1 GB) is about 2.4 GB, so the
+  free-space preflight threshold is **3 GiB**. The archive is removed after extraction.
+
+**Event log (`:`-prefixed lines on stdout, formats from the game source and confirmed live)**
+
+| line | meaning |
+| --- | --- |
+| `:gamestart:<gametype>_<map>:<matchid>` | a match began; split `<gametype>_<map>` on the first `_` (gametype ids contain none, map names may) |
+| `:gameinfo:mutators:LIST:...` / `:gameinfo:end` | match info block |
+| `:startdelay_ended` | warm-up over |
+| `:join:<id>:<ent>:<ip\|bot>:<name>` | player in game; `bot` literally for bots; name is last and may contain `:` |
+| `:name:<id>:<name>` | rename |
+| `:part:<id>` | player left; followed by about 18 `:anticheat:` lines which must be ignored |
+| `:team:<id>:<team>:<type>` | team assignment (ignored in v1) |
+| `:scores:<gametype>_<map>:<time>`, `:labels:...`, `:player:...`, `:end`, `:gameover` | match end |
+
+- Names carry raw colour codes and end with `^7`, e.g. `^1Red^xf80Orange^7 Pl:ay^^er`.
+- IPv6 clients contain colons in the address, which makes `:join:` ambiguous; the wrapper
+  config sets `sv_eventlog_ipv6_delimiter 1`, which logs `::1` as `0_0_0_0_0_0_0_1`.
+- Unknown `:` lines are normal and must be ignored by the parser (anticheat, votes,
+  `:recordset:`, and so on). `:connect:` exists in the game source but was never emitted in
+  any capture, so the parser does not depend on it; `:join:` is the join signal.
+
+**`status` replies**
+
+- Pre-map: `map: _init/_init`, `players: 0 active (16 max)`.
+- `status 1` (used for reconciliation) prints a header line then one row per player:
+  `<ip:port|botclient>  %pl  ping  time  frags  #<no>  <name>`; names are full length.
+  Plain `status` prints two lines per player and truncates names, so it is not used.
+  The reply has no terminator; the `players: N active (M max)` line gives the row count.
+- The reply does not contain the gametype. `gametype` is a command, not a readable
+  cvar; the gametype is known only from `:gamestart:` and is reported as unknown after a
+  reconcile that missed it (matching the "not yet known" scenario).
+- Bots only appear while at least one human is connected.

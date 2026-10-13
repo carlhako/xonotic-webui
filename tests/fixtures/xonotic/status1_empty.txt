@@ -1,0 +1,8 @@
+^7host:     spike wrapper
+^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+^7protocol: 3504 (DP7)
+^7map:      xoylent
+^7timing:   2.6% CPU, 0.00% lost, offset avg 0.2ms, max 1.7ms, sdev 0.2ms
+^7players:  0 active (8 max)
+^7
+^7^2IP                                             %pl ping  time   frags  no   name

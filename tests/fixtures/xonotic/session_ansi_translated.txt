@@ -1,0 +1,198 @@
+Game is Xonotic using base gamedir data
+gamename for server filtering: Xonotic
+Xonotic Linux 03:14:05 Jun 20 2023 - release
+Current nice level is below the soft limit - cannot use niceness
+Skeletal animation uses SSE code path
+execing quake.rc
+execing default.cfg
+execing xonotic-common.cfg
+execing xonotic-client.cfg
+Warning: Could not expand $vid_width
+Warning: Could not expand $vid_height
+Warning: Could not expand $vid_pixelheight
+Warning: Could not expand $vid_desktopfullscreen
+execing sRGB-disable.cfg
+execing binds-xonotic.cfg
+execing effects-normal.cfg
+execing crosshairs.cfg
+execing gamemodes-client.cfg
+execing notifications.cfg
+execing _hud_common.cfg
+execing _hud_descriptions.cfg
+execing hud_luma.cfg
+execing xonotic-server.cfg
+execing testing.cfg
+execing balance-xonotic.cfg
+execing bal-wep-xonotic.cfg
+execing physicsX.cfg
+execing turrets.cfg
+execing vehicles.cfg
+execing gamemodes-server.cfg
+execing ctfscoring-samual.cfg
+execing mutators.cfg
+execing randomitems-xonotic.cfg
+execing monsters.cfg
+execing minigames.cfg
+execing physics.cfg
+execing cdtracks.cfg
+execing commands.cfg
+Warning: Could not expand $qport in alias _if_dedicated
+execing help.cfg
+couldn't exec config.cfg
+"maxplayers" set to "16"
+execing data/campaign.cfg
+execing config_update.cfg
+execing font-xolonium.cfg
+Warning: Could not expand $scr_loadingscreen_barheight
+Warning: Could not expand $scr_infobar_height
+This command only works on clients: cl_cmd hud scoreboard_columns_set 
+execing autoexec/empty.cfg
+execing autoexec.cfg
+Loaded public key key_0.d0pk (fingerprint: Xon//KssdlzGkFKdnnN4sgg8H+koTbBn5JTi37BAW1Q=)
+Generated private ID key_0.d0pk (public key fingerprint: N0/arBta/jdmqsfyLUndlfj53d7DzefjM7zxQTTNfE8=)
+Saved unsigned key to key_0.d0si
+Signature generation in progress...
+execing post-config.cfg
+Server using port 26112
+Server listening on address 0.0.0.0:26112
+Server listening on address [0:0:0:0:0:0:0:0]:26112
+execing server.cfg
+maxplayers can not be changed while a server is running.
+It will be changed on next server startup ("map" command).
+"maxplayers" set to "8"
+Maplist contains no usable maps!  Resetting it to default map list.
+Switching to map solarium
+menu: unknown program name
+Server using port 26112
+Server listening on address 0.0.0.0:26112
+Server listening on address [0:0:0:0:0:0:0:0]:26112
+:gamestart:dm_solarium:0.1791885662.674087
+:gameinfo:mutators:LIST:norecoil
+:gameinfo:end
+Error response from keygen server: Not allowed
+:startdelay_ended
+Authenticated connection to 127.0.0.1:42287 has been established: client is wIazqMA2j0p/wKBq1Y1iTUbZbgLcJ8o51M5p1TYCt/s=@~Xon//Ks, I am N0/arBt@~Xon//Ks
+[1;31mRedOrange[m Pl:ay^er is connecting...
+[1;31mRedOrange[m Pl:ay^er[1;34m connected[m
+:join:1:1:127.0.0.1:[1;31mRedOrange[m Pl:ay^er
+[1;31mRedOrange[m Pl:ay^er connected
+:team:1:-1:4
+Receiving player stats failed: -404
+[1;31mRedOrange[m Pl:ay^er changed name to [1;32mRenamed:Pl[m
+:name:1:[1;32mRenamed:Pl[m
+host:     spike server
+version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+protocol: 3504 (DP7)
+map:      solarium
+timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+players:  1 active (8 max)
+
+#1   [1;32mRenamed:Pl[m   -666   0:00:12
+   127.0.0.1:42287
+[BOT]Resurrection[1;34m connected[m
+:join:2:2:bot:[BOT]Resurrection
+:team:2:-1:4
+unconnected changed name to [BOT]Resurrection
+[BOT]Scorcher[1;34m connected[m
+:join:3:3:bot:[BOT]Scorcher
+:team:3:-1:4
+unconnected changed name to [BOT]Scorcher
+host:     spike server
+version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+protocol: 3504 (DP7)
+map:      solarium
+timing:   5.6% CPU, 0.00% lost, offset avg 0.7ms, max 4.4ms, sdev 1.0ms
+players:  3 active (8 max)
+
+#1   [1;32mRenamed:Pl[m   -666   0:00:20
+   127.0.0.1:42287
+#2   [BOT]Resurrectio    0   0:00:05
+   botclient
+#3   [BOT]Scorcher       0   0:00:05
+   botclient
+Client "[1;32mRenamed:Pl[m" dropped
+:part:1
+[1;32mRenamed:Pl[m[1;34m disconnected[m
+:anticheat:_time:1:19.600082
+:anticheat:speedhack:0:-
+:anticheat:speedhack_m1:0:-
+:anticheat:speedhack_m2:0:-
+:anticheat:speedhack_m3:0:-
+:anticheat:speedhack_m4:0:-
+:anticheat:speedhack_m5:0:-
+:anticheat:div0_strafebot_old:0:-
+:anticheat:div0_strafebot_new:0:-
+:anticheat:div0_evade:0:-
+:anticheat:idle_snapaim:0:-
+:anticheat:idle_snapaim_signal:0:-
+:anticheat:idle_snapaim_noise:0:-
+:anticheat:idle_snapaim_m2:0:-
+:anticheat:idle_snapaim_m3:0:-
+:anticheat:idle_snapaim_m4:0:-
+:anticheat:idle_snapaim_m7:0:-
+:anticheat:idle_snapaim_m10:0:-
+:anticheat:div0_snapback:0:-
+Client "[BOT]Resurrection" dropped
+:part:2
+[BOT]Resurrection[1;34m disconnected[m
+:anticheat:_time:2:19.633415
+:anticheat:speedhack:0:-
+:anticheat:speedhack_m1:0:-
+:anticheat:speedhack_m2:0:-
+:anticheat:speedhack_m3:0:-
+:anticheat:speedhack_m4:0:-
+:anticheat:speedhack_m5:0:-
+:anticheat:div0_strafebot_old:0:-
+:anticheat:div0_strafebot_new:0:-
+:anticheat:div0_evade:0:-
+:anticheat:idle_snapaim:0:-
+:anticheat:idle_snapaim_signal:0:-
+:anticheat:idle_snapaim_noise:0:-
+:anticheat:idle_snapaim_m2:0:-
+:anticheat:idle_snapaim_m3:0:-
+:anticheat:idle_snapaim_m4:0:-
+:anticheat:idle_snapaim_m7:0:-
+:anticheat:idle_snapaim_m10:0:-
+:anticheat:div0_snapback:0:-
+Client "[BOT]Scorcher" dropped
+:part:3
+[BOT]Scorcher[1;34m disconnected[m
+:anticheat:_time:3:19.633415
+:anticheat:speedhack:0:-
+:anticheat:speedhack_m1:0:-
+:anticheat:speedhack_m2:0:-
+:anticheat:speedhack_m3:0:-
+:anticheat:speedhack_m4:0:-
+:anticheat:speedhack_m5:0:-
+:anticheat:div0_strafebot_old:0:-
+:anticheat:div0_strafebot_new:0:-
+:anticheat:div0_evade:0:-
+:anticheat:idle_snapaim:0:-
+:anticheat:idle_snapaim_signal:0:-
+:anticheat:idle_snapaim_noise:0:-
+:anticheat:idle_snapaim_m2:0:-
+:anticheat:idle_snapaim_m3:0:-
+:anticheat:idle_snapaim_m4:0:-
+:anticheat:idle_snapaim_m7:0:-
+:anticheat:idle_snapaim_m10:0:-
+:anticheat:div0_snapback:0:-
+host:     spike server
+version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+protocol: 3504 (DP7)
+map:      solarium
+timing:   6.5% CPU, 0.00% lost, offset avg 0.5ms, max 4.4ms, sdev 0.7ms
+players:  0 active (8 max)
+
+[1;32mIP                                             %pl ping  time   frags  no   name[m
+:scores:dm_solarium:26
+:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+:end
+:gameover
+uri_multi_ready: got HTTP error 422, data is in unusable format - not continuing
+Player stats writing failed: -422
+Switching to map implosion
+:gamestart:dm_implosion:0.1791885698.925596
+:gameinfo:mutators:LIST:norecoil
+:gameinfo:end
+:startdelay_ended
+Player stats writing failed: -2

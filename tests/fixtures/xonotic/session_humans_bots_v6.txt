@@ -1,0 +1,182 @@
+Game is Xonotic using base gamedir data
+gamename for server filtering: Xonotic
+Xonotic Linux 03:14:05 Jun 20 2023 - release
+Current nice level is below the soft limit - cannot use niceness
+Skeletal animation uses SSE code path
+execing quake.rc
+execing default.cfg
+execing xonotic-common.cfg
+execing xonotic-client.cfg
+Warning: Could not expand $vid_width
+Warning: Could not expand $vid_height
+Warning: Could not expand $vid_pixelheight
+Warning: Could not expand $vid_desktopfullscreen
+execing sRGB-disable.cfg
+execing binds-xonotic.cfg
+execing effects-normal.cfg
+execing crosshairs.cfg
+execing gamemodes-client.cfg
+execing notifications.cfg
+execing _hud_common.cfg
+execing _hud_descriptions.cfg
+execing hud_luma.cfg
+execing xonotic-server.cfg
+execing testing.cfg
+execing balance-xonotic.cfg
+execing bal-wep-xonotic.cfg
+execing physicsX.cfg
+execing turrets.cfg
+execing vehicles.cfg
+execing gamemodes-server.cfg
+execing ctfscoring-samual.cfg
+execing mutators.cfg
+execing randomitems-xonotic.cfg
+execing monsters.cfg
+execing minigames.cfg
+execing physics.cfg
+execing cdtracks.cfg
+execing commands.cfg
+Warning: Could not expand $qport in alias _if_dedicated
+execing help.cfg
+couldn't exec config.cfg
+"maxplayers" set to "16"
+execing data/campaign.cfg
+execing config_update.cfg
+execing font-xolonium.cfg
+Warning: Could not expand $scr_loadingscreen_barheight
+Warning: Could not expand $scr_infobar_height
+This command only works on clients: cl_cmd hud scoreboard_columns_set 
+execing autoexec/empty.cfg
+execing autoexec.cfg
+^7Loaded public key key_0.d0pk (fingerprint: Xon//KssdlzGkFKdnnN4sgg8H+koTbBn5JTi37BAW1Q=)
+^7Generated private ID key_0.d0pk (public key fingerprint: q3I2by6PAXisXbF4PW5OU4EiVDk8FyphBVu5Jf8Jvpk=)
+^7Saved unsigned key to key_0.d0si
+^7Signature generation in progress...
+^7execing post-config.cfg
+^7Server using port 26115
+^7Server listening on address 0.0.0.0:26115
+^7Server listening on address [0:0:0:0:0:0:0:0]:26115
+^7execing xonotic-webui.cfg
+^7execing server.cfg
+^7maxplayers can not be changed while a server is running.
+^7It will be changed on next server startup ("map" command).
+^7"maxplayers" set to "8"
+^7Maplist contains no usable maps!  Resetting it to default map list.
+^7^7Switching to map atelier
+^7menu: unknown program name
+^7Server using port 26115
+^7Server listening on address 0.0.0.0:26115
+^7Server listening on address [0:0:0:0:0:0:0:0]:26115
+^7:gamestart:dm_atelier:0.1791886043.115919
+^7:gameinfo:mutators:LIST:norecoil
+^7:gameinfo:end
+^7Error response from keygen server: Not allowed
+^7Authenticated connection to 127.0.0.1:33760 has been established: client is Ou73BCN7BNkhanMHgeg+bKh9L2RxN8qhLtRz3CCrIhM=@~Xon//Ks, I am q3I2by6@~Xon//Ks
+^7Authenticated connection to [0:0:0:0:0:0:0:1]:34273 has been established: client is pDMDNMOe94KBYj8yxRebve0rasNz8GzJUVV8nOjxQXM=@~Xon//Ks, I am q3I2by6@~Xon//Ks
+^7^7^1Red^xf80Orange^7 Pl:ay^^er^7 is connecting...
+^7^7V6 ^4Blue^7^7 is connecting...
+^7^7^1Red^xf80Orange^7 Pl:ay^^er^4 connected
+^7:join:1:1:127.0.0.1:^1Red^xf80Orange^7 Pl:ay^^er
+^7^1Red^xf80Orange^7 Pl:ay^^er connected
+^7:team:1:-1:4
+^7^7[BOT]Resurrection^4 connected
+^7:join:2:3:bot:[BOT]Resurrection
+^7:team:2:-1:4
+^7unconnected ^7changed name to [BOT]Resurrection
+^7^1Red^xf80Orange^7 Pl:ay^^er ^7changed name to ^2Renamed:Pl^7
+^7:name:1:^2Renamed:Pl^7
+^7^7V6 ^4Blue^7^4 connected
+^7:join:3:2:0_0_0_0_0_0_0_1:V6 ^4Blue^7
+^7V6 ^4Blue^7 connected
+^7:team:3:-1:4
+^7^7Receiving player stats failed: -404
+^7^7Receiving player stats failed: -404
+^7host:     spike wrapper
+^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+^7protocol: 3504 (DP7)
+^7map:      atelier
+^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+^7players:  3 active (8 max)
+^7
+^7^2IP                                             %pl ping  time   frags  no   name
+^7^3127.0.0.1:33760                                  0   19  0:00:13 -666  #1   ^7^2Renamed:Pl^7
+^7^7[0:0:0:0:0:0:0:1]:34273                          0   33  0:00:12 -666  #2   ^7V6 ^4Blue^7
+^7^3botclient                                        0    0  0:00:05    0  #3   ^7[BOT]Resurrection
+^7:startdelay_ended
+^7Client "^2Renamed:Pl^7" dropped
+^7:part:1
+^7^7^2Renamed:Pl^7^4 disconnected
+^7:anticheat:_time:1:20.100082
+^7:anticheat:speedhack:0:-
+^7:anticheat:speedhack_m1:0:-
+^7:anticheat:speedhack_m2:0:-
+^7:anticheat:speedhack_m3:0:-
+^7:anticheat:speedhack_m4:0:-
+^7:anticheat:speedhack_m5:0:-
+^7:anticheat:div0_strafebot_old:0:-
+^7:anticheat:div0_strafebot_new:0:-
+^7:anticheat:div0_evade:0:-
+^7:anticheat:idle_snapaim:0:-
+^7:anticheat:idle_snapaim_signal:0:-
+^7:anticheat:idle_snapaim_noise:0:-
+^7:anticheat:idle_snapaim_m2:0:-
+^7:anticheat:idle_snapaim_m3:0:-
+^7:anticheat:idle_snapaim_m4:0:-
+^7:anticheat:idle_snapaim_m7:0:-
+^7:anticheat:idle_snapaim_m10:0:-
+^7:anticheat:div0_snapback:0:-
+^7Client "V6 ^4Blue^7" dropped
+^7:part:3
+^7^7V6 ^4Blue^7^4 disconnected
+^7:anticheat:_time:3:27.100075
+^7:anticheat:speedhack:0:-
+^7:anticheat:speedhack_m1:0:-
+^7:anticheat:speedhack_m2:0:-
+^7:anticheat:speedhack_m3:0:-
+^7:anticheat:speedhack_m4:0:-
+^7:anticheat:speedhack_m5:0:-
+^7:anticheat:div0_strafebot_old:0:-
+^7:anticheat:div0_strafebot_new:0:-
+^7:anticheat:div0_evade:0:-
+^7:anticheat:idle_snapaim:0:-
+^7:anticheat:idle_snapaim_signal:0:-
+^7:anticheat:idle_snapaim_noise:0:-
+^7:anticheat:idle_snapaim_m2:0:-
+^7:anticheat:idle_snapaim_m3:0:-
+^7:anticheat:idle_snapaim_m4:0:-
+^7:anticheat:idle_snapaim_m7:0:-
+^7:anticheat:idle_snapaim_m10:0:-
+^7:anticheat:div0_snapback:0:-
+^7Client "[BOT]Resurrection" dropped
+^7:part:2
+^7^7[BOT]Resurrection^4 disconnected
+^7:anticheat:_time:2:27.133410
+^7:anticheat:speedhack:0:-
+^7:anticheat:speedhack_m1:0:-
+^7:anticheat:speedhack_m2:0:-
+^7:anticheat:speedhack_m3:0:-
+^7:anticheat:speedhack_m4:0:-
+^7:anticheat:speedhack_m5:0:-
+^7:anticheat:div0_strafebot_old:0:-
+^7:anticheat:div0_strafebot_new:0:-
+^7:anticheat:div0_evade:0:-
+^7:anticheat:idle_snapaim:0:-
+^7:anticheat:idle_snapaim_signal:0:-
+^7:anticheat:idle_snapaim_noise:0:-
+^7:anticheat:idle_snapaim_m2:0:-
+^7:anticheat:idle_snapaim_m3:0:-
+^7:anticheat:idle_snapaim_m4:0:-
+^7:anticheat:idle_snapaim_m7:0:-
+^7:anticheat:idle_snapaim_m10:0:-
+^7:anticheat:div0_snapback:0:-
+^7:scores:dm_atelier:30
+^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7:end
+^7:gameover
+^7^7uri_multi_ready: got HTTP error 422, data is in unusable format - not continuing
+^7^7Player stats writing failed: -422
+^7^7Switching to map boil
+^7:gamestart:dm_boil:0.1791886080.175944
+^7:gameinfo:mutators:LIST:norecoil
+^7:gameinfo:end
+^7^7Player stats writing failed: -2

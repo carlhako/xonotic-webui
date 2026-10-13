@@ -1,0 +1,139 @@
+Game is Xonotic using base gamedir data
+gamename for server filtering: Xonotic
+Xonotic Linux 03:14:05 Jun 20 2023 - release
+Current nice level is below the soft limit - cannot use niceness
+Skeletal animation uses SSE code path
+execing quake.rc
+execing default.cfg
+execing xonotic-common.cfg
+execing xonotic-client.cfg
+Warning: Could not expand $vid_width
+Warning: Could not expand $vid_height
+Warning: Could not expand $vid_pixelheight
+Warning: Could not expand $vid_desktopfullscreen
+execing sRGB-disable.cfg
+execing binds-xonotic.cfg
+execing effects-normal.cfg
+execing crosshairs.cfg
+execing gamemodes-client.cfg
+execing notifications.cfg
+execing _hud_common.cfg
+execing _hud_descriptions.cfg
+execing hud_luma.cfg
+execing xonotic-server.cfg
+execing testing.cfg
+execing balance-xonotic.cfg
+execing bal-wep-xonotic.cfg
+execing physicsX.cfg
+execing turrets.cfg
+execing vehicles.cfg
+execing gamemodes-server.cfg
+execing ctfscoring-samual.cfg
+execing mutators.cfg
+execing randomitems-xonotic.cfg
+execing monsters.cfg
+execing minigames.cfg
+execing physics.cfg
+execing cdtracks.cfg
+execing commands.cfg
+Warning: Could not expand $qport in alias _if_dedicated
+execing help.cfg
+couldn't exec config.cfg
+"maxplayers" set to "16"
+execing data/campaign.cfg
+execing config_update.cfg
+execing font-xolonium.cfg
+Warning: Could not expand $scr_loadingscreen_barheight
+Warning: Could not expand $scr_infobar_height
+This command only works on clients: cl_cmd hud scoreboard_columns_set 
+execing autoexec/empty.cfg
+execing autoexec.cfg
+^7Loaded public key key_0.d0pk (fingerprint: Xon//KssdlzGkFKdnnN4sgg8H+koTbBn5JTi37BAW1Q=)
+^7Generated private ID key_0.d0pk (public key fingerprint: esQqra2EFJuGvXPEWWGpSyja2wMROlal0yyly6r9jOk=)
+^7Saved unsigned key to key_0.d0si
+^7Signature generation in progress...
+^7execing post-config.cfg
+^7Server using port 26117
+^7Server listening on address 0.0.0.0:26117
+^7Server listening on address [0:0:0:0:0:0:0:0]:26117
+^7execing xonotic-webui.cfg
+^7execing server.cfg
+^7maxplayers can not be changed while a server is running.
+^7It will be changed on next server startup ("map" command).
+^7"maxplayers" set to "8"
+^7host:     spike wrapper
+^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+^7protocol: 3504 (DP7)
+^7map:      _init/_init
+^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+^7players:  0 active (16 max)
+^7
+^7Maplist contains no usable maps!  Resetting it to default map list.
+^7^7Switching to map xoylent
+^7menu: unknown program name
+^7Server using port 26117
+^7Server listening on address 0.0.0.0:26117
+^7Server listening on address [0:0:0:0:0:0:0:0]:26117
+^7:gamestart:dm_xoylent:0.1791886079.084462
+^7:gameinfo:mutators:LIST:norecoil
+^7:gameinfo:end
+^7Error response from keygen server: Not allowed
+^7Authenticated connection to 127.0.0.1:43733 has been established: client is WePKXXfB0zS7Dwv5FFPxt3U1TCnoDtXUx0eI4lqVD7o=@~Xon//Ks, I am esQqra2@~Xon//Ks
+^7^7^1Red^xf80Orange^7 Pl:ay^^er^7 is connecting...
+^7^7^1Red^xf80Orange^7 Pl:ay^^er^4 connected
+^7:join:1:1:127.0.0.1:^1Red^xf80Orange^7 Pl:ay^^er
+^7^1Red^xf80Orange^7 Pl:ay^^er connected
+^7:team:1:-1:4
+^7^7Receiving player stats failed: -404
+^7^1Red^xf80Orange^7 Pl:ay^^er ^7changed name to ^xf0fMagic^7Name
+^7:name:1:^xf0fMagic^7Name
+^7host:     spike wrapper
+^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+^7protocol: 3504 (DP7)
+^7map:      xoylent
+^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+^7players:  1 active (8 max)
+^7
+^7^2IP                                             %pl ping  time   frags  no   name
+^7^3127.0.0.1:43733                                  0   19  0:00:10 -666  #1   ^7^xf0fMagic^7Name
+^7host:     spike wrapper
+^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+^7protocol: 3504 (DP7)
+^7map:      xoylent
+^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+^7players:  1 active (8 max)
+^7
+^7#1   ^xf0fMagic^7Name -666   0:00:11
+^7   127.0.0.1:43733
+^7:startdelay_ended
+^7Client "^xf0fMagic^7Name" dropped
+^7:part:1
+^7^7^xf0fMagic^7Name^4 disconnected
+^7:anticheat:_time:1:16.733419
+^7:anticheat:speedhack:0:-
+^7:anticheat:speedhack_m1:0:-
+^7:anticheat:speedhack_m2:0:-
+^7:anticheat:speedhack_m3:0:-
+^7:anticheat:speedhack_m4:0:-
+^7:anticheat:speedhack_m5:0:-
+^7:anticheat:div0_strafebot_old:0:-
+^7:anticheat:div0_strafebot_new:0:-
+^7:anticheat:div0_evade:0:-
+^7:anticheat:idle_snapaim:0:-
+^7:anticheat:idle_snapaim_signal:0:-
+^7:anticheat:idle_snapaim_noise:0:-
+^7:anticheat:idle_snapaim_m2:0:-
+^7:anticheat:idle_snapaim_m3:0:-
+^7:anticheat:idle_snapaim_m4:0:-
+^7:anticheat:idle_snapaim_m7:0:-
+^7:anticheat:idle_snapaim_m10:0:-
+^7:anticheat:div0_snapback:0:-
+^7host:     spike wrapper
+^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+^7protocol: 3504 (DP7)
+^7map:      xoylent
+^7timing:   2.6% CPU, 0.00% lost, offset avg 0.2ms, max 1.7ms, sdev 0.2ms
+^7players:  0 active (8 max)
+^7
+^7^2IP                                             %pl ping  time   frags  no   name
+^7^7Player stats writing failed: -2

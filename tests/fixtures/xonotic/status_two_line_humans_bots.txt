@@ -1,0 +1,13 @@
+^7host:     spike server
+^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+^7protocol: 3504 (DP7)
+^7map:      solarium
+^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+^7players:  3 active (8 max)
+^7
+^7#1   ^1Red^xf80Orange -666   0:00:08
+^7   127.0.0.1:41426
+^7#2   [BOT]Toxic          0   0:00:00
+^7   botclient
+^7#3   [BOT]Shadow         0   0:00:00
+^7   botclient

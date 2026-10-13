@@ -1,0 +1,10 @@
+^7:scores:dm_atelier:30
+^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7:end
+^7:gameover
+^7^7uri_multi_ready: got HTTP error 422, data is in unusable format - not continuing
+^7^7Player stats writing failed: -422
+^7^7Switching to map boil
+^7:gamestart:dm_boil:0.1791886080.175944
+^7:gameinfo:mutators:LIST:norecoil
+^7:gameinfo:end

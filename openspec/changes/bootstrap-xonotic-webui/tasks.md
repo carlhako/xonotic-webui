@@ -5,16 +5,16 @@
 - [ ] 1.1 Confirm the final project name with the user (default `xonotic-webui`) and record it in the single constants spots named in design D16; verify the chosen name appears nowhere else hard-coded after the scaffold task
 - [x] 1.2 `git init` this directory with branch `main`; add `.gitignore` (venv, `__pycache__`, `node_modules`, `dist`, `src/*/static`, caches) and decide whether `.claude/` and `.pi/` are committed or ignored; verify `git status` is clean of generated files
 - [x] 1.3 Add an MIT `LICENSE` and a stub `README.md` (what it is, requirements, one-line install placeholder); verify both files are committed
-- [ ] 1.4 Confirm the repo name and public visibility with the user, then create the **public** GitHub repository under `carlhako` and push `main` (`gh repo create carlhako/<name> --public --source . --push --description "<one line>"`); verify `gh repo view carlhako/<name> --json visibility,url` reports `PUBLIC` and the openspec directory is visible on GitHub
+- [x] 1.4 Confirm the repo name and public visibility with the user, then create the **public** GitHub repository under `carlhako` and push `main` (`gh repo create carlhako/<name> --public --source . --push --description "<one line>"`); verify `gh repo view carlhako/<name> --json visibility,url` reports `PUBLIC` and the openspec directory is visible on GitHub
 - [x] 1.5 Before pushing, scan the tree for secrets and host-specific data (tokens, addresses, home paths); verify the scan finds nothing, since the repo is public (design D12)
 
 ## 2. Spike: capture real server behaviour
 
-- [ ] 2.1 Download `xonotic-0.8.6.zip` from dl.xonotic.org into a scratch location, compute its SHA-256, and record the digest and the zip's top-level directory name; verify the digest is written into the design's D13 and the installer constant list
-- [ ] 2.2 Run the dedicated binary with `-userdir` on a throwaway directory and a minimal `server.cfg` with the event log routed to the console; verify it starts, accepts commands on a piped stdin, and exits on `quit`
-- [ ] 2.3 Capture and save as test fixtures (`tests/fixtures/xonotic/`): the startup output through readiness, the `status` reply, join, part, name-change and match-start/end event lines, with and without bots and colour-coded names; verify each fixture is a real capture, not hand-written
-- [ ] 2.4 Determine the startup-complete line (D8), whether `sv_eventlog` set on the command line survives a `server.cfg` that sets it off (D3), and confirm stdin works as a pipe without a pty (design Risks); verify the findings are written back into design.md as resolved facts
-- [ ] 2.5 Record which game files the dedicated server needs and the on-disk size; verify the free-space threshold for the installer preflight is derived from the measurement
+- [x] 2.1 Download `xonotic-0.8.6.zip` from dl.xonotic.org into a scratch location, compute its SHA-256, and record the digest and the zip's top-level directory name; verify the digest is written into the design's D13 and the installer constant list
+- [x] 2.2 Run the dedicated binary with `-userdir` on a throwaway directory and a minimal `server.cfg` with the event log routed to the console; verify it starts, accepts commands on a piped stdin, and exits on `quit`
+- [x] 2.3 Capture and save as test fixtures (`tests/fixtures/xonotic/`): the startup output through readiness, the `status` reply, join, part, name-change and match-start/end event lines, with and without bots and colour-coded names; verify each fixture is a real capture, not hand-written
+- [x] 2.4 Determine the startup-complete line (D8), whether `sv_eventlog` set on the command line survives a `server.cfg` that sets it off (D3), and confirm stdin works as a pipe without a pty (design Risks); verify the findings are written back into design.md as resolved facts
+- [x] 2.5 Record which game files the dedicated server needs and the on-disk size; verify the free-space threshold for the installer preflight is derived from the measurement
 
 ## 3. Project scaffold, settings and health
 
