@@ -1,0 +1,157 @@
+# Quoting/escaping of ; $ \" // in cfg and stdin; maxplayers via changelevel vs map; mutator at next map.
+# Xonotic 0.8.6 dedicated server, launched as the supervisor launches it:
+#   xonotic-linux64-dedicated -userdir <userdir> +port <p> +sys_colortranslation 2 +serverconfig xonotic-webui.cfg
+# Format: <seconds since spawn> <line>; '>>> ' marks a command written to stdin.
+# Config files in effect:
+# --- data/server.cfg
+# hostname "spike"
+# sv_public 0
+# maxplayers 16
+# --- data/xonotic-webui.cfg
+# exec server.cfg
+# exec xonotic-webui-settings.cfg
+# sv_eventlog 1
+# sv_eventlog_console 1
+# sv_eventlog_ipv6_delimiter 1
+# sys_colortranslation 2
+# --- data/xonotic-webui-settings.cfg
+# sv_motd "cfg a;b"
+# set webui_t1 "cfg x $hostname y"
+# set webui_t2 "cfg d$$d"
+# set webui_t3 "cfg q\"q"
+# set webui_t4 "cfg semi;echo INJECTED_CFG"
+# set webui_t5 cfg ok
+   0.01 Game is Xonotic using base gamedir data
+   0.01 gamename for server filtering: Xonotic
+   0.01 Xonotic Linux 03:14:05 Jun 20 2023 - release
+   0.01 Current nice level is below the soft limit - cannot use niceness
+   0.07 Skeletal animation uses SSE code path
+   0.07 execing quake.rc
+   0.07 execing default.cfg
+   0.08 execing xonotic-common.cfg
+   0.08 execing xonotic-client.cfg
+   0.08 Warning: Could not expand $vid_width
+   0.08 Warning: Could not expand $vid_height
+   0.08 Warning: Could not expand $vid_pixelheight
+   0.08 Warning: Could not expand $vid_desktopfullscreen
+   0.08 execing sRGB-disable.cfg
+   0.08 execing binds-xonotic.cfg
+   0.09 execing effects-normal.cfg
+   0.09 execing crosshairs.cfg
+   0.09 execing gamemodes-client.cfg
+   0.09 execing notifications.cfg
+   0.11 execing _hud_common.cfg
+   0.12 execing _hud_descriptions.cfg
+   0.13 execing hud_luma.cfg
+   0.13 execing xonotic-server.cfg
+   0.14 execing testing.cfg
+   0.14 execing balance-xonotic.cfg
+   0.15 execing bal-wep-xonotic.cfg
+   0.17 execing physicsX.cfg
+   0.17 execing turrets.cfg
+   0.19 execing vehicles.cfg
+   0.21 execing gamemodes-server.cfg
+   0.22 execing ctfscoring-samual.cfg
+   0.23 execing mutators.cfg
+   0.25 execing randomitems-xonotic.cfg
+   0.26 execing monsters.cfg
+   0.27 execing minigames.cfg
+   0.27 execing physics.cfg
+   0.29 execing cdtracks.cfg
+   0.30 execing commands.cfg
+   0.30 Warning: Could not expand $qport in alias _if_dedicated
+   0.31 execing help.cfg
+   0.31 couldn't exec config.cfg
+   0.31 "maxplayers" set to "16"
+   0.31 execing data/campaign.cfg
+   0.31 execing config_update.cfg
+   0.31 execing font-xolonium.cfg
+   0.31 Warning: Could not expand $scr_loadingscreen_barheight
+   0.31 Warning: Could not expand $scr_infobar_height
+   0.31 This command only works on clients: cl_cmd hud scoreboard_columns_set 
+   0.31 execing autoexec/empty.cfg
+   0.32 execing autoexec.cfg
+   0.32 ^7Loaded public key key_0.d0pk (fingerprint: Xon//KssdlzGkFKdnnN4sgg8H+koTbBn5JTi37BAW1Q=)
+   0.32 ^7Generated private ID key_0.d0pk (public key fingerprint: 1UaREyBN1hUUeBlZHLH60J2Wi7PWZIoqvXOkjyPHmiY=)
+   0.32 ^7Saved unsigned key to key_0.d0si
+   0.32 ^7Signature generation in progress...
+   0.32 ^7execing post-config.cfg
+   0.35 ^7Server using port 26305
+   0.35 ^7Server listening on address 0.0.0.0:26305
+   0.35 ^7Server listening on address [0:0:0:0:0:0:0:0]:26305
+   2.56 ^7execing xonotic-webui.cfg
+   2.56 ^7execing server.cfg
+   2.56 ^7maxplayers can not be changed while a server is running.
+   2.56 ^7It will be changed on next server startup ("map" command).
+   2.56 ^7"maxplayers" set to "16"
+   2.56 ^7execing xonotic-webui-settings.cfg
+   2.57 ^7Maplist contains no usable maps!  Resetting it to default map list.
+   2.57 ^7^7Switching to map implosion
+   2.60 ^7menu: unknown program name
+   2.80 ^7Server using port 26305
+   2.80 ^7Server listening on address 0.0.0.0:26305
+   2.80 ^7Server listening on address [0:0:0:0:0:0:0:0]:26305
+   3.52 ^7:gamestart:dm_implosion:0.1791922839.203123
+   3.52 ^7:gameinfo:mutators:LIST:norecoil
+   3.52 ^7:gameinfo:end
+   4.85 ^7Error response from keygen server: Not allowed
+   7.00 >>> sv_motd
+   7.00 >>> webui_t1
+   7.00 >>> webui_t2
+   7.00 >>> webui_t3
+   7.00 >>> webui_t4
+   7.00 >>> webui_t5
+   7.02 ^7"sv_motd" is "cfg a;b" [""]
+   7.02 ^7"webui_t1" is "cfg x spike y" ["cfg x spike y"]
+   7.02 ^7"webui_t2" is "cfg d$d" ["cfg d$d"]
+   7.02 ^7"webui_t3" is "cfg q"q" ["cfg q"q"]
+   7.02 ^7"webui_t4" is "cfg semi;echo INJECTED_CFG" ["cfg semi;echo INJECTED_CFG"]
+   7.02 ^7"webui_t5" is "cfg" ["cfg"]
+   8.00 >>> set webui_s1 "live a;echo INJECTED_LIVE"
+   8.00 >>> webui_s1
+   8.00 >>> set webui_s2 "live $hostname"
+   8.00 >>> webui_s2
+   8.00 >>> set webui_s3 "live $$x"
+   8.00 >>> webui_s3
+   8.00 >>> set webui_s4 "live // comment"
+   8.00 >>> webui_s4
+   8.02 ^7"webui_s1" is "live a;echo INJECTED_LIVE" ["live a;echo INJECTED_LIVE"]
+   8.02 ^7"webui_s2" is "live spike" ["live spike"]
+   8.02 ^7"webui_s3" is "live $x" ["live $x"]
+   8.02 ^7"webui_s4" is "live // comment" ["live // comment"]
+   9.00 >>> maxplayers 6
+   9.00 >>> g_instagib 1
+   9.00 >>> changelevel boil
+   9.02 ^7maxplayers can not be changed while a server is running.
+   9.02 ^7It will be changed on next server startup ("map" command).
+   9.02 ^7"maxplayers" set to "6"
+   9.89 ^7:gamestart:dm_boil:0.1791922846.978095
+   9.89 ^7:gameinfo:mutators:LIST:instagib:norecoil
+   9.89 ^7:gameinfo:end
+  16.00 >>> status
+  16.00 >>> g_instagib
+  16.03 ^7host:     spike
+  16.03 ^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+  16.03 ^7protocol: 3504 (DP7)
+  16.03 ^7map:      boil
+  16.03 ^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+  16.03 ^7players:  0 active (16 max)
+  16.03 ^7
+  16.03 ^7"g_instagib" is "1" ["0"]
+  17.00 >>> map stormkeep
+  17.15 ^7Server using port 26305
+  17.15 ^7Server listening on address 0.0.0.0:26305
+  17.15 ^7Server listening on address [0:0:0:0:0:0:0:0]:26305
+  18.02 ^7:gamestart:dm_stormkeep:0.1791922854.898782
+  18.02 ^7:gameinfo:mutators:LIST:instagib:norecoil
+  18.02 ^7:gameinfo:end
+  25.01 >>> status
+  25.03 ^7host:     spike
+  25.03 ^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+  25.03 ^7protocol: 3504 (DP7)
+  25.03 ^7map:      stormkeep
+  25.03 ^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+  25.03 ^7players:  0 active (6 max)
+  25.03 ^7
+  26.00 >>> quit
+  26.04 ^7^7Player stats writing failed: -2

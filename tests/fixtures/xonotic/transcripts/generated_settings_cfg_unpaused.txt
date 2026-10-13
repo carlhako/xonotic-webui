@@ -1,0 +1,197 @@
+# Generated settings cfg at startup (sv_autopause 0): endmatch and gotomap on an empty unpaused server, cvarlist.
+# Xonotic 0.8.6 dedicated server, launched as the supervisor launches it:
+#   xonotic-linux64-dedicated -userdir <userdir> +port <p> +sys_colortranslation 2 +serverconfig xonotic-webui.cfg
+# Format: <seconds since spawn> <line>; '>>> ' marks a command written to stdin.
+# Config files in effect:
+# --- data/server.cfg
+# hostname "spike"
+# sv_public 0
+# maxplayers 16
+# --- data/xonotic-webui.cfg
+# exec server.cfg
+# exec xonotic-webui-settings.cfg
+# sv_eventlog 1
+# sv_eventlog_console 1
+# sv_eventlog_ipv6_delimiter 1
+# sys_colortranslation 2
+# --- data/xonotic-webui-settings.cfg
+# // generated
+# hostname "from settings cfg"
+# g_dm 0
+# g_tdm 1
+# timelimit_override 4
+# g_tdm_point_limit 25
+# g_maplist "stormkeep boil"
+# g_maplist_shuffle 0
+# sv_autopause 0
+# maxplayers 10
+   0.01 Game is Xonotic using base gamedir data
+   0.01 gamename for server filtering: Xonotic
+   0.01 Xonotic Linux 03:14:05 Jun 20 2023 - release
+   0.01 Current nice level is below the soft limit - cannot use niceness
+   0.07 Skeletal animation uses SSE code path
+   0.07 execing quake.rc
+   0.07 execing default.cfg
+   0.07 execing xonotic-common.cfg
+   0.08 execing xonotic-client.cfg
+   0.08 Warning: Could not expand $vid_width
+   0.08 Warning: Could not expand $vid_height
+   0.08 Warning: Could not expand $vid_pixelheight
+   0.08 Warning: Could not expand $vid_desktopfullscreen
+   0.08 execing sRGB-disable.cfg
+   0.08 execing binds-xonotic.cfg
+   0.09 execing effects-normal.cfg
+   0.09 execing crosshairs.cfg
+   0.09 execing gamemodes-client.cfg
+   0.09 execing notifications.cfg
+   0.11 execing _hud_common.cfg
+   0.12 execing _hud_descriptions.cfg
+   0.12 execing hud_luma.cfg
+   0.13 execing xonotic-server.cfg
+   0.14 execing testing.cfg
+   0.14 execing balance-xonotic.cfg
+   0.14 execing bal-wep-xonotic.cfg
+   0.17 execing physicsX.cfg
+   0.17 execing turrets.cfg
+   0.19 execing vehicles.cfg
+   0.20 execing gamemodes-server.cfg
+   0.21 execing ctfscoring-samual.cfg
+   0.23 execing mutators.cfg
+   0.25 execing randomitems-xonotic.cfg
+   0.26 execing monsters.cfg
+   0.27 execing minigames.cfg
+   0.27 execing physics.cfg
+   0.29 execing cdtracks.cfg
+   0.29 execing commands.cfg
+   0.29 Warning: Could not expand $qport in alias _if_dedicated
+   0.30 execing help.cfg
+   0.30 couldn't exec config.cfg
+   0.30 "maxplayers" set to "16"
+   0.31 execing data/campaign.cfg
+   0.31 execing config_update.cfg
+   0.31 execing font-xolonium.cfg
+   0.31 Warning: Could not expand $scr_loadingscreen_barheight
+   0.31 Warning: Could not expand $scr_infobar_height
+   0.31 This command only works on clients: cl_cmd hud scoreboard_columns_set 
+   0.31 execing autoexec/empty.cfg
+   0.31 execing autoexec.cfg
+   0.31 ^7Loaded public key key_0.d0pk (fingerprint: Xon//KssdlzGkFKdnnN4sgg8H+koTbBn5JTi37BAW1Q=)
+   0.31 ^7Generated private ID key_0.d0pk (public key fingerprint: 4AD42MNBVpLcqHGg1IJYJodlD4q0TY3G22VK73k9kO0=)
+   0.31 ^7Saved unsigned key to key_0.d0si
+   0.31 ^7Signature generation in progress...
+   0.31 ^7execing post-config.cfg
+   0.35 ^7Server using port 26303
+   0.35 ^7Server listening on address 0.0.0.0:26303
+   0.35 ^7Server listening on address [0:0:0:0:0:0:0:0]:26303
+   2.55 ^7execing xonotic-webui.cfg
+   2.55 ^7execing server.cfg
+   2.55 ^7maxplayers can not be changed while a server is running.
+   2.55 ^7It will be changed on next server startup ("map" command).
+   2.55 ^7"maxplayers" set to "16"
+   2.55 ^7execing xonotic-webui-settings.cfg
+   2.55 ^7maxplayers can not be changed while a server is running.
+   2.55 ^7It will be changed on next server startup ("map" command).
+   2.55 ^7"maxplayers" set to "10"
+   2.56 ^7^7Switching to map stormkeep
+   2.73 ^7Server using port 26303
+   2.73 ^7Server listening on address 0.0.0.0:26303
+   2.73 ^7Server listening on address [0:0:0:0:0:0:0:0]:26303
+   3.45 ^7:gamestart:tdm_stormkeep:0.1791921625.711446
+   3.45 ^7:gameinfo:mutators:LIST:norecoil
+   3.45 ^7:gameinfo:end
+   4.77 ^7Error response from keygen server: Not allowed
+   8.00 >>> status
+   8.00 >>> timelimit
+   8.00 >>> fraglimit
+   8.00 >>> g_maplist
+   8.00 >>> g_maplist_index
+   8.03 ^7host:     from settings cfg
+   8.03 ^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+   8.03 ^7protocol: 3504 (DP7)
+   8.03 ^7map:      stormkeep
+   8.03 ^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+   8.03 ^7players:  0 active (10 max)
+   8.03 ^7
+   8.03 ^7"timelimit" is "4" ["0"]
+   8.03 ^7"fraglimit" is "25" ["0"]
+   8.03 ^7"g_maplist" is "stormkeep boil" [""]
+   8.03 ^7"g_maplist_index" is "0" ["0"]
+   9.00 >>> endmatch
+   9.03 ^7:scores:tdm_stormkeep:7
+   9.03 ^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,teamkills<,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+   9.03 ^7:labels:teamscores:score!!,
+   9.03 ^7:teamscores:see-labels::1
+   9.03 ^7:teamscores:see-labels::2
+   9.03 ^7:teamscores:see-labels::3
+   9.03 ^7:teamscores:see-labels::4
+   9.03 ^7:teamscores:see-labels:0,0:5
+   9.03 ^7:teamscores:see-labels::6
+   9.03 ^7:teamscores:see-labels::7
+   9.03 ^7:teamscores:see-labels::8
+   9.03 ^7:teamscores:see-labels::9
+   9.03 ^7:teamscores:see-labels::10
+   9.03 ^7:teamscores:see-labels::11
+   9.03 ^7:teamscores:see-labels::12
+   9.03 ^7:teamscores:see-labels::13
+   9.03 ^7:teamscores:see-labels:0,0:14
+   9.03 ^7:teamscores:see-labels::15
+   9.03 ^7:end
+   9.03 ^7:gameover
+  10.17 ^7^7uri_multi_ready: got HTTP error 422, data is in unusable format - not continuing
+  10.17 ^7^7Player stats writing failed: -422
+  10.20 ^7^7Switching to map boil
+  11.01 ^7:gamestart:tdm_boil:0.1791921633.654694
+  11.01 ^7:gameinfo:mutators:LIST:norecoil
+  11.01 ^7:gameinfo:end
+  25.75 ^7:startdelay_ended
+  60.04 >>> status
+  60.05 ^7host:     from settings cfg
+  60.05 ^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+  60.05 ^7protocol: 3504 (DP7)
+  60.05 ^7map:      boil
+  60.05 ^7timing:   1.4% CPU, 0.00% lost, offset avg 0.1ms, max 0.2ms, sdev 0.0ms
+  60.05 ^7players:  0 active (10 max)
+  60.05 ^7
+  61.00 >>> nextmap boil
+  61.00 >>> gotomap stormkeep
+  61.02 ^7^7Map switch will happen after scoreboard.
+  61.02 ^7:scores:tdm_boil:51
+  61.02 ^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,teamkills<,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+  61.02 ^7:labels:teamscores:score!!,
+  61.02 ^7:teamscores:see-labels::1
+  61.02 ^7:teamscores:see-labels::2
+  61.02 ^7:teamscores:see-labels::3
+  61.02 ^7:teamscores:see-labels::4
+  61.02 ^7:teamscores:see-labels:0,0:5
+  61.02 ^7:teamscores:see-labels::6
+  61.02 ^7:teamscores:see-labels::7
+  61.02 ^7:teamscores:see-labels::8
+  61.02 ^7:teamscores:see-labels::9
+  61.02 ^7:teamscores:see-labels::10
+  61.02 ^7:teamscores:see-labels::11
+  61.02 ^7:teamscores:see-labels::12
+  61.02 ^7:teamscores:see-labels::13
+  61.02 ^7:teamscores:see-labels:0,0:14
+  61.02 ^7:teamscores:see-labels::15
+  61.02 ^7:end
+  61.02 ^7:gameover
+  61.42 ^7^7uri_multi_ready: got HTTP error 422, data is in unusable format - not continuing
+  61.42 ^7^7Player stats writing failed: -422
+  61.45 ^7^7Switching to map stormkeep
+  62.31 ^7:gamestart:tdm_stormkeep:0.1791921684.588093
+  62.31 ^7:gameinfo:mutators:LIST:norecoil
+  62.31 ^7:gameinfo:end
+  77.06 ^7:startdelay_ended
+ 100.02 >>> status
+ 100.02 >>> cvarlist
+ 100.03 ^7host:     from settings cfg
+ 100.03 ^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+ 100.03 ^7protocol: 3504 (DP7)
+ 100.03 ^7map:      stormkeep
+ 100.03 ^7timing:   1.9% CPU, 0.00% lost, offset avg 0.1ms, max 0.8ms, sdev 0.1ms
+ 100.03 ^7players:  0 active (10 max)
+ 100.03 ^7
+ 100.06 [6097 cvar lines omitted: see ../cvarlist.txt]
+ 100.06 ^76097 cvar(s)
+ 102.00 >>> quit
+ 102.03 ^7^7Player stats writing failed: -2

@@ -1,0 +1,154 @@
+# Limit overrides across changelevel/restart, per-gametype limit precedence, unsupported map fallback, resetmatch.
+# Xonotic 0.8.6 dedicated server, launched as the supervisor launches it:
+#   xonotic-linux64-dedicated -userdir <userdir> +port <p> +sys_colortranslation 2 +serverconfig xonotic-webui.cfg
+# Format: <seconds since spawn> <line>; '>>> ' marks a command written to stdin.
+# Config files in effect:
+# --- data/server.cfg
+# hostname "spike"
+# sv_public 0
+# maxplayers 16
+# --- data/xonotic-webui.cfg
+# exec server.cfg
+# sv_eventlog 1
+# sv_eventlog_console 1
+# sv_eventlog_ipv6_delimiter 1
+# sys_colortranslation 2
+   0.01 Game is Xonotic using base gamedir data
+   0.01 gamename for server filtering: Xonotic
+   0.01 Xonotic Linux 03:14:05 Jun 20 2023 - release
+   0.01 Current nice level is below the soft limit - cannot use niceness
+   0.07 Skeletal animation uses SSE code path
+   0.07 execing quake.rc
+   0.07 execing default.cfg
+   0.07 execing xonotic-common.cfg
+   0.08 execing xonotic-client.cfg
+   0.08 Warning: Could not expand $vid_width
+   0.08 Warning: Could not expand $vid_height
+   0.08 Warning: Could not expand $vid_pixelheight
+   0.08 Warning: Could not expand $vid_desktopfullscreen
+   0.08 execing sRGB-disable.cfg
+   0.08 execing binds-xonotic.cfg
+   0.09 execing effects-normal.cfg
+   0.09 execing crosshairs.cfg
+   0.09 execing gamemodes-client.cfg
+   0.09 execing notifications.cfg
+   0.11 execing _hud_common.cfg
+   0.12 execing _hud_descriptions.cfg
+   0.12 execing hud_luma.cfg
+   0.12 execing xonotic-server.cfg
+   0.14 execing testing.cfg
+   0.14 execing balance-xonotic.cfg
+   0.14 execing bal-wep-xonotic.cfg
+   0.16 execing physicsX.cfg
+   0.17 execing turrets.cfg
+   0.19 execing vehicles.cfg
+   0.20 execing gamemodes-server.cfg
+   0.21 execing ctfscoring-samual.cfg
+   0.23 execing mutators.cfg
+   0.25 execing randomitems-xonotic.cfg
+   0.26 execing monsters.cfg
+   0.26 execing minigames.cfg
+   0.27 execing physics.cfg
+   0.29 execing cdtracks.cfg
+   0.29 execing commands.cfg
+   0.29 Warning: Could not expand $qport in alias _if_dedicated
+   0.30 execing help.cfg
+   0.30 couldn't exec config.cfg
+   0.30 "maxplayers" set to "16"
+   0.30 execing data/campaign.cfg
+   0.30 execing config_update.cfg
+   0.31 execing font-xolonium.cfg
+   0.31 Warning: Could not expand $scr_loadingscreen_barheight
+   0.31 Warning: Could not expand $scr_infobar_height
+   0.31 This command only works on clients: cl_cmd hud scoreboard_columns_set 
+   0.31 execing autoexec/empty.cfg
+   0.31 execing autoexec.cfg
+   0.31 ^7Loaded public key key_0.d0pk (fingerprint: Xon//KssdlzGkFKdnnN4sgg8H+koTbBn5JTi37BAW1Q=)
+   0.31 ^7Loaded private ID key_0.d0si for key_0.d0pk (public key fingerprint: PfVDqVM+rKJPc49kZWo+yh0ED/lRp4/MRIwzhW7j/dE=)
+   0.31 ^7NOTE: this ID has not yet been signed!
+   0.31 ^7Only need a signature for an existing key...
+   0.31 ^7Signature generation in progress...
+   0.31 ^7execing post-config.cfg
+   0.34 ^7Server using port 26302
+   0.34 ^7Server listening on address 0.0.0.0:26302
+   0.34 ^7Server listening on address [0:0:0:0:0:0:0:0]:26302
+   2.53 ^7execing xonotic-webui.cfg
+   2.54 ^7execing server.cfg
+   2.54 ^7maxplayers can not be changed while a server is running.
+   2.54 ^7It will be changed on next server startup ("map" command).
+   2.54 ^7"maxplayers" set to "16"
+   2.54 ^7Maplist contains no usable maps!  Resetting it to default map list.
+   2.55 ^7^7Switching to map silentsiege
+   2.57 ^7menu: unknown program name
+   2.71 ^7Server using port 26302
+   2.71 ^7Server listening on address 0.0.0.0:26302
+   2.71 ^7Server listening on address [0:0:0:0:0:0:0:0]:26302
+   3.42 ^7:gamestart:dm_silentsiege:0.1791921441.185741
+   3.42 ^7:gameinfo:mutators:LIST:norecoil
+   3.42 ^7:gameinfo:end
+   4.73 ^7Error response from keygen server: Not allowed
+   8.00 >>> gametype tdm
+   8.00 >>> fraglimit_override 7
+   8.00 >>> timelimit_override 3
+   8.00 >>> hostname "live rename"
+   8.03 ^7Game type successfully switched to tdm
+   9.00 >>> changelevel stormkeep
+   9.93 ^7:gamestart:tdm_stormkeep:0.1791921447.413798
+   9.93 ^7:gameinfo:mutators:LIST:norecoil
+   9.93 ^7:gameinfo:end
+  17.00 >>> timelimit
+  17.00 >>> fraglimit
+  17.00 >>> status
+  17.00 >>> g_maplist
+  17.00 >>> nextmap
+  17.03 ^7"timelimit" is "3" ["0"]
+  17.03 ^7"fraglimit" is "7" ["0"]
+  17.03 ^7host:     live rename
+  17.03 ^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+  17.03 ^7protocol: 3504 (DP7)
+  17.03 ^7map:      stormkeep
+  17.03 ^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+  17.03 ^7players:  0 active (16 max)
+  17.03 ^7
+  17.03 ^7"g_maplist" is "solarium warfare techassault leave_em_behind nexballarena vorix erbium space-elevator silentsiege geoplanetary go xoylent darkzone glowplant trident fuse bromine runningman afterslime boil atelier dance courtfun stormkeep implosion finalrage runningmanctf catharsis opium" [""]
+  17.03 ^7"nextmap" is "" [""]
+  18.00 >>> g_tdm_point_limit 12
+  18.00 >>> restart
+  18.79 ^7:gamestart:tdm_stormkeep:0.1791921456.482127
+  18.79 ^7:gameinfo:mutators:LIST:norecoil
+  18.79 ^7:gameinfo:end
+  26.01 >>> fraglimit
+  26.01 >>> timelimit
+  26.01 ^7"fraglimit" is "12" ["0"]
+  26.01 ^7"timelimit" is "3" ["0"]
+  27.00 >>> changelevel boil
+  27.80 ^7:gamestart:tdm_boil:0.1791921465.808538
+  27.80 ^7:gameinfo:mutators:LIST:norecoil
+  27.80 ^7:gameinfo:end
+  35.01 >>> status
+  35.01 >>> fraglimit
+  35.01 ^7host:     live rename
+  35.01 ^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+  35.01 ^7protocol: 3504 (DP7)
+  35.01 ^7map:      boil
+  35.01 ^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+  35.01 ^7players:  0 active (16 max)
+  35.01 ^7
+  35.01 ^7"fraglimit" is "12" ["0"]
+  36.00 >>> gametype ctf
+  36.00 >>> changelevel warfare
+  36.01 ^7Game type successfully switched to ctf
+  36.81 ^7^7can't play the selected map in the given game mode (ctf). Falling back to a supported mode (dm).
+  36.84 ^7:gamestart:dm_warfare:0.1791921474.590501
+  36.84 ^7:gameinfo:mutators:LIST:norecoil
+  36.84 ^7:gameinfo:end
+  44.01 >>> fraglimit
+  44.01 >>> capturelimit_override 2
+  44.01 >>> resetmatch
+  44.01 ^7"fraglimit" is "7" ["0"]
+  44.01 ^7^3Match is restarting...
+  44.01 ^7:restart
+  50.01 >>> fraglimit
+  50.04 ^7"fraglimit" is "7" ["0"]
+  51.00 >>> quit
+  51.01 ^7^7Player stats writing failed: -2

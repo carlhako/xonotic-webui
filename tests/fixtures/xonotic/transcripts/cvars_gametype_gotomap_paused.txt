@@ -1,0 +1,195 @@
+# Cvar reads, live limit change, maxplayers, gametype, gotomap on an empty auto-paused server (stalls).
+# Xonotic 0.8.6 dedicated server, launched as the supervisor launches it:
+#   xonotic-linux64-dedicated -userdir <userdir> +port <p> +sys_colortranslation 2 +serverconfig xonotic-webui.cfg
+# Format: <seconds since spawn> <line>; '>>> ' marks a command written to stdin.
+# Config files in effect:
+# --- data/server.cfg
+# hostname "spike"
+# sv_public 0
+# maxplayers 16
+# --- data/xonotic-webui.cfg
+# exec server.cfg
+# sv_eventlog 1
+# sv_eventlog_console 1
+# sv_eventlog_ipv6_delimiter 1
+# sys_colortranslation 2
+   0.01 Game is Xonotic using base gamedir data
+   0.01 gamename for server filtering: Xonotic
+   0.01 Xonotic Linux 03:14:05 Jun 20 2023 - release
+   0.01 Current nice level is below the soft limit - cannot use niceness
+   0.07 Skeletal animation uses SSE code path
+   0.07 execing quake.rc
+   0.07 execing default.cfg
+   0.08 execing xonotic-common.cfg
+   0.08 execing xonotic-client.cfg
+   0.08 Warning: Could not expand $vid_width
+   0.08 Warning: Could not expand $vid_height
+   0.08 Warning: Could not expand $vid_pixelheight
+   0.08 Warning: Could not expand $vid_desktopfullscreen
+   0.08 execing sRGB-disable.cfg
+   0.08 execing binds-xonotic.cfg
+   0.09 execing effects-normal.cfg
+   0.09 execing crosshairs.cfg
+   0.09 execing gamemodes-client.cfg
+   0.09 execing notifications.cfg
+   0.12 execing _hud_common.cfg
+   0.12 execing _hud_descriptions.cfg
+   0.13 execing hud_luma.cfg
+   0.13 execing xonotic-server.cfg
+   0.14 execing testing.cfg
+   0.14 execing balance-xonotic.cfg
+   0.15 execing bal-wep-xonotic.cfg
+   0.17 execing physicsX.cfg
+   0.18 execing turrets.cfg
+   0.20 execing vehicles.cfg
+   0.21 execing gamemodes-server.cfg
+   0.22 execing ctfscoring-samual.cfg
+   0.24 execing mutators.cfg
+   0.26 execing randomitems-xonotic.cfg
+   0.27 execing monsters.cfg
+   0.27 execing minigames.cfg
+   0.28 execing physics.cfg
+   0.30 execing cdtracks.cfg
+   0.30 execing commands.cfg
+   0.30 Warning: Could not expand $qport in alias _if_dedicated
+   0.31 execing help.cfg
+   0.31 couldn't exec config.cfg
+   0.31 "maxplayers" set to "16"
+   0.31 execing data/campaign.cfg
+   0.31 execing config_update.cfg
+   0.32 execing font-xolonium.cfg
+   0.32 Warning: Could not expand $scr_loadingscreen_barheight
+   0.32 Warning: Could not expand $scr_infobar_height
+   0.32 This command only works on clients: cl_cmd hud scoreboard_columns_set 
+   0.32 execing autoexec/empty.cfg
+   0.32 execing autoexec.cfg
+   0.32 ^7Loaded public key key_0.d0pk (fingerprint: Xon//KssdlzGkFKdnnN4sgg8H+koTbBn5JTi37BAW1Q=)
+   0.32 ^7Generated private ID key_0.d0pk (public key fingerprint: PfVDqVM+rKJPc49kZWo+yh0ED/lRp4/MRIwzhW7j/dE=)
+   0.32 ^7Saved unsigned key to key_0.d0si
+   0.32 ^7Signature generation in progress...
+   0.32 ^7execing post-config.cfg
+   0.35 ^7Server using port 26301
+   0.35 ^7Server listening on address 0.0.0.0:26301
+   0.35 ^7Server listening on address [0:0:0:0:0:0:0:0]:26301
+   2.55 ^7execing xonotic-webui.cfg
+   2.55 ^7execing server.cfg
+   2.55 ^7maxplayers can not be changed while a server is running.
+   2.55 ^7It will be changed on next server startup ("map" command).
+   2.55 ^7"maxplayers" set to "16"
+   2.56 ^7Maplist contains no usable maps!  Resetting it to default map list.
+   2.56 ^7^7Switching to map runningman
+   2.59 ^7menu: unknown program name
+   2.67 ^7Server using port 26301
+   2.67 ^7Server listening on address 0.0.0.0:26301
+   2.67 ^7Server listening on address [0:0:0:0:0:0:0:0]:26301
+   3.31 ^7:gamestart:dm_runningman:0.1791921213.226234
+   3.31 ^7:gameinfo:mutators:LIST:norecoil
+   3.31 ^7:gameinfo:end
+   4.54 ^7Error response from keygen server: Not allowed
+   6.00 >>> timelimit
+   6.00 >>> fraglimit
+   6.00 >>> timelimit_override
+   6.00 >>> fraglimit_override
+   6.00 >>> g_maplist
+   6.00 >>> nextmap
+   6.00 >>> g_maplist_votable
+   6.00 >>> g_maplist_shuffle
+   6.00 >>> maxplayers
+   6.00 >>> hostname
+   6.00 >>> bot_number
+   6.00 >>> skill
+   6.00 >>> g_tdm_point_limit
+   6.01 ^7"timelimit" is "15" ["0"]
+   6.01 ^7"fraglimit" is "30" ["0"]
+   6.01 ^7"timelimit_override" is "-1" ["-1"]
+   6.01 ^7"fraglimit_override" is "-1" ["-1"]
+   6.01 ^7"g_maplist" is "boil opium courtfun erbium vorix xoylent go trident catharsis afterslime space-elevator darkzone glowplant silentsiege finalrage implosion fuse geoplanetary techassault dance bromine solarium nexballarena runningmanctf atelier leave_em_behind warfare stormkeep runningman" [""]
+   6.01 ^7"nextmap" is "" [""]
+   6.01 ^7"g_maplist_votable" is "6" ["6"]
+   6.01 ^7"g_maplist_shuffle" is "1" ["1"]
+   6.01 ^7"maxplayers" is "16"
+   6.01 ^7"hostname" is "spike" ["Xonotic 0.8.6 Server"]
+   6.01 ^7"bot_number" is "0" ["0"]
+   6.01 ^7"skill" is "8" ["8"]
+   6.01 ^7"g_tdm_point_limit" is "-1" ["-1"]
+   7.00 >>> gametype
+   7.00 >>> lsmaps
+   7.01 ^7^7Incorrect parameters for ^2gametype^7
+   7.01 ^7^7Usage:^3 sv_cmd gametype <mode>
+   7.01 ^7^7  Where <mode> is the gametype mode to switch to.
+   7.01 ^7^7See also: ^2gotomap^7
+   7.01 ^7^7Maps available (18): ^3afterslime ^2atelier ^3boil ^2bromine ^3darkzone ^2erbium ^3finalrage ^2fuse ^3glowplant ^2implosion ^3opium ^2runningman ^3silentsiege ^2solarium ^3stormkeep ^2trident ^3warfare ^2xoylent 
+   7.01 ^7
+   8.00 >>> maplist
+   8.01 ^7^7Incorrect parameters for ^2maplist^7
+   8.01 ^7^7Usage:^3 sv_cmd maplist <action> [<map>]
+   8.01 ^7^7  Where <action> is the command to complete,
+   8.01 ^7^7  and <map> is what it acts upon (for the 'add' and 'remove' actions).
+   8.01 ^7^7  Full list of commands here: add, cleanup, remove, shuffle.
+   9.00 >>> timelimit 5
+   9.00 >>> timelimit
+   9.01 ^7"timelimit" is "5" ["0"]
+  10.00 >>> fraglimit_override 7
+  10.00 >>> timelimit_override 3
+  11.00 >>> maxplayers 8
+  11.00 >>> maxplayers
+  11.01 ^7maxplayers can not be changed while a server is running.
+  11.01 ^7It will be changed on next server startup ("map" command).
+  11.01 ^7"maxplayers" set to "8"
+  11.01 ^7"maxplayers" is "8"
+  12.00 >>> g_instagib 1
+  12.00 >>> hostname "spike two"
+  13.00 >>> gametype nosuch
+  13.00 >>> gametype tdm
+  13.01 ^7Failed to switch to nosuch: this game type does not exist!
+  13.01 ^7Game type successfully switched to tdm
+  14.00 >>> gametype
+  14.01 ^7^7Incorrect parameters for ^2gametype^7
+  14.01 ^7^7Usage:^3 sv_cmd gametype <mode>
+  14.01 ^7^7  Where <mode> is the gametype mode to switch to.
+  14.01 ^7^7See also: ^2gotomap^7
+  15.00 >>> gotomap nosuchmap
+  15.00 >>> gotomap stormkeep
+  15.01 ^7^7The map you suggested is not available on this server.
+  15.01 ^7^7Map switch will happen after scoreboard.
+  40.02 >>> timelimit
+  40.02 >>> fraglimit
+  40.02 >>> maxplayers
+  40.02 >>> g_instagib
+  40.02 >>> status
+  40.04 ^7"timelimit" is "5" ["0"]
+  40.04 ^7"fraglimit" is "30" ["0"]
+  40.04 ^7"maxplayers" is "8"
+  40.04 ^7"g_instagib" is "1" ["0"]
+  40.04 ^7host:     spike two
+  40.04 ^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+  40.04 ^7protocol: 3504 (DP7)
+  40.04 ^7map:      runningman
+  40.04 ^7timing:   0.0% CPU, 0.00% lost, offset avg 0.0ms, max 0.0ms, sdev 0.0ms
+  40.04 ^7players:  0 active (16 max)
+  40.04 ^7
+  41.00 >>> cvarlist g_maplist
+  41.01 ^7g_maplist is "boil opium courtfun erbium vorix xoylent go trident catharsis afterslime space-elevator darkzone glowplant silentsiege finalrage implosion fuse geoplanetary techassault dance bromine solarium nexballarena runningmanctf atelier leave_em_behind warfare stormkeep runningman" [""] the list of maps to be cycled among (is autogenerated if empty)
+  41.01 ^7g_maplist_allow_frustrating is "0" ["0"] allow impossible maps to be, e.g., voted for and in the maplist (if set to 2, ONLY impossible maps are allowed)
+  41.01 ^7g_maplist_allow_hidden is "0" ["0"] allow hidden maps to be, e.g., voted for and in the maplist
+  41.01 ^7g_maplist_check_waypoints is "0" ["0"] when 1, maps are skipped if there currently are bots, but the map has no waypoints
+  41.01 ^7g_maplist_ignore_sizes is "0" ["0"] when 1, all maps are shown in the map list regardless of player count
+  41.01 ^7g_maplist_index is "28" ["0"] this is used internally for saving position in maplist cycle
+  41.01 ^7g_maplist_mostrecent is "runningman" [""] contains the name of the maps that were most recently played
+  41.01 ^7g_maplist_mostrecent_count is "3" ["3"] number of most recent maps that are blocked from being played again
+  41.01 ^7g_maplist_selectrandom is "0" ["0"] if 1, a random map will be chosen as next map - DEPRECATED in favor of g_maplist_shuffle
+  41.01 ^7g_maplist_shuffle is "1" ["1"] new randomization method: like selectrandom, but avoid playing the same maps in short succession. This works by taking out the first element and inserting it into g_maplist with a bias to the end of the list
+  41.01 ^7g_maplist_sizes_count_bots is "1" ["1"] include the number of bots currently in the server when counting the number of players for size restrictions
+  41.01 ^7g_maplist_sizes_count_maxplayers is "1" ["1"] check the player limit when getting the player count so forced spectators don't affect the size restrictions
+  41.01 ^7g_maplist_sizes_specparty is "0" ["0"] this fraction of people are expected to only spectate, reduces player count used to select voting GUI maps
+  41.01 ^7g_maplist_votable is "6" ["6"] number of maps that are shown in the map voting at the end of a match, 0 to disable
+  41.01 ^7g_maplist_votable_abstain is "0" ["0"] offer a "don't care" option on the voting screen
+  41.01 ^7g_maplist_votable_keeptwotime is "15" ["15"] show only 2 options after this amount of time during map vote screen
+  41.01 ^7g_maplist_votable_nodetail is "0" ["0"] hide per-map vote counts (to avoid influential first votes)
+  41.01 ^7g_maplist_votable_screenshot_dir is "maps levelshots" ["maps levelshots"] where to look for map screenshots
+  41.01 ^7g_maplist_votable_suggestions is "2" ["2"] number of maps a player is allowed to suggest for the map voting screen using 'suggestmap'
+  41.01 ^7g_maplist_votable_suggestions_override_mostrecent is "0" ["0"] allow players to suggest maps that have been played recently
+  41.01 ^7g_maplist_votable_timeout is "30" ["30"] timeout for the map voting; must be below 50 seconds!
+  41.01 ^721 cvars beginning with "g_maplist"
+  42.00 >>> quit
+  42.01 ^7^7Player stats writing failed: -2

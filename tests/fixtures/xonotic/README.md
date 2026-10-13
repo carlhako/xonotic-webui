@@ -25,3 +25,20 @@ D3). Each line is exactly as the server printed it (including the leading `^7`).
 | `session_humans_only.txt` | whole run: join, rename, part, no bots |
 | `session_humans_bots_v6.txt` | whole run: two humans (IPv4 and IPv6), a bot, rename, parts, match end |
 | `session_ansi_translated.txt` | whole run with the engine's default ANSI colour translation (`sys_colortranslation` not set) |
+| `cvarlist.txt` | full `cvarlist` reply (6,097 cvars: `name is "value" ["default"] description`), source of the bundled cvar catalogue |
+
+## Transcripts (`transcripts/`)
+
+Captured for the `config-and-maps` change (see its `design.md`, **Spike findings**) on an
+empty server, no clients. Unlike the files above these are annotated: each line is
+`<seconds since spawn> <line>`, `>>> ` marks a command written to stdin, and a `#` header
+records the config files in effect (the wrapper `exec`s `xonotic-webui-settings.cfg` where
+the run used one). Local paths are replaced with `<game>` and `<userdir>`.
+
+| file | what it shows |
+| --- | --- |
+| `cvars_gametype_gotomap_paused.txt` | cvar reads, live `timelimit`, `maxplayers` refusal, `gametype`, `gotomap` stalling on an auto-paused server |
+| `changelevel_overrides_gametype.txt` | `*_override` limits surviving `changelevel`/`restart`, per-gametype limit precedence, unsupported-map fallback to dm, `resetmatch` |
+| `generated_settings_cfg_unpaused.txt` | settings from a generated cfg at startup; `endmatch` and `gotomap` with `sv_autopause 0` |
+| `autopause_unpause_actions.txt` | auto-pause on: queued `endmatch`/`gotomap` completed by a console `pause` toggle; re-pause on the new map |
+| `value_escaping_maxplayers_mutators.txt` | `;`, `$`, `\"`, `//` in quoted values (cfg and stdin); `maxplayers` via `changelevel` vs `map`; mutator at next map |
