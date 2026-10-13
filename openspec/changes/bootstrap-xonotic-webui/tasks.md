@@ -76,7 +76,7 @@
 - [x] 9.5 Implement panel install from the release tarball with prebuilt wheels only, `RELEASE_TAG` pinning and offline tarball path; verify a run with no Node or compiler present
 - [x] 9.6 Seed `server.cfg` only when absent with the event log enabled and never overwrite; verify a re-run leaves an edited file byte-identical
 - [x] 9.7 Implement the venv swap, health wait and rollback on failure plus the final URL and game-port report; verify a simulated bad release restores the previous version and exits non-zero
-- [ ] 9.8 Add `.github/workflows/ci.yml` (ruff, pytest, frontend lint and tests) and `.github/workflows/release.yml` (tag build, bundle-in-wheel assertion, publish tarball and `install.sh`); verify CI is green on `main` and a test tag produces both release assets
+- [x] 9.8 Add `.github/workflows/ci.yml` (ruff, pytest, frontend lint and tests) and `.github/workflows/release.yml` (tag build, bundle-in-wheel assertion, publish tarball and `install.sh`); verify CI is green on `main` and a test tag produces both release assets
 - [ ] 9.9 Write the README: requirements, the install one-liner for the public repo, ports to open (web, UDP 26000), filesystem layout, settings table, re-run-to-upgrade, security stance (LAN only, no auth); verify every documented command was executed once as written
 
 ## 10. End-to-end verification
