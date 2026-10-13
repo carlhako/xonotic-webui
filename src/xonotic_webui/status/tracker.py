@@ -28,7 +28,7 @@ from xonotic_webui.events import (
 )
 from xonotic_webui.logging import get_logger
 from xonotic_webui.status.model import Player, StatusSnapshot
-from xonotic_webui.supervisor import RunState, SupervisorError, Supervisor
+from xonotic_webui.supervisor import RunState, Supervisor, SupervisorError
 
 log = get_logger("status")
 

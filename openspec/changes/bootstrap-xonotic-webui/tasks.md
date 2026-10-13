@@ -18,10 +18,10 @@
 
 ## 3. Project scaffold, settings and health
 
-- [ ] 3.1 Create `pyproject.toml` (hatchling, FastAPI, uvicorn, pydantic, pydantic-settings, ruff/pytest dev extras, wheel force-includes the static bundle), `src/<pkg>/` layout and `tests/`; verify `pip install -e .[dev]` succeeds and `pytest` collects
-- [ ] 3.2 Implement settings with the precedence env over TOML over defaults and the keys in design D6; verify unit tests cover each precedence level and invalid values
-- [ ] 3.3 Implement logging, the app factory, the uvicorn entrypoint with a bounded graceful-shutdown window, and `GET /health` returning the panel version regardless of server state; verify a test for server-stopped health (server-status: liveness check)
-- [ ] 3.4 Serve the built static bundle with SPA fallback that does not shadow `/api` or `/health`; verify tests for root, deep-link reload and a non-existent API path (web-ui-shell: served by the panel)
+- [x] 3.1 Create `pyproject.toml` (hatchling, FastAPI, uvicorn, pydantic, pydantic-settings, ruff/pytest dev extras, wheel force-includes the static bundle), `src/<pkg>/` layout and `tests/`; verify `pip install -e .[dev]` succeeds and `pytest` collects
+- [x] 3.2 Implement settings with the precedence env over TOML over defaults and the keys in design D6; verify unit tests cover each precedence level and invalid values
+- [x] 3.3 Implement logging, the app factory, the uvicorn entrypoint with a bounded graceful-shutdown window, and `GET /health` returning the panel version regardless of server state; verify a test for server-stopped health (server-status: liveness check)
+- [x] 3.4 Serve the built static bundle with SPA fallback that does not shadow `/api` or `/health`; verify tests for root, deep-link reload and a non-existent API path (web-ui-shell: served by the panel)
 
 ## 4. Supervisor (server-lifecycle)
 
@@ -52,9 +52,9 @@
 
 ## 7. HTTP API
 
-- [ ] 7.1 Expose `POST /api/lifecycle/{start,stop,restart}` mapping supervisor errors to precise HTTP statuses and messages; verify API tests for success and each rejection
-- [ ] 7.2 Expose `GET /api/console/stream`, `POST /api/console/command`, `GET /api/status` and `GET /api/status/stream` as SSE and JSON; verify API tests with the fake server end to end (start, see output, send command, stop)
-- [ ] 7.3 Generate and commit the OpenAPI schema snapshot used by the front end types; verify a test fails when routes change without regenerating it
+- [x] 7.1 Expose `POST /api/lifecycle/{start,stop,restart}` mapping supervisor errors to precise HTTP statuses and messages; verify API tests for success and each rejection
+- [x] 7.2 Expose `GET /api/console/stream`, `POST /api/console/command`, `GET /api/status` and `GET /api/status/stream` as SSE and JSON; verify API tests with the fake server end to end (start, see output, send command, stop)
+- [x] 7.3 Generate and commit the OpenAPI schema snapshot used by the front end types; verify a test fails when routes change without regenerating it
 
 ## 8. Web interface (web-ui-shell, console and dashboard views)
 

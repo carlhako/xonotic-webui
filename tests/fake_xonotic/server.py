@@ -39,6 +39,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import ClassVar
 
 HERE = Path(__file__).resolve().parent
 STARTUP = HERE.parent / "fixtures" / "xonotic" / "startup.txt"
@@ -65,7 +66,7 @@ class State:
     map = "_init/_init"
     gametype = "dm"
     eventlog = "0" if "eventlog_off" in FLAGS else "1"
-    roster: dict[int, dict] = {}  # ent -> {id, bot, name}
+    roster: ClassVar[dict[int, dict]] = {}  # ent -> {id, bot, name}
     lock = threading.Lock()
 
 

@@ -101,9 +101,7 @@ def test_env_overrides_toml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         ("CRASH_RESTART_WINDOW", "0"),
     ],
 )
-def test_invalid_values_are_rejected(
-    monkeypatch: pytest.MonkeyPatch, key: str, value: str
-) -> None:
+def test_invalid_values_are_rejected(monkeypatch: pytest.MonkeyPatch, key: str, value: str) -> None:
     monkeypatch.setenv(f"XONOTIC_WEBUI_{key}", value)
     with pytest.raises(ValidationError):
         Settings()

@@ -1,0 +1,836 @@
+{
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "properties": {
+          "code": {
+            "description": "A stable machine-readable error code.",
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "A human-readable explanation.",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiError",
+        "type": "object"
+      },
+      "CommandRequest": {
+        "properties": {
+          "command": {
+            "description": "A single console command line.",
+            "title": "Command",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "CommandRequest",
+        "type": "object"
+      },
+      "CrashModel": {
+        "properties": {
+          "at": {
+            "description": "ISO 8601 UTC time of the unexpected exit.",
+            "title": "At",
+            "type": "string"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          }
+        },
+        "required": [
+          "at",
+          "exit_code"
+        ],
+        "title": "CrashModel",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "HealthModel": {
+        "properties": {
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version"
+        ],
+        "title": "HealthModel",
+        "type": "object"
+      },
+      "PlayerModel": {
+        "properties": {
+          "bot": {
+            "title": "Bot",
+            "type": "boolean"
+          },
+          "ent": {
+            "description": "The server's slot number for the client.",
+            "title": "Ent",
+            "type": "integer"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Event-log player id, when a join was observed.",
+            "title": "Id"
+          },
+          "name": {
+            "description": "Display name with Xonotic colour codes intact.",
+            "title": "Name",
+            "type": "string"
+          },
+          "plain_name": {
+            "description": "The name with colour codes removed.",
+            "title": "Plain Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ent",
+          "name",
+          "plain_name",
+          "bot"
+        ],
+        "title": "PlayerModel",
+        "type": "object"
+      },
+      "StartFailureModel": {
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "reason",
+          "exit_code"
+        ],
+        "title": "StartFailureModel",
+        "type": "object"
+      },
+      "StatusModel": {
+        "properties": {
+          "bot_count": {
+            "title": "Bot Count",
+            "type": "integer"
+          },
+          "event_log": {
+            "anyOf": [
+              {
+                "enum": [
+                  "enabled",
+                  "unavailable"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether live player tracking from the event log is working.",
+            "title": "Event Log"
+          },
+          "gametype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gametype"
+          },
+          "human_count": {
+            "title": "Human Count",
+            "type": "integer"
+          },
+          "last_crash": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CrashModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_start_failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StartFailureModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "map": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map"
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerModel"
+            },
+            "title": "Players",
+            "type": "array"
+          },
+          "restart_abandoned": {
+            "title": "Restart Abandoned",
+            "type": "boolean"
+          },
+          "state": {
+            "enum": [
+              "stopped",
+              "starting",
+              "running",
+              "stopping"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "map",
+          "gametype",
+          "players",
+          "human_count",
+          "bot_count",
+          "event_log",
+          "last_crash",
+          "restart_abandoned",
+          "last_start_failure"
+        ],
+        "title": "StatusModel",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "xonotic-webui",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/console/command": {
+      "post": {
+        "operationId": "command_api_console_command_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server is not running."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Empty or multi-line command."
+          }
+        },
+        "summary": "Submit a single console command",
+        "tags": [
+          "console"
+        ]
+      }
+    },
+    "/api/console/stream": {
+      "get": {
+        "operationId": "stream_api_console_stream_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {
+                "schema": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "output",
+                        "command",
+                        "marker"
+                      ],
+                      "title": "Kind",
+                      "type": "string"
+                    },
+                    "plain": {
+                      "description": "The line with colour codes removed.",
+                      "title": "Plain",
+                      "type": "string"
+                    },
+                    "seq": {
+                      "title": "Seq",
+                      "type": "integer"
+                    },
+                    "text": {
+                      "description": "The raw line, colour codes intact.",
+                      "title": "Text",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "seq",
+                    "kind",
+                    "text",
+                    "plain"
+                  ],
+                  "title": "ConsoleLineModel",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "An event stream; each event's data is a ConsoleLine."
+          }
+        },
+        "summary": "Stream console output (server-sent events of ConsoleLine)",
+        "tags": [
+          "console"
+        ]
+      }
+    },
+    "/api/lifecycle/restart": {
+      "post": {
+        "operationId": "restart_api_lifecycle_restart_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not valid in the current state."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server exited while starting."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The game is not installed."
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server did not become ready in time."
+          }
+        },
+        "summary": "Stop (if running) and start the server",
+        "tags": [
+          "lifecycle"
+        ]
+      }
+    },
+    "/api/lifecycle/start": {
+      "post": {
+        "operationId": "start_api_lifecycle_start_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not valid in the current state."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server exited while starting."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The game is not installed."
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server did not become ready in time."
+          }
+        },
+        "summary": "Start the server and wait until it is ready",
+        "tags": [
+          "lifecycle"
+        ]
+      }
+    },
+    "/api/lifecycle/stop": {
+      "post": {
+        "operationId": "stop_api_lifecycle_stop_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not valid in the current state."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server exited while starting."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The game is not installed."
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server did not become ready in time."
+          }
+        },
+        "summary": "Stop the server gracefully",
+        "tags": [
+          "lifecycle"
+        ]
+      }
+    },
+    "/api/status": {
+      "get": {
+        "operationId": "status_api_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Current server status",
+        "tags": [
+          "status"
+        ]
+      }
+    },
+    "/api/status/stream": {
+      "get": {
+        "operationId": "status_stream_api_status_stream_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$defs": {
+                    "CrashModel": {
+                      "properties": {
+                        "at": {
+                          "description": "ISO 8601 UTC time of the unexpected exit.",
+                          "title": "At",
+                          "type": "string"
+                        },
+                        "exit_code": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Exit Code"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "exit_code"
+                      ],
+                      "title": "CrashModel",
+                      "type": "object"
+                    },
+                    "PlayerModel": {
+                      "properties": {
+                        "bot": {
+                          "title": "Bot",
+                          "type": "boolean"
+                        },
+                        "ent": {
+                          "description": "The server's slot number for the client.",
+                          "title": "Ent",
+                          "type": "integer"
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Event-log player id, when a join was observed.",
+                          "title": "Id"
+                        },
+                        "name": {
+                          "description": "Display name with Xonotic colour codes intact.",
+                          "title": "Name",
+                          "type": "string"
+                        },
+                        "plain_name": {
+                          "description": "The name with colour codes removed.",
+                          "title": "Plain Name",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "ent",
+                        "name",
+                        "plain_name",
+                        "bot"
+                      ],
+                      "title": "PlayerModel",
+                      "type": "object"
+                    },
+                    "StartFailureModel": {
+                      "properties": {
+                        "at": {
+                          "title": "At",
+                          "type": "string"
+                        },
+                        "exit_code": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Exit Code"
+                        },
+                        "reason": {
+                          "title": "Reason",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "reason",
+                        "exit_code"
+                      ],
+                      "title": "StartFailureModel",
+                      "type": "object"
+                    }
+                  },
+                  "properties": {
+                    "bot_count": {
+                      "title": "Bot Count",
+                      "type": "integer"
+                    },
+                    "event_log": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "enabled",
+                            "unavailable"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether live player tracking from the event log is working.",
+                      "title": "Event Log"
+                    },
+                    "gametype": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Gametype"
+                    },
+                    "human_count": {
+                      "title": "Human Count",
+                      "type": "integer"
+                    },
+                    "last_crash": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/$defs/CrashModel"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "last_start_failure": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/$defs/StartFailureModel"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "map": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Map"
+                    },
+                    "players": {
+                      "items": {
+                        "$ref": "#/$defs/PlayerModel"
+                      },
+                      "title": "Players",
+                      "type": "array"
+                    },
+                    "restart_abandoned": {
+                      "title": "Restart Abandoned",
+                      "type": "boolean"
+                    },
+                    "state": {
+                      "enum": [
+                        "stopped",
+                        "starting",
+                        "running",
+                        "stopping"
+                      ],
+                      "title": "State",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "map",
+                    "gametype",
+                    "players",
+                    "human_count",
+                    "bot_count",
+                    "event_log",
+                    "last_crash",
+                    "restart_abandoned",
+                    "last_start_failure"
+                  ],
+                  "title": "StatusModel",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "An event stream; the first event is the current snapshot."
+          }
+        },
+        "summary": "Stream status changes (server-sent events of Status)",
+        "tags": [
+          "status"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "meta"
+        ]
+      }
+    }
+  }
+}

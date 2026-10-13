@@ -31,7 +31,9 @@ async def started(tmp_path: Path) -> AsyncIterator[tuple[Supervisor, Console]]:
     await sup.aclose()
 
 
-async def take(stream: AsyncIterator[ConsoleLine], n: int, timeout: float = 5.0) -> list[ConsoleLine]:
+async def take(
+    stream: AsyncIterator[ConsoleLine], n: int, timeout: float = 5.0
+) -> list[ConsoleLine]:
     out: list[ConsoleLine] = []
     for _ in range(n):
         out.append(await asyncio.wait_for(anext(stream), timeout))
@@ -39,7 +41,9 @@ async def take(stream: AsyncIterator[ConsoleLine], n: int, timeout: float = 5.0)
 
 
 async def next_matching(
-    stream: AsyncIterator[ConsoleLine], predicate: Callable[[ConsoleLine], bool], timeout: float = 5.0
+    stream: AsyncIterator[ConsoleLine],
+    predicate: Callable[[ConsoleLine], bool],
+    timeout: float = 5.0,
 ) -> ConsoleLine:
     async def go() -> ConsoleLine:
         async for line in stream:

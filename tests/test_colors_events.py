@@ -79,7 +79,11 @@ def test_human_session_events() -> None:
 def test_bot_and_ipv6_joins() -> None:
     events = [e for line in fixture_lines("session_humans_bots_v6.txt") if (e := parse_event(line))]
     joins = [e for e in events if isinstance(e, PlayerJoin)]
-    assert [(j.player_id, j.ent, j.bot) for j in joins] == [(1, 1, False), (2, 3, True), (3, 2, False)]
+    assert [(j.player_id, j.ent, j.bot) for j in joins] == [
+        (1, 1, False),
+        (2, 3, True),
+        (3, 2, False),
+    ]
     assert joins[1].name == "[BOT]Resurrection"
     # the IPv6 address is delimiter-escaped, so the name is still the last field
     assert joins[2].name == "V6 ^4Blue^7"
