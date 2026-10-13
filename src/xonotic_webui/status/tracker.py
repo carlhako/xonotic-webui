@@ -28,7 +28,7 @@ from xonotic_webui.events import (
 )
 from xonotic_webui.logging import get_logger
 from xonotic_webui.status.model import Player, StatusSnapshot
-from xonotic_webui.supervisor import RunState, Supervisor, SupervisorError
+from xonotic_webui.supervisor import NotRunningError, RunState, Supervisor, SupervisorError
 
 log = get_logger("status")
 
@@ -241,6 +241,8 @@ class StatusTracker:
             reply = await self._console.query(
                 "status 1", StatusReplyCollector(), reply_timeout=self._query_timeout
             )
+        except NotRunningError:
+            return  # the server stopped under us (a stop raced the post-start work)
         except (InternalQueryError, SupervisorError) as exc:
             log.warning("status reconcile failed: %s", exc)
             return

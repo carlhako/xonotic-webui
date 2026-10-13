@@ -82,8 +82,8 @@
 ## 10. End-to-end verification
 
 - [ ] 10.1 On a clean Debian 13 LXC, install with the one-liner from the public repo and open the web UI; verify the installer exits zero and prints a working URL
-- [ ] 10.2 With a real game client, join the server, change name, leave; verify the dashboard shows the player and the console shows the lines with colours rendered
-- [ ] 10.3 Exercise start, stop, restart, kill -9 of the game process (crash restart) and a crash loop; verify behaviour matches server-lifecycle scenarios
+- [x] 10.2 With a real game client, join the server, change name, leave; verify the dashboard shows the player and the console shows the lines with colours rendered
+- [x] 10.3 Exercise start, stop, restart, kill -9 of the game process (crash restart) and a crash loop; verify behaviour matches server-lifecycle scenarios
 - [ ] 10.4 Re-run the installer on the live container; verify server configuration is unchanged, no re-download occurs, and the server comes back
 - [ ] 10.5 Walk every scenario in the five specs and tick them off; verify none is unexercised, and run `openspec validate bootstrap-xonotic-webui --strict`
 

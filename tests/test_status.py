@@ -306,3 +306,13 @@ async def test_identical_snapshots_are_not_resent(make_stack: Callable[..., Stac
     with pytest.raises(TimeoutError):
         await asyncio.wait_for(anext(stream), 0.3)
     await stream.aclose()
+
+
+async def test_reconcile_after_the_server_stopped_is_silent(
+    make_stack: Callable[..., Stack], caplog: pytest.LogCaptureFixture
+) -> None:
+    """A stop can race the post-start reconcile; that is expected, not a warning."""
+    stack = make_stack()
+    with caplog.at_level("WARNING", logger="xonotic_webui"):
+        await stack.tracker._reconcile()  # the server was never started
+    assert [r for r in caplog.records if r.levelname == "WARNING"] == []
