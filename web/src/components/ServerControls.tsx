@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { allowedActions, useLifecycle, type LifecycleAction } from "../api/useLifecycle";
 import type { Status } from "../api/client";
+import { playersPhrase } from "../lib/text";
+import { Confirm } from "./Confirm";
 
 const LABELS: Record<LifecycleAction, string> = {
   start: "Start",
   stop: "Stop",
   restart: "Restart",
 };
-
-function playersPhrase(n: number): string {
-  return `${n} ${n === 1 ? "player" : "players"}`;
-}
 
 // Start, stop and restart, each enabled only when valid for the current state
 // (web-ui-shell: "The dashboard shows live state and lifecycle controls"). Stopping or
@@ -71,20 +69,14 @@ export function ServerControls({
       </div>
 
       {confirming && (
-        <div className="confirm" role="alertdialog" aria-label="Confirm">
-          <p>
-            {confirming === "stop" ? "Stop" : "Restart"} the server?{" "}
-            <strong>{playersPhrase(humans)} will be disconnected.</strong>
-          </p>
-          <div className="controls-row">
-            <button className="btn btn-danger" onClick={confirm}>
-              {confirming === "stop" ? "Stop anyway" : "Restart anyway"}
-            </button>
-            <button className="btn" onClick={() => setConfirming(null)}>
-              Cancel
-            </button>
-          </div>
-        </div>
+        <Confirm
+          confirmLabel={confirming === "stop" ? "Stop anyway" : "Restart anyway"}
+          onConfirm={confirm}
+          onCancel={() => setConfirming(null)}
+        >
+          {confirming === "stop" ? "Stop" : "Restart"} the server?{" "}
+          <strong>{playersPhrase(humans)} will be disconnected.</strong>
+        </Confirm>
       )}
 
       {error && (

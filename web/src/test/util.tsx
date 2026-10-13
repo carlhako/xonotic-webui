@@ -22,6 +22,7 @@ export function makeStatus(overrides: Partial<Status> = {}): Status {
     last_crash: null,
     restart_abandoned: false,
     last_start_failure: null,
+    action: null,
     ...overrides,
   };
 }
@@ -71,4 +72,72 @@ export function stubFetch(handler: (url: string, init?: RequestInit) => Response
   const fn = vi.fn(async (url: string, init?: RequestInit) => handler(url, init));
   vi.stubGlobal("fetch", fn);
   return fn;
+}
+
+// -- fixtures for the settings and maps sections ---------------------------------------
+
+import type { MapInfo, Setting, SettingsView } from "../api/client";
+
+export function makeSetting(overrides: Partial<Setting> = {}): Setting {
+  return {
+    key: "hostname",
+    group: "identity",
+    label: "Server name",
+    help: "Shown in the server browser.",
+    kind: "string",
+    default: "Xonotic 0.8.6 Server",
+    value: null,
+    live_value: null,
+    apply: "now",
+    min: null,
+    max: null,
+    max_length: 100,
+    choices: [],
+    unit: null,
+    value_labels: [],
+    server_cfg: false,
+    ...overrides,
+  };
+}
+
+export function makeSettingsView(
+  settings: Setting[],
+  overrides: Partial<SettingsView> = {},
+): SettingsView {
+  return {
+    running: true,
+    groups: [
+      { id: "identity", label: "Identity" },
+      { id: "match", label: "Match" },
+      { id: "bots", label: "Bots" },
+    ],
+    settings,
+    score_unit: "frags",
+    ...overrides,
+  };
+}
+
+export function makeMap(overrides: Partial<MapInfo> = {}): MapInfo {
+  return {
+    name: "stormkeep",
+    title: "Stormkeep",
+    description: "",
+    author: "",
+    gametypes: ["dm", "tdm"],
+    has_mapinfo: true,
+    preview: true,
+    source: "game",
+    ...overrides,
+  };
+}
+
+/** Route fetches by `METHOD path` (query strings included in the key); unknown routes
+ *  fail loudly so a test never silently depends on a request it did not expect. */
+export function routeFetch(routes: Record<string, (init?: RequestInit) => Response>) {
+  return stubFetch((url, init) => {
+    const key = `${init?.method ?? "GET"} ${url}`;
+    const route = routes[key];
+    if (!route) throw new Error(`unexpected request: ${key}`);
+    return route(init);
+  });
 }

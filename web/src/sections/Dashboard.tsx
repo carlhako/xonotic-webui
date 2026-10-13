@@ -1,5 +1,6 @@
 import { useStatus } from "../api/StatusContext";
 import { ColoredText } from "../components/ColoredText";
+import { MatchActions } from "../components/MatchActions";
 import { ServerControls } from "../components/ServerControls";
 import { formatTimestamp } from "../lib/time";
 import type { RunState } from "../api/client";
@@ -62,6 +63,7 @@ export function Dashboard() {
       </div>
 
       <ServerControls status={status} disabled={stale} />
+      <MatchActions status={status} disabled={stale} />
 
       {status?.event_log === "unavailable" && (
         <div className="panel is-warn" role="status">

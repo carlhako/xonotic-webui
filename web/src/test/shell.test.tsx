@@ -4,12 +4,17 @@ import { describe, expect, it } from "vitest";
 import { makeStatus, pushStatus, renderApp } from "./util";
 
 describe("shell (8.2)", () => {
-  it("names the application and lists the Dashboard and Console sections", async () => {
+  it("names the application and lists every section", async () => {
     renderApp();
     expect(screen.getByText("xonotic-webui")).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Sections" });
     const links = within(nav).getAllByRole("link");
-    expect(links.map((l) => l.textContent)).toEqual(["Dashboard", "Console"]);
+    expect(links.map((l) => l.textContent)).toEqual([
+      "Dashboard",
+      "Maps",
+      "Settings",
+      "Console",
+    ]);
   });
 
   it("highlights the current section and switches without a reload", async () => {

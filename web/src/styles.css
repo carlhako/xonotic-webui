@@ -355,6 +355,276 @@ p {
   opacity: 0.6;
 }
 
+/* -- settings -- */
+.intro {
+  margin-bottom: 1rem;
+}
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+.tab {
+  font: inherit;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.tab.is-active {
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow: inset 0 -2px 0 var(--brand);
+}
+.settings-panel,
+.raw-cvars {
+  margin-top: 0;
+}
+.field {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.field:first-child {
+  padding-top: 0;
+}
+.field-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  font-weight: 600;
+}
+.field-head .badge-warn {
+  margin-left: 0;
+}
+.field-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.field-control input[type="text"],
+.field-control input[type="number"],
+.field-control select,
+.cvar-search,
+.override-editor input,
+.override-add input,
+.switch-now select,
+.controls-row select,
+.map-filter select {
+  font: inherit;
+  font-size: 16px; /* below 16px iOS zooms the page on focus */
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+  max-width: 100%;
+}
+.field-control input[type="text"] {
+  width: min(24rem, 100%);
+}
+.field-control input[type="number"] {
+  width: 9rem;
+}
+.field-control input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+.field-help,
+.field-meta {
+  font-size: 0.85rem;
+}
+.field-meta code,
+.cvar-meta code {
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+.field-error {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+.field-feedback {
+  color: var(--ok);
+  font-size: 0.9rem;
+}
+.has-error input {
+  border-color: var(--danger);
+}
+.btn-save:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.settings-panel .controls-row {
+  margin-top: 1rem;
+}
+.spaced {
+  margin-top: 1.5rem;
+}
+
+/* -- raw cvars -- */
+.cvar-search {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+.cvar-list,
+.override-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cvar,
+.override {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.cvar-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+.cvar-name {
+  font-family: var(--mono);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cvar-desc,
+.cvar-meta {
+  font-size: 0.85rem;
+}
+.override {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+.override-actions {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.25rem;
+}
+.override-actions .link {
+  margin-left: 0.5rem;
+}
+.override-editor,
+.override-add,
+.switch-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+.override-editor input {
+  flex: 1 1 12rem;
+}
+
+/* -- maps -- */
+.map-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.map-filter h2 {
+  margin: 0;
+}
+.map-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 0.75rem;
+}
+.map-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.map-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--console-bg);
+}
+.map-body {
+  padding: 0.6rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.map-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.map-name {
+  font-size: 0.8rem;
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+.map-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.map-badges .badge-warn,
+.rotation-item .badge-warn {
+  margin-left: 0;
+}
+.rotation-list {
+  margin: 0 0 0.75rem;
+  padding-left: 1.4rem;
+}
+.rotation-item {
+  padding: 0.3rem 0;
+}
+.rotation-item::marker {
+  color: var(--text-dim);
+}
+.rotation-name {
+  font-weight: 600;
+  margin-right: 0.5rem;
+  overflow-wrap: anywhere;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.action-status {
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  background: var(--surface-2);
+  overflow-wrap: anywhere;
+}
+.action-status.is-done {
+  background: var(--ok-weak);
+  color: var(--ok);
+}
+.action-status.is-warn {
+  background: var(--warn-weak);
+  color: var(--warn);
+}
+.match-actions {
+  margin-top: 0.5rem;
+}
+
 @media (max-width: 520px) {
   :root {
     --gutter: 12px;
