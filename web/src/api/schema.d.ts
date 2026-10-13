@@ -38,6 +38,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cvars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search the game's cvars by name or description */
+        get: operations["search_cvars_api_cvars_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/gametype": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Select the gametype; it applies at the next map */
+        put: operations["put_gametype_api_gametype_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/gametypes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The gametypes, which of them the installed maps can play, and the selection */
+        get: operations["get_gametypes_api_gametypes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/lifecycle/restart": {
         parameters: {
             query?: never;
@@ -84,6 +135,162 @@ export interface paths {
         /** Stop the server gracefully */
         post: operations["stop_api_lifecycle_stop_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The installed maps */
+        get: operations["get_maps_api_maps_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maps/{name}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A map's preview image */
+        get: operations["get_preview_api_maps__name__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/match/goto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End the match with the scoreboard and go to a map, with no vote */
+        post: operations["goto_api_match_goto_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/match/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restart the current match on the same map */
+        post: operations["restart_api_match_restart_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/match/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End the match early; the game then votes or rotates as usual */
+        post: operations["skip_api_match_skip_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rotation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The map rotation as saved */
+        get: operations["get_rotation_api_rotation_get"];
+        /** Set the map rotation and shuffle; it applies at the next map */
+        put: operations["put_rotation_api_rotation_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The curated settings with their saved, default and live values */
+        get: operations["get_settings_api_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Save settings; null resets one to its default */
+        patch: operations["patch_settings_api_settings_patch"];
+        trace?: never;
+    };
+    "/api/settings/overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The raw cvar overrides */
+        get: operations["get_overrides_api_settings_overrides_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/overrides/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Add or change a raw cvar override */
+        put: operations["put_override_api_settings_overrides__name__put"];
+        post?: never;
+        /** Remove a raw cvar override */
+        delete: operations["delete_override_api_settings_overrides__name__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -152,10 +359,22 @@ export interface components {
              */
             code: string;
             /**
+             * Field
+             * @description The setting or cvar the error is about, when there is one.
+             */
+            field?: string | null;
+            /**
              * Message
              * @description A human-readable explanation.
              */
             message: string;
+        };
+        /** ChoiceModel */
+        ChoiceModel: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
         };
         /** CommandRequest */
         CommandRequest: {
@@ -195,9 +414,109 @@ export interface components {
             /** Exit Code */
             exit_code: number | null;
         };
+        /** CvarModel */
+        CvarModel: {
+            /** Default */
+            default: string;
+            /** Description */
+            description: string;
+            /**
+             * Editable
+             * @description False for cvars the panel reserves.
+             */
+            editable: boolean;
+            /** Live Value */
+            live_value: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Override
+             * @description The raw override saved for this cvar, if any.
+             */
+            override: string | null;
+            /** Server Cfg */
+            server_cfg: boolean;
+        };
+        /** CvarPageModel */
+        CvarPageModel: {
+            /** Items */
+            items: components["schemas"]["CvarModel"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Running */
+            running: boolean;
+            /** Total */
+            total: number;
+        };
         /** ErrorResponse */
         ErrorResponse: {
             detail: components["schemas"]["ApiError"];
+        };
+        /** GametypeModel */
+        GametypeModel: {
+            /** Id */
+            id: string;
+            /** Map Count */
+            map_count: number;
+            /** Name */
+            name: string;
+            /**
+             * Offered
+             * @description At least one installed map supports it.
+             */
+            offered: boolean;
+            /**
+             * Score Unit
+             * @description What a score limit counts: frags, captures, ...
+             */
+            score_unit: string;
+        };
+        /** GametypeRequest */
+        GametypeRequest: {
+            /** Gametype */
+            gametype: string;
+        };
+        /** GametypeResultModel */
+        GametypeResultModel: {
+            /**
+             * Apply
+             * @enum {string}
+             */
+            apply: "now" | "next_map" | "next_start" | "may_need_restart";
+            /** Gametype */
+            gametype: string;
+        };
+        /** GametypesModel */
+        GametypesModel: {
+            /**
+             * Effective
+             * @description What the next map is played as.
+             */
+            effective: string | null;
+            /** Gametypes */
+            gametypes: components["schemas"]["GametypeModel"][];
+            /**
+             * Running
+             * @description What the current match is being played as.
+             */
+            running: string | null;
+            /**
+             * Selected
+             * @description The gametype the operator saved, if any.
+             */
+            selected: string | null;
+        };
+        /** GotoRequest */
+        GotoRequest: {
+            /** Map */
+            map: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
         };
         /** HealthModel */
         HealthModel: {
@@ -208,6 +527,96 @@ export interface components {
             status: "ok";
             /** Version */
             version: string;
+        };
+        /** MapModel */
+        MapModel: {
+            /** Author */
+            author: string;
+            /** Description */
+            description: string;
+            /**
+             * Gametypes
+             * @description Empty when the map has no map information.
+             */
+            gametypes: string[];
+            /** Has Mapinfo */
+            has_mapinfo: boolean;
+            /** Name */
+            name: string;
+            /**
+             * Preview
+             * @description A preview image is available at /api/maps/{name}/preview.
+             */
+            preview: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "game" | "user";
+            /** Title */
+            title: string;
+        };
+        /** MapsModel */
+        MapsModel: {
+            /** Maps */
+            maps: components["schemas"]["MapModel"][];
+        };
+        /** MatchActionModel */
+        MatchActionModel: {
+            /**
+             * Id
+             * @description Increases with every action, so clients can tell them apart.
+             */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "goto" | "skip" | "restart";
+            /**
+             * Map
+             * @description The requested map, for go to map.
+             */
+            map: string | null;
+            /**
+             * State
+             * @description pending until the next match starts; timed_out if none did in time.
+             * @enum {string}
+             */
+            state: "pending" | "done" | "timed_out";
+        };
+        /** OverrideModel */
+        OverrideModel: {
+            /** Live Value */
+            live_value: string | null;
+            /** Name */
+            name: string;
+            /** Server Cfg */
+            server_cfg: boolean;
+            /** Value */
+            value: string;
+        };
+        /** OverrideRequest */
+        OverrideRequest: {
+            /** Value */
+            value: string;
+        };
+        /** OverrideResultModel */
+        OverrideResultModel: {
+            /**
+             * Apply
+             * @enum {string}
+             */
+            apply: "now" | "next_map" | "next_start" | "may_need_restart";
+            /** Name */
+            name: string;
+        };
+        /** OverridesModel */
+        OverridesModel: {
+            /** Overrides */
+            overrides: components["schemas"]["OverrideModel"][];
+            /** Running */
+            running: boolean;
         };
         /** PlayerModel */
         PlayerModel: {
@@ -234,6 +643,142 @@ export interface components {
              */
             plain_name: string;
         };
+        /** RotationItemModel */
+        RotationItemModel: {
+            /** Installed */
+            installed: boolean;
+            /** Name */
+            name: string;
+            /**
+             * Supported
+             * @description Whether it can be played in the gametype; null when none is known.
+             */
+            supported: boolean | null;
+            /** Title */
+            title: string | null;
+        };
+        /** RotationModel */
+        RotationModel: {
+            /**
+             * Gametype
+             * @description The gametype `supported` was judged against.
+             */
+            gametype: string | null;
+            /** Maps */
+            maps: components["schemas"]["RotationItemModel"][];
+            /**
+             * Shuffle
+             * @description Null until chosen: the game's default applies.
+             */
+            shuffle: boolean | null;
+        };
+        /** RotationRequest */
+        RotationRequest: {
+            /**
+             * Maps
+             * @description Ordered; empty means every map for the gametype.
+             */
+            maps: string[];
+            /** Shuffle */
+            shuffle?: boolean | null;
+        };
+        /** RotationResultModel */
+        RotationResultModel: {
+            /**
+             * Apply
+             * @enum {string}
+             */
+            apply: "now" | "next_map" | "next_start" | "may_need_restart";
+            rotation: components["schemas"]["RotationModel"];
+        };
+        /** SettingGroupModel */
+        SettingGroupModel: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        };
+        /** SettingModel */
+        SettingModel: {
+            /**
+             * Apply
+             * @description When a change to this setting takes effect on a running server.
+             * @enum {string}
+             */
+            apply: "now" | "next_map" | "next_start" | "may_need_restart";
+            /** Choices */
+            choices: components["schemas"]["ChoiceModel"][];
+            /** Default */
+            default: string | number | boolean;
+            /** Group */
+            group: string;
+            /** Help */
+            help: string;
+            /**
+             * Key
+             * @description The setting's id, which is the cvar it is written as.
+             */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "string" | "int" | "float" | "bool" | "choice";
+            /** Label */
+            label: string;
+            /**
+             * Live Value
+             * @description What the running server currently has; null when stopped or unknown.
+             */
+            live_value: string | null;
+            /** Max */
+            max: number | null;
+            /** Max Length */
+            max_length: number | null;
+            /** Min */
+            min: number | null;
+            /**
+             * Server Cfg
+             * @description server.cfg also sets this; the panel's value wins.
+             */
+            server_cfg: boolean;
+            /** Unit */
+            unit: ("minutes" | "score") | null;
+            /**
+             * Value
+             * @description The value saved in the panel, or null when the default applies.
+             */
+            value: string | number | boolean | null;
+            /**
+             * Value Labels
+             * @description Names for special numeric values.
+             */
+            value_labels: components["schemas"]["ValueLabelModel"][];
+        };
+        /** SettingsModel */
+        SettingsModel: {
+            /** Groups */
+            groups: components["schemas"]["SettingGroupModel"][];
+            /** Running */
+            running: boolean;
+            /**
+             * Score Unit
+             * @description What a score limit counts for the current gametype (frags, captures...).
+             */
+            score_unit: string | null;
+            /** Settings */
+            settings: components["schemas"]["SettingModel"][];
+        };
+        /** SettingsResultModel */
+        SettingsResultModel: {
+            /**
+             * Applied
+             * @description For each changed setting, when it takes effect.
+             */
+            applied: {
+                [key: string]: "now" | "next_map" | "next_start" | "may_need_restart";
+            };
+        };
         /** StartFailureModel */
         StartFailureModel: {
             /** At */
@@ -245,6 +790,8 @@ export interface components {
         };
         /** StatusModel */
         StatusModel: {
+            /** @description The latest map action and whether it has completed. */
+            action: components["schemas"]["MatchActionModel"] | null;
             /** Bot Count */
             bot_count: number;
             /**
@@ -269,6 +816,26 @@ export interface components {
              * @enum {string}
              */
             state: "stopped" | "starting" | "running" | "stopping";
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
+        /** ValueLabelModel */
+        ValueLabelModel: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
         };
     };
     responses: never;
@@ -335,6 +902,119 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": components["schemas"]["ConsoleLineModel"];
+                };
+            };
+        };
+    };
+    search_cvars_api_cvars_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CvarPageModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_gametype_api_gametype_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GametypeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GametypeResultModel"];
+                };
+            };
+            /** @description The request was rejected; nothing changed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_gametypes_api_gametypes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GametypesModel"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -498,6 +1178,524 @@ export interface operations {
             };
             /** @description The server did not become ready in time. */
             504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_maps_api_maps_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapsModel"];
+                };
+            };
+        };
+    };
+    get_preview_api_maps__name__preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "image/jpeg": unknown;
+                    "image/png": unknown;
+                };
+            };
+            /** @description The map has no preview image. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    goto_api_match_goto_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GotoRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchActionModel"];
+                };
+            };
+            /** @description Not valid in the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The map is not installed or not playable. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The server exited while starting. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The game is not installed. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The server did not become ready in time. */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restart_api_match_restart_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchActionModel"];
+                };
+            };
+            /** @description Not valid in the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The map is not installed or not playable. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The server exited while starting. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The game is not installed. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The server did not become ready in time. */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    skip_api_match_skip_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchActionModel"];
+                };
+            };
+            /** @description Not valid in the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The map is not installed or not playable. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The server exited while starting. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The game is not installed. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The server did not become ready in time. */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_rotation_api_rotation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RotationModel"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_rotation_api_rotation_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RotationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RotationResultModel"];
+                };
+            };
+            /** @description The request was rejected; nothing changed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_settings_api_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsModel"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patch_settings_api_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: string | number | boolean | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsResultModel"];
+                };
+            };
+            /** @description The value or name was rejected; nothing saved. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_overrides_api_settings_overrides_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverridesModel"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_override_api_settings_overrides__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverrideResultModel"];
+                };
+            };
+            /** @description The value or name was rejected; nothing saved. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_override_api_settings_overrides__name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverrideResultModel"];
+                };
+            };
+            /** @description The value or name was rejected; nothing saved. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };

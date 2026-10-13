@@ -12,8 +12,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import asdict
+from typing import Any
 
 from xonotic_webui.colors import strip_colors
 from xonotic_webui.console.console import Console, InternalQueryError
@@ -31,6 +32,9 @@ from xonotic_webui.status.model import Player, StatusSnapshot
 from xonotic_webui.supervisor import NotRunningError, RunState, Supervisor, SupervisorError
 
 log = get_logger("status")
+
+# How many times a roster refresh is repeated when events arrived while it was in flight.
+_RECONCILE_ATTEMPTS = 3
 
 _EVENTLOG_VALUE = re.compile(r'^"sv_eventlog" is "(?P<value>[^"]*)"')
 
@@ -55,6 +59,10 @@ class StatusTracker:
         self._gametype: str | None = None
         self._event_log: str | None = None
         self._events_seen = False
+        self._player_events = 0  # joins, parts and renames seen so far
+        self._match_count = 0
+        self._match_listeners: list[Callable[[GameStart], None]] = []
+        self._action: dict[str, Any] | None = None
 
         self._subscribers: set[asyncio.Queue[StatusSnapshot]] = set()
         self._last_sent: dict | None = None
@@ -79,7 +87,23 @@ class StatusTracker:
             last_crash=asdict(crash) if crash else None,
             restart_abandoned=self._sup.restart_abandoned,
             last_start_failure=asdict(failure) if failure else None,
+            action=dict(self._action) if self._action else None,
         )
+
+    # -- match actions ----------------------------------------------------------------
+    @property
+    def match_count(self) -> int:
+        """Matches started since the server started (every ``:gamestart:`` counts)."""
+        return self._match_count
+
+    def add_match_listener(self, listener: Callable[[GameStart], None]) -> None:
+        """Call ``listener`` for every match start, including a restart of the same map."""
+        self._match_listeners.append(listener)
+
+    def set_action(self, action: dict[str, Any] | None) -> None:
+        """Publish the latest match action (or clear it) to every client."""
+        self._action = dict(action) if action else None
+        self._publish()
 
     async def stream(self) -> AsyncIterator[StatusSnapshot]:
         """The current snapshot immediately, then one per change."""
@@ -118,7 +142,14 @@ class StatusTracker:
         if isinstance(event, GameStart):
             changed = self._map != event.map or self._gametype != event.gametype
             self._map, self._gametype = event.map, event.gametype
+            self._match_count += 1
+            for listener in list(self._match_listeners):
+                try:
+                    listener(event)
+                except Exception:
+                    log.exception("match listener raised; continuing")
         elif isinstance(event, PlayerJoin):
+            self._player_events += 1
             self._drop_id(event.player_id)
             old = self._players.get(event.ent)
             if old is not None and old.id is not None:
@@ -129,6 +160,7 @@ class StatusTracker:
             self._ent_by_id[event.player_id] = event.ent
             changed = True
         elif isinstance(event, PlayerName):
+            self._player_events += 1
             player = self._player_by_id(event.player_id)
             if player is None:
                 self._request_reconcile()
@@ -136,6 +168,7 @@ class StatusTracker:
                 player.name = event.name
                 changed = True
         elif isinstance(event, PlayerPart):
+            self._player_events += 1
             ent = self._ent_by_id.pop(event.player_id, None)
             if ent is None or self._players.pop(ent, None) is None:
                 self._request_reconcile()
@@ -170,6 +203,8 @@ class StatusTracker:
         self._gametype = None
         self._event_log = None
         self._events_seen = False
+        self._match_count = 0
+        self._action = None
 
     def _spawn(self, coro, name: str) -> asyncio.Task[None]:
         task = asyncio.create_task(coro, name=name)
@@ -236,18 +271,32 @@ class StatusTracker:
             await self._reconcile()
 
     async def _reconcile(self) -> None:
-        """Rebuild the roster (and the map) from a ``status 1`` reply."""
-        try:
-            reply = await self._console.query(
-                "status 1", StatusReplyCollector(), reply_timeout=self._query_timeout
-            )
-        except NotRunningError:
-            return  # the server stopped under us (a stop raced the post-start work)
-        except (InternalQueryError, SupervisorError) as exc:
-            log.warning("status reconcile failed: %s", exc)
+        """Rebuild the roster (and the map) from a ``status 1`` reply.
+
+        The reply is applied after the event loop has had a chance to process lines that
+        arrived behind it. If a join, part or rename was seen while the query was in
+        flight, the reply may predate it and would silently undo it, so ask again (a few
+        times at most).
+        """
+        for attempt in range(_RECONCILE_ATTEMPTS):
+            seen = self._player_events
+            try:
+                reply = await self._console.query(
+                    "status 1", StatusReplyCollector(), reply_timeout=self._query_timeout
+                )
+            except NotRunningError:
+                return  # the server stopped under us (a stop raced the post-start work)
+            except (InternalQueryError, SupervisorError) as exc:
+                log.warning("status reconcile failed: %s", exc)
+                return
+            if self._sup.state is not RunState.RUNNING:
+                return
+            if self._player_events != seen and attempt < _RECONCILE_ATTEMPTS - 1:
+                continue
+            self._apply_status_reply(reply)
             return
-        if self._sup.state is not RunState.RUNNING:
-            return
+
+    def _apply_status_reply(self, reply: StatusReplyCollector) -> None:
         players: dict[int, Player] = {}
         for row in reply.rows:
             known = self._players.get(row.ent)

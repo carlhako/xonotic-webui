@@ -37,6 +37,8 @@ class StatusSnapshot:
     last_crash: dict[str, Any] | None = None
     restart_abandoned: bool = False
     last_start_failure: dict[str, Any] | None = None
+    # The latest match action (go to map, skip, restart) and how it is going.
+    action: dict[str, Any] | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -59,4 +61,5 @@ class StatusSnapshot:
             "last_crash": self.last_crash,
             "restart_abandoned": self.restart_abandoned,
             "last_start_failure": self.last_start_failure,
+            "action": self.action,
         }

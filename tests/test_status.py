@@ -316,3 +316,39 @@ async def test_reconcile_after_the_server_stopped_is_silent(
     with caplog.at_level("WARNING", logger="xonotic_webui"):
         await stack.tracker._reconcile()  # the server was never started
     assert [r for r in caplog.records if r.levelname == "WARNING"] == []
+
+
+# --- a status reply that predates a join must not undo it -----------------------------
+
+
+async def test_a_roster_reply_that_predates_a_join_does_not_remove_the_player(
+    make_stack: Callable[..., Stack], fake: Callable[[str], None]
+) -> None:
+    from xonotic_webui.events import StatusReplyCollector, StatusRow
+
+    stack = make_stack()
+    await stack.sup.start()
+    await wait_for(lambda: stack.tracker.snapshot().state == "running")
+    await asyncio.sleep(0.3)  # let the post-start reconcile finish
+    tracker = stack.tracker
+
+    calls = 0
+
+    async def query(command: str, collector: StatusReplyCollector, **_: object):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            # the reply was produced before the join; the join is processed as the
+            # coroutine resumes, i.e. before the stale reply is applied
+            tracker.on_line("^7:join:1:1:127.0.0.1:Late")
+            collector.map = "atelier"
+            return collector
+        collector.map = "atelier"
+        collector.rows = [StatusRow(ent=1, bot=False, name="Late")]
+        return collector
+
+    stack.console.query = query  # type: ignore[method-assign]
+    await tracker._reconcile()
+    assert calls == 2  # the first reply was recognised as possibly stale and asked again
+    assert names(tracker.snapshot()) == [("Late", False)]
+    assert tracker.snapshot().human_count == 1

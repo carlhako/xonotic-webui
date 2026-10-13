@@ -8,6 +8,18 @@
             "title": "Code",
             "type": "string"
           },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The setting or cvar the error is about, when there is one.",
+            "title": "Field"
+          },
           "message": {
             "description": "A human-readable explanation.",
             "title": "Message",
@@ -19,6 +31,24 @@
           "message"
         ],
         "title": "ApiError",
+        "type": "object"
+      },
+      "ChoiceModel": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "ChoiceModel",
         "type": "object"
       },
       "CommandRequest": {
@@ -96,6 +126,101 @@
         "title": "CrashModel",
         "type": "object"
       },
+      "CvarModel": {
+        "properties": {
+          "default": {
+            "title": "Default",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "editable": {
+            "description": "False for cvars the panel reserves.",
+            "title": "Editable",
+            "type": "boolean"
+          },
+          "live_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Value"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The raw override saved for this cvar, if any.",
+            "title": "Override"
+          },
+          "server_cfg": {
+            "title": "Server Cfg",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "default",
+          "description",
+          "editable",
+          "live_value",
+          "override",
+          "server_cfg"
+        ],
+        "title": "CvarModel",
+        "type": "object"
+      },
+      "CvarPageModel": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CvarModel"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "running",
+          "total",
+          "offset",
+          "limit",
+          "items"
+        ],
+        "title": "CvarPageModel",
+        "type": "object"
+      },
       "ErrorResponse": {
         "properties": {
           "detail": {
@@ -106,6 +231,159 @@
           "detail"
         ],
         "title": "ErrorResponse",
+        "type": "object"
+      },
+      "GametypeModel": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "map_count": {
+            "title": "Map Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "offered": {
+            "description": "At least one installed map supports it.",
+            "title": "Offered",
+            "type": "boolean"
+          },
+          "score_unit": {
+            "description": "What a score limit counts: frags, captures, ...",
+            "title": "Score Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "score_unit",
+          "offered",
+          "map_count"
+        ],
+        "title": "GametypeModel",
+        "type": "object"
+      },
+      "GametypeRequest": {
+        "properties": {
+          "gametype": {
+            "title": "Gametype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gametype"
+        ],
+        "title": "GametypeRequest",
+        "type": "object"
+      },
+      "GametypeResultModel": {
+        "properties": {
+          "apply": {
+            "enum": [
+              "now",
+              "next_map",
+              "next_start",
+              "may_need_restart"
+            ],
+            "title": "Apply",
+            "type": "string"
+          },
+          "gametype": {
+            "title": "Gametype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gametype",
+          "apply"
+        ],
+        "title": "GametypeResultModel",
+        "type": "object"
+      },
+      "GametypesModel": {
+        "properties": {
+          "effective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the next map is played as.",
+            "title": "Effective"
+          },
+          "gametypes": {
+            "items": {
+              "$ref": "#/components/schemas/GametypeModel"
+            },
+            "title": "Gametypes",
+            "type": "array"
+          },
+          "running": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the current match is being played as.",
+            "title": "Running"
+          },
+          "selected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The gametype the operator saved, if any.",
+            "title": "Selected"
+          }
+        },
+        "required": [
+          "gametypes",
+          "selected",
+          "running",
+          "effective"
+        ],
+        "title": "GametypesModel",
+        "type": "object"
+      },
+      "GotoRequest": {
+        "properties": {
+          "map": {
+            "title": "Map",
+            "type": "string"
+          }
+        },
+        "required": [
+          "map"
+        ],
+        "title": "GotoRequest",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
         "type": "object"
       },
       "HealthModel": {
@@ -125,6 +403,220 @@
           "version"
         ],
         "title": "HealthModel",
+        "type": "object"
+      },
+      "MapModel": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "gametypes": {
+            "description": "Empty when the map has no map information.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Gametypes",
+            "type": "array"
+          },
+          "has_mapinfo": {
+            "title": "Has Mapinfo",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "preview": {
+            "description": "A preview image is available at /api/maps/{name}/preview.",
+            "title": "Preview",
+            "type": "boolean"
+          },
+          "source": {
+            "enum": [
+              "game",
+              "user"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "title",
+          "description",
+          "author",
+          "gametypes",
+          "has_mapinfo",
+          "preview",
+          "source"
+        ],
+        "title": "MapModel",
+        "type": "object"
+      },
+      "MapsModel": {
+        "properties": {
+          "maps": {
+            "items": {
+              "$ref": "#/components/schemas/MapModel"
+            },
+            "title": "Maps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "maps"
+        ],
+        "title": "MapsModel",
+        "type": "object"
+      },
+      "MatchActionModel": {
+        "properties": {
+          "id": {
+            "description": "Increases with every action, so clients can tell them apart.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "goto",
+              "skip",
+              "restart"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "map": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The requested map, for go to map.",
+            "title": "Map"
+          },
+          "state": {
+            "description": "pending until the next match starts; timed_out if none did in time.",
+            "enum": [
+              "pending",
+              "done",
+              "timed_out"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "map",
+          "state"
+        ],
+        "title": "MatchActionModel",
+        "type": "object"
+      },
+      "OverrideModel": {
+        "properties": {
+          "live_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Value"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "server_cfg": {
+            "title": "Server Cfg",
+            "type": "boolean"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "live_value",
+          "server_cfg"
+        ],
+        "title": "OverrideModel",
+        "type": "object"
+      },
+      "OverrideRequest": {
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "OverrideRequest",
+        "type": "object"
+      },
+      "OverrideResultModel": {
+        "properties": {
+          "apply": {
+            "enum": [
+              "now",
+              "next_map",
+              "next_start",
+              "may_need_restart"
+            ],
+            "title": "Apply",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "apply"
+        ],
+        "title": "OverrideResultModel",
+        "type": "object"
+      },
+      "OverridesModel": {
+        "properties": {
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/OverrideModel"
+            },
+            "title": "Overrides",
+            "type": "array"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "running",
+          "overrides"
+        ],
+        "title": "OverridesModel",
         "type": "object"
       },
       "PlayerModel": {
@@ -171,6 +663,406 @@
         "title": "PlayerModel",
         "type": "object"
       },
+      "RotationItemModel": {
+        "properties": {
+          "installed": {
+            "title": "Installed",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "supported": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether it can be played in the gametype; null when none is known.",
+            "title": "Supported"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "name",
+          "title",
+          "installed",
+          "supported"
+        ],
+        "title": "RotationItemModel",
+        "type": "object"
+      },
+      "RotationModel": {
+        "properties": {
+          "gametype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The gametype `supported` was judged against.",
+            "title": "Gametype"
+          },
+          "maps": {
+            "items": {
+              "$ref": "#/components/schemas/RotationItemModel"
+            },
+            "title": "Maps",
+            "type": "array"
+          },
+          "shuffle": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until chosen: the game's default applies.",
+            "title": "Shuffle"
+          }
+        },
+        "required": [
+          "maps",
+          "shuffle",
+          "gametype"
+        ],
+        "title": "RotationModel",
+        "type": "object"
+      },
+      "RotationRequest": {
+        "properties": {
+          "maps": {
+            "description": "Ordered; empty means every map for the gametype.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Maps",
+            "type": "array"
+          },
+          "shuffle": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shuffle"
+          }
+        },
+        "required": [
+          "maps"
+        ],
+        "title": "RotationRequest",
+        "type": "object"
+      },
+      "RotationResultModel": {
+        "properties": {
+          "apply": {
+            "enum": [
+              "now",
+              "next_map",
+              "next_start",
+              "may_need_restart"
+            ],
+            "title": "Apply",
+            "type": "string"
+          },
+          "rotation": {
+            "$ref": "#/components/schemas/RotationModel"
+          }
+        },
+        "required": [
+          "apply",
+          "rotation"
+        ],
+        "title": "RotationResultModel",
+        "type": "object"
+      },
+      "SettingGroupModel": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "SettingGroupModel",
+        "type": "object"
+      },
+      "SettingModel": {
+        "properties": {
+          "apply": {
+            "description": "When a change to this setting takes effect on a running server.",
+            "enum": [
+              "now",
+              "next_map",
+              "next_start",
+              "may_need_restart"
+            ],
+            "title": "Apply",
+            "type": "string"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/ChoiceModel"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Default"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "help": {
+            "title": "Help",
+            "type": "string"
+          },
+          "key": {
+            "description": "The setting's id, which is the cvar it is written as.",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "string",
+              "int",
+              "float",
+              "bool",
+              "choice"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "live_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the running server currently has; null when stopped or unknown.",
+            "title": "Live Value"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "server_cfg": {
+            "description": "server.cfg also sets this; the panel's value wins.",
+            "title": "Server Cfg",
+            "type": "boolean"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "minutes",
+                  "score"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The value saved in the panel, or null when the default applies.",
+            "title": "Value"
+          },
+          "value_labels": {
+            "description": "Names for special numeric values.",
+            "items": {
+              "$ref": "#/components/schemas/ValueLabelModel"
+            },
+            "title": "Value Labels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "group",
+          "label",
+          "help",
+          "kind",
+          "default",
+          "value",
+          "live_value",
+          "apply",
+          "min",
+          "max",
+          "max_length",
+          "choices",
+          "unit",
+          "value_labels",
+          "server_cfg"
+        ],
+        "title": "SettingModel",
+        "type": "object"
+      },
+      "SettingsModel": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/SettingGroupModel"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "score_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a score limit counts for the current gametype (frags, captures...).",
+            "title": "Score Unit"
+          },
+          "settings": {
+            "items": {
+              "$ref": "#/components/schemas/SettingModel"
+            },
+            "title": "Settings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "running",
+          "groups",
+          "settings",
+          "score_unit"
+        ],
+        "title": "SettingsModel",
+        "type": "object"
+      },
+      "SettingsResultModel": {
+        "properties": {
+          "applied": {
+            "additionalProperties": {
+              "enum": [
+                "now",
+                "next_map",
+                "next_start",
+                "may_need_restart"
+              ],
+              "type": "string"
+            },
+            "description": "For each changed setting, when it takes effect.",
+            "title": "Applied",
+            "type": "object"
+          }
+        },
+        "required": [
+          "applied"
+        ],
+        "title": "SettingsResultModel",
+        "type": "object"
+      },
       "StartFailureModel": {
         "properties": {
           "at": {
@@ -203,6 +1095,17 @@
       },
       "StatusModel": {
         "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchActionModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest map action and whether it has completed."
+          },
           "bot_count": {
             "title": "Bot Count",
             "type": "integer"
@@ -301,9 +1204,68 @@
           "event_log",
           "last_crash",
           "restart_abandoned",
-          "last_start_failure"
+          "last_start_failure",
+          "action"
         ],
         "title": "StatusModel",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "ValueLabelModel": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "ValueLabelModel",
         "type": "object"
       }
     }
@@ -377,6 +1339,165 @@
         "summary": "Stream console output (server-sent events; each event is a ConsoleLine)",
         "tags": [
           "console"
+        ]
+      }
+    },
+    "/api/cvars": {
+      "get": {
+        "operationId": "search_cvars_api_cvars_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CvarPageModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "Search the game's cvars by name or description",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/gametype": {
+      "put": {
+        "operationId": "put_gametype_api_gametype_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GametypeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GametypeResultModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request was rejected; nothing changed."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "Select the gametype; it applies at the next map",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/gametypes": {
+      "get": {
+        "operationId": "get_gametypes_api_gametypes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GametypesModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "The gametypes, which of them the installed maps can play, and the selection",
+        "tags": [
+          "maps"
         ]
       }
     },
@@ -560,6 +1681,625 @@
         "summary": "Stop the server gracefully",
         "tags": [
           "lifecycle"
+        ]
+      }
+    },
+    "/api/maps": {
+      "get": {
+        "operationId": "get_maps_api_maps_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapsModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The installed maps",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/maps/{name}/preview": {
+      "get": {
+        "operationId": "get_preview_api_maps__name__preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "image/jpeg": {},
+              "image/png": {}
+            },
+            "description": "The image."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The map has no preview image."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A map's preview image",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/match/goto": {
+      "post": {
+        "operationId": "goto_api_match_goto_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GotoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchActionModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not valid in the current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The map is not installed or not playable."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server exited while starting."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The game is not installed."
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server did not become ready in time."
+          }
+        },
+        "summary": "End the match with the scoreboard and go to a map, with no vote",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/match/restart": {
+      "post": {
+        "operationId": "restart_api_match_restart_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchActionModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not valid in the current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The map is not installed or not playable."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server exited while starting."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The game is not installed."
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server did not become ready in time."
+          }
+        },
+        "summary": "Restart the current match on the same map",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/match/skip": {
+      "post": {
+        "operationId": "skip_api_match_skip_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchActionModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not valid in the current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The map is not installed or not playable."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server exited while starting."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The game is not installed."
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The server did not become ready in time."
+          }
+        },
+        "summary": "End the match early; the game then votes or rotates as usual",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/rotation": {
+      "get": {
+        "operationId": "get_rotation_api_rotation_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotationModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "The map rotation as saved",
+        "tags": [
+          "maps"
+        ]
+      },
+      "put": {
+        "operationId": "put_rotation_api_rotation_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotationResultModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request was rejected; nothing changed."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "Set the map rotation and shuffle; it applies at the next map",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "operationId": "get_settings_api_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "The curated settings with their saved, default and live values",
+        "tags": [
+          "settings"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_settings_api_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "title": "Changes",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResultModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The value or name was rejected; nothing saved."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "Save settings; null resets one to its default",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/overrides": {
+      "get": {
+        "operationId": "get_overrides_api_settings_overrides_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverridesModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "The raw cvar overrides",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/overrides/{name}": {
+      "delete": {
+        "operationId": "delete_override_api_settings_overrides__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverrideResultModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The value or name was rejected; nothing saved."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "Remove a raw cvar override",
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "operationId": "put_override_api_settings_overrides__name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverrideResultModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The value or name was rejected; nothing saved."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "Add or change a raw cvar override",
+        "tags": [
+          "settings"
         ]
       }
     },

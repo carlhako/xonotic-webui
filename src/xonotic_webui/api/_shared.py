@@ -42,8 +42,11 @@ LIFECYCLE_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 }
 
 
-def api_error(status: int, code: str, message: str) -> HTTPException:
-    return HTTPException(status_code=status, detail={"code": code, "message": message})
+def api_error(status: int, code: str, message: str, field: str | None = None) -> HTTPException:
+    detail: dict[str, Any] = {"code": code, "message": message}
+    if field is not None:
+        detail["field"] = field
+    return HTTPException(status_code=status, detail=detail)
 
 
 def http_error_from_supervisor(exc: SupervisorError) -> HTTPException:
