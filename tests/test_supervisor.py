@@ -107,9 +107,63 @@ async def test_start_reaches_running_and_launches_as_designed(
     # the wrapper runs the operator's config then forces what the panel depends on
     wrapper = rec["wrapper_cfg"]
     assert wrapper.index("exec server.cfg") < wrapper.index("sv_eventlog 1")
+    # the panel's generated settings run between the operator's config and the forced cvars
+    assert wrapper.index("exec server.cfg") < wrapper.index("exec xonotic-webui-settings.cfg")
+    assert wrapper.index("exec xonotic-webui-settings.cfg") < wrapper.index("sv_eventlog 1")
     assert "sv_eventlog_console 1" in wrapper
     assert "sv_eventlog_ipv6_delimiter 1" in wrapper
     assert "sys_colortranslation 2" in wrapper
+
+
+async def test_wrapper_line_order_is_server_cfg_then_settings_then_forced_cvars(
+    sup: Supervisor, settings: Settings
+) -> None:
+    await sup.start()
+    lines = [
+        ln for ln in launch_record(settings)["wrapper_cfg"].splitlines() if not ln.startswith("//")
+    ]
+    assert lines == [
+        "exec server.cfg",
+        "exec xonotic-webui-settings.cfg",
+        "sv_eventlog 1",
+        "sv_eventlog_console 1",
+        "sv_eventlog_ipv6_delimiter 1",
+        "sys_colortranslation 2",
+    ]
+
+
+async def test_an_empty_store_produces_a_header_only_settings_config(
+    sup: Supervisor, settings: Settings
+) -> None:
+    await sup.start()
+    cfg = launch_record(settings)["configs"]["xonotic-webui-settings.cfg"]
+    assert cfg.startswith("// Managed by xonotic-webui")
+    assert [ln for ln in cfg.splitlines() if not ln.startswith("//")] == []
+
+
+async def test_the_settings_config_is_rendered_again_on_every_start(
+    settings: Settings, make_sup: Callable[..., Supervisor]
+) -> None:
+    texts = iter(['hostname "first"\n', 'hostname "second"\n'])
+    sup = make_sup(settings, settings_cfg=lambda: next(texts))
+    await sup.start()
+    assert launch_record(settings)["configs"]["xonotic-webui-settings.cfg"] == 'hostname "first"\n'
+    await sup.restart()
+    assert launch_record(settings)["configs"]["xonotic-webui-settings.cfg"] == 'hostname "second"\n'
+
+
+async def test_a_failing_renderer_does_not_stop_the_server_starting(
+    settings: Settings, make_sup: Callable[..., Supervisor]
+) -> None:
+    def boom() -> str:
+        raise RuntimeError("settings.json is broken")
+
+    sup = make_sup(settings, settings_cfg=boom)
+    await sup.start()
+    assert sup.state is RunState.RUNNING
+    cfg = launch_record(settings)["configs"]["xonotic-webui-settings.cfg"]
+    assert [ln for ln in cfg.splitlines() if not ln.startswith("//")] == []
+    assert any("panel settings not applied" in ln.text for ln in sup.console.snapshot())
 
 
 async def test_start_requires_an_installation(

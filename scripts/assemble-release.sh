@@ -33,6 +33,7 @@ pkg = sys.argv[2]
 assert f"{pkg}/static/index.html" in names, "wheel is missing the built frontend"
 assert any(n.startswith(f"{pkg}/static/assets/") for n in names), "wheel has no assets"
 assert f"{pkg}/__main__.py" in names
+assert f"{pkg}/serversettings/cvars.json" in names, "wheel is missing the cvar catalogue"
 leaked = [n for n in names if n.endswith((".ts", ".tsx"))]
 assert not leaked, f"frontend source in the wheel: {leaked}"
 print("wheel OK:", sys.argv[1])

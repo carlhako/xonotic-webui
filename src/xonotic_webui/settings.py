@@ -136,6 +136,11 @@ class Settings(BaseSettings):
     def state_file(self) -> Path:
         return self.state_dir / "state.json"
 
+    @property
+    def game_settings_file(self) -> Path:
+        """The operator's server settings, as saved from the panel."""
+        return self.state_dir / "settings.json"
+
     @classmethod
     def settings_customise_sources(
         cls,

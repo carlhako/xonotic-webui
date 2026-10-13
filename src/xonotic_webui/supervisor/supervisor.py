@@ -30,11 +30,14 @@ from pathlib import Path
 from xonotic_webui.console.buffer import ConsoleBuffer
 from xonotic_webui.events import GameStart, is_loaded_map, is_map_line, parse_event
 from xonotic_webui.logging import get_logger
+from xonotic_webui.serversettings.registry import FORCED_CVARS
+from xonotic_webui.serversettings.store import CONFIG_HEADER
 from xonotic_webui.settings import APP_NAME, Settings
 from xonotic_webui.supervisor.process import XonoticProcess
 from xonotic_webui.supervisor.state import RunState, StateListener, StateMachine
 
 __all__ = [
+    "SETTINGS_CONFIG_NAME",
     "WRAPPER_CONFIG_NAME",
     "AlreadyRunningError",
     "CrashInfo",
@@ -52,19 +55,19 @@ log = get_logger("supervisor")
 
 LineSink = Callable[[str], None]
 
-# The panel-owned config the server is launched with (design D3). It runs the operator's
-# server.cfg and then forces the settings the panel depends on, so a user config cannot
-# turn the event log off or the console colours back into ANSI escapes.
+# The panel-owned config the server is launched with (bootstrap design D3). It runs the
+# operator's server.cfg, then the panel's generated settings (config-and-maps D1), and
+# only then forces what the panel depends on, so neither a user config nor a panel
+# setting can turn the event log off or the console colours back into ANSI escapes.
 WRAPPER_CONFIG_NAME = f"{APP_NAME}.cfg"
-_WRAPPER_CONFIG = f"""\
-// Managed by {APP_NAME}: rewritten on every start, do not edit.
-// Run the operator's configuration, then force what the panel depends on (design D3).
-exec server.cfg
-sv_eventlog 1
-sv_eventlog_console 1
-sv_eventlog_ipv6_delimiter 1
-sys_colortranslation 2
-"""
+SETTINGS_CONFIG_NAME = f"{APP_NAME}-settings.cfg"
+_WRAPPER_CONFIG = (
+    f"// Managed by {APP_NAME}: rewritten on every start, do not edit.\n"
+    "// Run the operator's configuration, then the panel's settings, then force what the\n"
+    "// panel depends on.\n"
+    "exec server.cfg\n"
+    f"exec {SETTINGS_CONFIG_NAME}\n" + "".join(f"{name} {value}\n" for name, value in FORCED_CVARS)
+)
 
 # After a quit that is not honoured: SIGTERM, wait this long, then SIGKILL.
 _TERM_GRACE = 5.0
@@ -131,6 +134,17 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def write_userdir_config(settings: Settings, name: str, text: str) -> Path:
+    """Atomically write ``text`` as ``userdir/data/<name>``; returns the path."""
+    data_dir = settings.userdir / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    path = data_dir / name
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text)
+    tmp.replace(path)
+    return path
+
+
 class Supervisor:
     def __init__(
         self,
@@ -140,8 +154,12 @@ class Supervisor:
         clock: Callable[[], float] = time.monotonic,
         probe_after: float = 8.0,
         probe_interval: float = 2.0,
+        settings_cfg: Callable[[], str] | None = None,
     ) -> None:
         self._settings = settings
+        # Renders the panel-owned settings config at every start. Without one the file is
+        # header-only, which changes nothing.
+        self._settings_cfg = settings_cfg
         self._sink = line_sink
         self._clock = clock
         self._probe_after = probe_after
@@ -196,6 +214,10 @@ class Supervisor:
 
     def set_line_sink(self, sink: LineSink) -> None:
         self._sink = sink
+
+    def set_settings_cfg(self, render: Callable[[], str]) -> None:
+        """Provide what the generated settings config contains at every start."""
+        self._settings_cfg = render
 
     def _notify_change(self) -> None:
         for listener in list(self._change_listeners):
@@ -262,12 +284,18 @@ class Supervisor:
             self._persist_desired(running=True)
 
     def _write_wrapper_config(self) -> None:
-        data_dir = self._settings.userdir / "data"
-        data_dir.mkdir(parents=True, exist_ok=True)
-        path = data_dir / WRAPPER_CONFIG_NAME
-        tmp = path.with_name(path.name + ".tmp")
-        tmp.write_text(_WRAPPER_CONFIG)
-        tmp.replace(path)
+        write_userdir_config(self._settings, WRAPPER_CONFIG_NAME, _WRAPPER_CONFIG)
+
+    def _write_settings_config(self) -> None:
+        text = CONFIG_HEADER
+        if self._settings_cfg is not None:
+            try:
+                text = self._settings_cfg()
+            except Exception as exc:
+                # An unreadable settings store must not keep the server from starting.
+                log.exception("could not generate the settings config")
+                self.console.add_marker(f"— panel settings not applied: {exc} —")
+        write_userdir_config(self._settings, SETTINGS_CONFIG_NAME, text)
 
     def _argv(self) -> list[str]:
         s = self._settings
@@ -284,6 +312,7 @@ class Supervisor:
         ]
 
     async def _spawn(self) -> _Run:
+        self._write_settings_config()
         self._write_wrapper_config()
         # Mark the run boundary so a restart is distinguishable within the history.
         if len(self.console) > 0:

@@ -7,6 +7,8 @@
 
 from xonotic_webui.supervisor.state import RunState, TransitionError
 from xonotic_webui.supervisor.supervisor import (
+    SETTINGS_CONFIG_NAME,
+    WRAPPER_CONFIG_NAME,
     AlreadyRunningError,
     CrashInfo,
     NoInstallationError,
@@ -17,9 +19,12 @@ from xonotic_webui.supervisor.supervisor import (
     Supervisor,
     SupervisorError,
     TransitionInProgressError,
+    write_userdir_config,
 )
 
 __all__ = [
+    "SETTINGS_CONFIG_NAME",
+    "WRAPPER_CONFIG_NAME",
     "AlreadyRunningError",
     "CrashInfo",
     "NoInstallationError",
@@ -32,4 +37,5 @@ __all__ = [
     "SupervisorError",
     "TransitionError",
     "TransitionInProgressError",
+    "write_userdir_config",
 ]
