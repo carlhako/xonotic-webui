@@ -1,0 +1,52 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # The ONLY place Node runs: the release contains the compiled bundle, never the
+      # frontend source, so the target host needs no Node and no compiler.
+      - name: Build frontend
+        run: |
+          npm --prefix web ci
+          npm --prefix web run build
+          test -f src/xonotic_webui/static/index.html
+
+      # A pure-python wheel that carries the prebuilt static/ bundle (force-include in
+      # pyproject.toml). The installer installs it by path and resolves dependencies as
+      # prebuilt wheels.
+      - name: Build wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel --outdir dist
+          ls dist/xonotic_webui-*-py3-none-any.whl
+
+      # Asserts the wheel carries the interface and that no frontend source ships.
+      - name: Assemble release assets
+        run: scripts/assemble-release.sh release
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release/xonotic-webui.tar.gz
+            release/install.sh
+          fail_on_unmatched_files: true

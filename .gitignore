@@ -8,8 +8,7 @@ venv/
 .ruff_cache/
 
 # Build output (the frontend bundle is built into the package by CI / locally)
-src/*/static/*
-!src/*/static/.gitkeep
+src/*/static/
 wheelhouse/
 dist/
 build/
@@ -22,3 +21,4 @@ web/dist/
 # Local
 *.log
 .DS_Store
+release/

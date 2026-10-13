@@ -32,7 +32,7 @@
 - [x] 4.5 Implement conflict rejection (start while running, stop while stopped, request during transition); verify one test per scenario in server-lifecycle
 - [x] 4.6 Implement bounded crash restart (threshold, window, zero disables) and crash recording; verify tests for single crash, crash loop and disabled
 - [x] 4.7 Persist intended run state to `state.json` and restore it on panel start; verify tests for restart-while-running, deliberately stopped, and crash not altering intent
-- [ ] 4.8 Stop the server cleanly on panel shutdown with no orphan process; verify with a test that the child is gone after the app exits and with `KillMode`/timeouts reasoned in the unit file comments
+- [x] 4.8 Stop the server cleanly on panel shutdown with no orphan process; verify with a test that the child is gone after the app exits and with `KillMode`/timeouts reasoned in the unit file comments
 
 ## 5. Console (server-console)
 
@@ -69,13 +69,13 @@
 
 ## 9. Installer, service and release
 
-- [ ] 9.1 Write `deploy/xonotic-webui.service` (unprivileged user, `CAP_NET_BIND_SERVICE` only, hardening, `TimeoutStopSec` above the shutdown timeout, `Restart=on-failure`); verify with `systemd-analyze verify`
-- [ ] 9.2 Write `deploy/install.sh` preflight: root, amd64, apt, free-space check from task 2.5; verify by running it as non-root and with a mocked architecture and low-space condition (installation: platform requirement)
+- [x] 9.1 Write `deploy/xonotic-webui.service` (unprivileged user, `CAP_NET_BIND_SERVICE` only, hardening, `TimeoutStopSec` above the shutdown timeout, `Restart=on-failure`); verify with `systemd-analyze verify`
+- [x] 9.2 Write `deploy/install.sh` preflight: root, amd64, apt, free-space check from task 2.5; verify by running it as non-root and with a mocked architecture and low-space condition (installation: platform requirement)
 - [ ] 9.3 Implement user creation, directory layout, root-owned application and game tree and writable userdir; verify ownership and the service user's inability to write the app tree
-- [ ] 9.4 Implement the game archive download with resume, pinned SHA-256 check, local-archive path, and cleanup on mismatch; verify a corrupted-archive test leaves no unverified files
-- [ ] 9.5 Implement panel install from the release tarball with prebuilt wheels only, `RELEASE_TAG` pinning and offline tarball path; verify a run with no Node or compiler present
-- [ ] 9.6 Seed `server.cfg` only when absent with the event log enabled and never overwrite; verify a re-run leaves an edited file byte-identical
-- [ ] 9.7 Implement the venv swap, health wait and rollback on failure plus the final URL and game-port report; verify a simulated bad release restores the previous version and exits non-zero
+- [x] 9.4 Implement the game archive download with resume, pinned SHA-256 check, local-archive path, and cleanup on mismatch; verify a corrupted-archive test leaves no unverified files
+- [x] 9.5 Implement panel install from the release tarball with prebuilt wheels only, `RELEASE_TAG` pinning and offline tarball path; verify a run with no Node or compiler present
+- [x] 9.6 Seed `server.cfg` only when absent with the event log enabled and never overwrite; verify a re-run leaves an edited file byte-identical
+- [x] 9.7 Implement the venv swap, health wait and rollback on failure plus the final URL and game-port report; verify a simulated bad release restores the previous version and exits non-zero
 - [ ] 9.8 Add `.github/workflows/ci.yml` (ruff, pytest, frontend lint and tests) and `.github/workflows/release.yml` (tag build, bundle-in-wheel assertion, publish tarball and `install.sh`); verify CI is green on `main` and a test tag produces both release assets
 - [ ] 9.9 Write the README: requirements, the install one-liner for the public repo, ports to open (web, UDP 26000), filesystem layout, settings table, re-run-to-upgrade, security stance (LAN only, no auth); verify every documented command was executed once as written
 

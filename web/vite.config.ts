@@ -1,18 +1,6 @@
 /// <reference types="vitest/config" />
-import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-
-// `emptyOutDir` removes the tracked .gitkeep that keeps the (otherwise ignored) static
-// directory present in a fresh checkout; put it back after every build.
-const keepGitkeep = (): Plugin => ({
-  name: "keep-gitkeep",
-  apply: "build",
-  closeBundle() {
-    writeFileSync(resolve(__dirname, "../src/xonotic_webui/static/.gitkeep"), "");
-  },
-});
 
 // The build emits the static bundle straight into the Python package so the FastAPI
 // process can serve it (design D11). `npm run dev` proxies API and SSE calls to a
@@ -25,7 +13,7 @@ const keepGitkeep = (): Plugin => ({
 const backend = `http://127.0.0.1:${process.env.XONOTIC_WEBUI_PORT ?? "80"}`;
 
 export default defineConfig({
-  plugins: [react(), keepGitkeep()],
+  plugins: [react()],
   build: {
     outDir: "../src/xonotic_webui/static",
     emptyOutDir: true,

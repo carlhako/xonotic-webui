@@ -1,0 +1,70 @@
+[Unit]
+Description=xonotic-webui — Xonotic dedicated server control panel
+Documentation=https://github.com/carlhako/xonotic-webui
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=xonotic-webui
+Group=xonotic-webui
+
+# Installed layout (design D5).
+WorkingDirectory=/opt/xonotic-webui
+Environment=PYTHONUNBUFFERED=1
+Environment=XONOTIC_WEBUI_GAME_ROOT=/opt/xonotic/0.8.6
+Environment=XONOTIC_WEBUI_STATE_DIR=/var/lib/xonotic-webui
+# Optional overrides (port, game port, timeouts); the leading "-" makes it optional.
+EnvironmentFile=-/etc/xonotic-webui/xonotic-webui.env
+
+ExecStart=/opt/xonotic-webui/venv/bin/python -m xonotic_webui
+
+# A panel crash becomes an outage of seconds, not until someone notices. The game
+# server is started again by the panel on its next start if it was running when the
+# panel last stopped (state.json), so a crashed panel does not leave it stopped.
+Restart=on-failure
+RestartSec=3
+
+# --- stopping -------------------------------------------------------------------
+# On stop the panel does, in order:
+#   1. stop accepting requests and end open event streams (bounded: 10s, uvicorn's
+#      timeout_graceful_shutdown, see __main__.py),
+#   2. send `quit` to the game server and wait up to XONOTIC_WEBUI_SHUTDOWN_TIMEOUT
+#      (default 60s),
+#   3. if it is still up, SIGTERM then wait 5s, then SIGKILL and wait up to 10s.
+# Worst case is therefore 10 + 60 + 5 + 10 = 85s. TimeoutStopSec MUST exceed that, or
+# systemd would SIGKILL the panel mid-shutdown and leave the game server to be killed
+# without a clean exit. 120s leaves margin. If you raise
+# XONOTIC_WEBUI_SHUTDOWN_TIMEOUT, raise this by the same amount.
+TimeoutStopSec=120
+# mixed: SIGTERM goes to the panel only, so it can run the sequence above itself. Only
+# if the panel is still alive after TimeoutStopSec does systemd SIGKILL everything left
+# in the cgroup, game server included, so a stop can never leave an orphan behind.
+KillMode=mixed
+KillSignal=SIGTERM
+
+# The panel serves the web interface on port 80 (XONOTIC_WEBUI_PORT). Ports below 1024
+# are privileged and it runs unprivileged, so grant exactly the capability to bind one.
+# Ambient capabilities are applied before exec, so NoNewPrivileges=true does not block
+# them.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# Hardening. The panel and the game it supervises write only to their state directory;
+# the application and the game tree are root-owned and read-only to them.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/var/lib/xonotic-webui
+StateDirectory=xonotic-webui
+
+[Install]
+WantedBy=multi-user.target
