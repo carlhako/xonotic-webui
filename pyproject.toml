@@ -31,9 +31,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/xonotic_webui"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/xonotic_webui/static" = "xonotic_webui/static"
+# The built web interface is git-ignored build output, so say explicitly that the wheel
+# carries it. (Not a force-include: that fails an editable install on a fresh checkout,
+# before the frontend has been built. scripts/assemble-release.sh asserts the wheel has it.)
+artifacts = ["src/xonotic_webui/static/**"]
 
 [tool.ruff]
 line-length = 100
