@@ -25,13 +25,13 @@
 
 ## 4. Supervisor (server-lifecycle)
 
-- [ ] 4.1 Add the fake dedicated server test double driven by the spike fixtures (startup output, ready line, event lines, `status` reply, honours `quit`, optional crash and hang modes); verify it runs standalone from the test suite
-- [ ] 4.2 Port the process wrapper (spawn with `-userdir` and game port, line reader, stdin writer, signals) and the four-state machine with compare-and-transition; verify unit tests for each legal and illegal transition
-- [ ] 4.3 Implement start with readiness detection and timeout, and the missing-installation error; verify tests: ready within timeout, never ready, exit during startup, game files missing
-- [ ] 4.4 Implement graceful stop (`quit`, wait, `SIGTERM`, `SIGKILL`) and restart as a single operation; verify tests for clean exit and for a server that ignores `quit`
-- [ ] 4.5 Implement conflict rejection (start while running, stop while stopped, request during transition); verify one test per scenario in server-lifecycle
-- [ ] 4.6 Implement bounded crash restart (threshold, window, zero disables) and crash recording; verify tests for single crash, crash loop and disabled
-- [ ] 4.7 Persist intended run state to `state.json` and restore it on panel start; verify tests for restart-while-running, deliberately stopped, and crash not altering intent
+- [x] 4.1 Add the fake dedicated server test double driven by the spike fixtures (startup output, ready line, event lines, `status` reply, honours `quit`, optional crash and hang modes); verify it runs standalone from the test suite
+- [x] 4.2 Port the process wrapper (spawn with `-userdir` and game port, line reader, stdin writer, signals) and the four-state machine with compare-and-transition; verify unit tests for each legal and illegal transition
+- [x] 4.3 Implement start with readiness detection and timeout, and the missing-installation error; verify tests: ready within timeout, never ready, exit during startup, game files missing
+- [x] 4.4 Implement graceful stop (`quit`, wait, `SIGTERM`, `SIGKILL`) and restart as a single operation; verify tests for clean exit and for a server that ignores `quit`
+- [x] 4.5 Implement conflict rejection (start while running, stop while stopped, request during transition); verify one test per scenario in server-lifecycle
+- [x] 4.6 Implement bounded crash restart (threshold, window, zero disables) and crash recording; verify tests for single crash, crash loop and disabled
+- [x] 4.7 Persist intended run state to `state.json` and restore it on panel start; verify tests for restart-while-running, deliberately stopped, and crash not altering intent
 - [ ] 4.8 Stop the server cleanly on panel shutdown with no orphan process; verify with a test that the child is gone after the app exits and with `KillMode`/timeouts reasoned in the unit file comments
 
 ## 5. Console (server-console)
