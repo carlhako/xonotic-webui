@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Build output (the frontend bundle is built into the package by CI / locally)
+src/*/static/*
+!src/*/static/.gitkeep
+wheelhouse/
+dist/
+build/
+xonotic-webui.tar.gz
+
+# Node
+web/node_modules/
+web/dist/
+
+# Local
+*.log
+.DS_Store
