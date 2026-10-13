@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -198,6 +199,107 @@ def test_layout_has_root_owned_application_and_game_trees(sb: Sandbox) -> None:
     assert "-o xonotic-webui -g xonotic-webui" in owners
 
 
+def _userns_available() -> bool:
+    """Unprivileged user namespace with a subuid range, a mount namespace and setpriv."""
+    if os.geteuid() == 0 or not all(shutil.which(t) for t in ("unshare", "setpriv")):
+        return False
+    r = subprocess.run(
+        ["unshare", "--map-root-user", "--map-auto", "--mount", "true"],
+        capture_output=True,
+        check=False,
+    )
+    return r.returncode == 0
+
+
+USERNS_SCRIPT = r"""
+set -euo pipefail
+umask 022
+tmp="$1"
+# A passwd/group the installer's user lands in, as useradd --system would make it.
+cp /etc/passwd "$tmp/passwd"; cp /etc/group "$tmp/group"
+mount --bind "$tmp/passwd" /etc/passwd; mount --bind "$tmp/group" /etc/group
+mkdir -p "$tmp/bin"
+cat >"$tmp/bin/useradd" <<'SH'
+#!/bin/bash
+echo "xonotic-webui:x:4242:4242::/var/lib/xonotic-webui:/usr/sbin/nologin" >>/etc/passwd
+echo "xonotic-webui:x:4242:" >>/etc/group
+SH
+chmod +x "$tmp/bin/useradd"
+export PATH="$tmp/bin:$PATH"
+# A tmpfs so every path component is traversable by the service user.
+mount -t tmpfs tmpfs /mnt
+export DESTDIR=/mnt/dest
+source "$INSTALL"
+ensure_user; ensure_user
+ensure_dirs; ensure_dirs
+mkdir -p "$GAME_DIR/data" "$PREFIX/venv/bin"
+printf '#!/bin/sh\n' >"$GAME_DIR/xonotic-linux64-dedicated"
+chmod 0755 "$GAME_DIR/xonotic-linux64-dedicated"
+echo d >"$GAME_DIR/data/a.pk3"; echo x >"$PREFIX/venv/bin/python"
+chmod 0755 "$PREFIX/venv/bin/python"
+repair_ownership; verify_layout; echo VERIFIED
+stat -c 'OWNER %U:%G %a %n' "$PREFIX" "$GAME_PARENT" "$GAME_DIR" \
+  "$STATE_DIR" "$USERDIR" "$USERDIR/data"
+for d in "$PREFIX" "$PREFIX/venv" "$GAME_PARENT" "$GAME_DIR" "$GAME_DIR/data" "$ETC_DIR"; do
+  as_service_user touch "$d/probe" 2>/dev/null && echo "WROTE $d" || echo "DENIED $d"
+done
+for d in "$STATE_DIR" "$USERDIR" "$USERDIR/data"; do
+  as_service_user touch "$d/probe" && echo "ALLOWED $d" || echo "BLOCKED $d"
+done
+# sabotage: a group-writable app file, a service-user-owned game file, a root-owned state file
+chmod 0777 "$PREFIX/venv/bin"; chown 4242:4242 "$GAME_DIR/data/a.pk3"
+echo cfg >"$USERDIR/data/server.cfg"
+if ( verify_layout ) 2>/dev/null; then echo "MISSED-SABOTAGE"; else echo "CAUGHT-SABOTAGE"; fi
+repair_ownership; verify_layout; echo REPAIRED
+stat -c 'OWNER %U %n' "$GAME_DIR/data/a.pk3" "$USERDIR/data/server.cfg"
+chown 4242:4242 "$PREFIX"
+if ( verify_layout ) 2>/dev/null; then echo MISSED-OWNED-PREFIX
+else echo CAUGHT-OWNED-PREFIX; fi
+"""
+
+
+@pytest.mark.skipif(not _userns_available(), reason="needs unprivileged user namespaces + subuid")
+def test_layout_is_enforced_for_real_in_a_user_namespace(tmp_path: Path) -> None:
+    """Ownership and the service user's inability to write the app tree, for real.
+
+    Runs the installer's own functions as (namespace) root with a real, distinct service
+    uid: `install -o`, `chown` and the kernel's permission checks are not stubbed."""
+    r = subprocess.run(
+        [
+            "unshare",
+            "--map-root-user",
+            "--map-auto",
+            "--mount",
+            "bash",
+            "-c",
+            USERNS_SCRIPT,
+            "bash",
+            str(tmp_path),
+        ],
+        env={**os.environ, "INSTALL": str(INSTALL)},
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    out = r.stdout
+    assert "VERIFIED" in out
+    for rel in ("opt/xonotic-webui", "opt/xonotic", "opt/xonotic/0.8.6"):
+        assert f"OWNER root:root 755 /mnt/dest/{rel}\n" in out, out
+    for rel in ("var/lib/xonotic-webui", "var/lib/xonotic-webui/userdir"):
+        assert f"OWNER xonotic-webui:xonotic-webui 755 /mnt/dest/{rel}\n" in out, out
+    assert out.count("DENIED") == 6
+    assert "WROTE" not in out
+    assert out.count("ALLOWED") == 3
+    assert "BLOCKED" not in out
+    assert "CAUGHT-SABOTAGE" in out
+    assert "REPAIRED" in out
+    assert "OWNER root /mnt/dest/opt/xonotic/0.8.6/data/a.pk3" in out
+    assert "OWNER xonotic-webui /mnt/dest/var/lib/xonotic-webui/userdir/data/server.cfg" in out
+    assert "CAUGHT-OWNED-PREFIX" in out
+
+
 # --- 9.4 the game -----------------------------------------------------------------------------
 
 
@@ -220,6 +322,19 @@ def test_matching_local_archive_is_extracted_minimally(sb: Sandbox) -> None:
     assert not (game / "source").exists()
     assert archive.exists(), "a user-supplied archive is never deleted"
     assert not (sb.root / "opt" / "xonotic" / ".staging-0.8.6").exists()
+
+
+def test_local_archive_is_used_instead_of_downloading(sb: Sandbox) -> None:
+    archive = sb.tmp / "game.zip"
+    digest = make_game_zip(archive)
+    sb.shim("curl", "exit 22")  # any download attempt fails the install
+    r = sb.call(
+        f'XONOTIC_SHA256="{digest}"; mkdir -p "$GAME_PARENT" "$CACHE_DIR"; install_game',
+        XONOTIC_ARCHIVE=str(archive),
+    )
+    assert r.returncode == 0, r.stderr
+    assert sb.called("curl") == []
+    assert (sb.root / "opt" / "xonotic" / "0.8.6" / "xonotic-linux64-dedicated").is_file()
 
 
 def test_digest_mismatch_fails_and_leaves_no_unverified_files(sb: Sandbox) -> None:

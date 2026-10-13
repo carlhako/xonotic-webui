@@ -138,6 +138,63 @@ ensure_dirs() {
   install -d -m 0755 -o root -g root "$ETC_DIR" "$CACHE_DIR"
 }
 
+# Entries under $1 that the service user could change: not owned by root, or writable by
+# group/other (symlinks carry no mode of their own). Prints the first, if any.
+tampering_risk() {
+  [ -e "$1" ] || return 0
+  find "$1" \( ! -uid 0 -o \( ! -type l -a -perm /022 \) \) -print -quit
+}
+
+# Re-runs are the repair path: put the root-owned trees back to root-owned and
+# not group/other-writable, and give the state directory back to the service user, in case
+# a previous run, an unzip or a hand edit as root left them otherwise. Contents are never
+# rewritten, only their ownership and mode.
+repair_ownership() {
+  local p
+  for p in "$PREFIX" "$GAME_PARENT"; do
+    if [ -n "$(tampering_risk "$p")" ]; then
+      log "restoring root ownership of $p"
+      chown -R root:root "$p"
+      chmod -R go-w "$p"
+    fi
+  done
+  if [ -n "$(find "$STATE_DIR" ! -user "$SERVICE_USER" -print -quit)" ]; then
+    log "restoring ownership of $STATE_DIR to $SERVICE_USER"
+    chown -R "$SERVICE_USER:$SERVICE_USER" "$STATE_DIR"
+  fi
+}
+
+# Run "$@" as the service user with no supplementary groups (the least it can ever have).
+as_service_user() {
+  setpriv --reuid "$(id -u "$SERVICE_USER")" --regid "$(id -g "$SERVICE_USER")" \
+    --clear-groups -- "$@"
+}
+
+# Prove the layout rather than assume it: the application and game trees are root's and
+# the service user can neither write to them nor leave anything behind in them, while it
+# can write its own state and read and run what it needs. Fails before the service is
+# touched.
+verify_layout() {
+  local p risk
+  for p in "$PREFIX" "$GAME_PARENT" "$ETC_DIR"; do
+    [ -d "$p" ] || die "layout check: $p is missing"
+    [ "$(stat -c %u "$p")" -eq 0 ] || die "layout check: $p is not owned by root"
+    risk="$(tampering_risk "$p")"
+    [ -z "$risk" ] || die "layout check: $risk is changeable by the service user"
+    if as_service_user test -w "$p"; then
+      die "layout check: the service user can write to $p"
+    fi
+    as_service_user test -x "$p" || die "layout check: the service user cannot enter $p"
+  done
+  if [ -x "$GAME_DIR/xonotic-linux64-dedicated" ]; then
+    as_service_user test -x "$GAME_DIR/xonotic-linux64-dedicated" \
+      || die "layout check: the service user cannot run the game server"
+  fi
+  for p in "$STATE_DIR" "$USERDIR" "$USERDIR/data"; do
+    as_service_user test -w "$p" || die "layout check: the service user cannot write to $p"
+  done
+}
+
 # --- the game ---------------------------------------------------------------------
 sha256_of() { sha256sum "$1" | awk '{print $1}'; }
 
@@ -379,10 +436,12 @@ main() {
   ensure_user
   ensure_dirs
   install_game
+  repair_ownership
   seed_server_cfg
   seed_env_file
   fetch_release
   build_venv
+  verify_layout
   swap_and_start
   report
 }

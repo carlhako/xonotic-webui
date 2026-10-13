@@ -71,21 +71,21 @@
 
 - [x] 9.1 Write `deploy/xonotic-webui.service` (unprivileged user, `CAP_NET_BIND_SERVICE` only, hardening, `TimeoutStopSec` above the shutdown timeout, `Restart=on-failure`); verify with `systemd-analyze verify`
 - [x] 9.2 Write `deploy/install.sh` preflight: root, amd64, apt, free-space check from task 2.5; verify by running it as non-root and with a mocked architecture and low-space condition (installation: platform requirement)
-- [ ] 9.3 Implement user creation, directory layout, root-owned application and game tree and writable userdir; verify ownership and the service user's inability to write the app tree
+- [x] 9.3 Implement user creation, directory layout, root-owned application and game tree and writable userdir; verify ownership and the service user's inability to write the app tree
 - [x] 9.4 Implement the game archive download with resume, pinned SHA-256 check, local-archive path, and cleanup on mismatch; verify a corrupted-archive test leaves no unverified files
 - [x] 9.5 Implement panel install from the release tarball with prebuilt wheels only, `RELEASE_TAG` pinning and offline tarball path; verify a run with no Node or compiler present
 - [x] 9.6 Seed `server.cfg` only when absent with the event log enabled and never overwrite; verify a re-run leaves an edited file byte-identical
 - [x] 9.7 Implement the venv swap, health wait and rollback on failure plus the final URL and game-port report; verify a simulated bad release restores the previous version and exits non-zero
 - [x] 9.8 Add `.github/workflows/ci.yml` (ruff, pytest, frontend lint and tests) and `.github/workflows/release.yml` (tag build, bundle-in-wheel assertion, publish tarball and `install.sh`); verify CI is green on `main` and a test tag produces both release assets
-- [ ] 9.9 Write the README: requirements, the install one-liner for the public repo, ports to open (web, UDP 26000), filesystem layout, settings table, re-run-to-upgrade, security stance (LAN only, no auth); verify every documented command was executed once as written
+- [x] 9.9 Write the README: requirements, the install one-liner for the public repo, ports to open (web, UDP 26000), filesystem layout, settings table, re-run-to-upgrade, security stance (LAN only, no auth); verify every documented command was executed once as written
 
 ## 10. End-to-end verification
 
-- [ ] 10.1 On a clean Debian 13 LXC, install with the one-liner from the public repo and open the web UI; verify the installer exits zero and prints a working URL
+- [x] 10.1 On a clean Debian 13 LXC, install with the one-liner from the public repo and open the web UI; verify the installer exits zero and prints a working URL
 - [x] 10.2 With a real game client, join the server, change name, leave; verify the dashboard shows the player and the console shows the lines with colours rendered
 - [x] 10.3 Exercise start, stop, restart, kill -9 of the game process (crash restart) and a crash loop; verify behaviour matches server-lifecycle scenarios
-- [ ] 10.4 Re-run the installer on the live container; verify server configuration is unchanged, no re-download occurs, and the server comes back
-- [ ] 10.5 Walk every scenario in the five specs and tick them off; verify none is unexercised, and run `openspec validate bootstrap-xonotic-webui --strict`
+- [x] 10.4 Re-run the installer on the live container; verify server configuration is unchanged, no re-download occurs, and the server comes back
+- [x] 10.5 Walk every scenario in the five specs and tick them off; verify none is unexercised, and run `openspec validate bootstrap-xonotic-webui --strict`
 
 ## Workflow follow-up
 

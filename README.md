@@ -23,7 +23,9 @@ Xonotic **0.8.6** is the only supported game version.
 - Debian 12 or 13, **amd64** (a Proxmox LXC works)
 - root, to install; the panel and the game server then run as an unprivileged user
 - about **1.2 GB to download** and about **3 GiB of free disk** while installing
-- network access to `dl.xonotic.org` and GitHub (or the offline options below)
+- network access to `dl.xonotic.org` (the game), `github.com` (the panel release), the
+  Python package index (the panel's dependencies, as prebuilt wheels) and your Debian
+  mirror; the offline options below replace the first three
 
 ## Install
 
@@ -41,7 +43,19 @@ curl -fsSL https://github.com/carlhako/xonotic-webui/releases/latest/download/in
 When it finishes it prints the web address and the game port. The installer is safe to
 read first; it is `deploy/install.sh` in this repository.
 
-Options, passed as environment variables to the installer:
+The installer is the same whether you are installing or upgrading. It refuses to start,
+before changing anything, unless it is run as root on a 64-bit x86 Debian-family system
+with `apt-get` and, if the game is not yet installed, enough free disk. It then installs `python3`, `python3-venv`, `curl`,
+`unzip`, `ca-certificates`, `libstdc++6` and `zlib1g`, creates the unprivileged
+`xonotic-webui` user, downloads the game and checks it against a pinned SHA-256, installs
+the panel into its own virtualenv, and enables and starts the `xonotic-webui` systemd
+service.
+
+Options are environment variables that must reach `bash`, so put them after the pipe:
+
+```bash
+curl -fsSL https://github.com/carlhako/xonotic-webui/releases/latest/download/install.sh | RELEASE_TAG=v0.1.0 bash
+```
 
 | variable | effect |
 | --- | --- |
@@ -49,6 +63,17 @@ Options, passed as environment variables to the installer:
 | `XONOTIC_WEBUI_TARBALL=/path/xonotic-webui.tar.gz` | install the panel from a local release tarball |
 | `XONOTIC_ARCHIVE=/path/xonotic-0.8.6.zip` | use a local game archive instead of downloading (still digest-checked) |
 | `XONOTIC_WEBUI_WHEELHOUSE=/path` | resolve Python dependencies from a local directory of wheels |
+| `XONOTIC_WEBUI_REPO=owner/name` | take the release from another GitHub repository, such as a fork |
+
+The release assets are `install.sh` and `xonotic-webui.tar.gz`. To install without
+downloading anything from GitHub or `dl.xonotic.org`, save both from the release page,
+fetch the game archive and a wheelhouse yourself, and run the saved script as root:
+
+```bash
+XONOTIC_WEBUI_TARBALL=/path/xonotic-webui.tar.gz XONOTIC_ARCHIVE=/path/xonotic-0.8.6.zip XONOTIC_WEBUI_WHEELHOUSE=/path/wheels bash install.sh
+```
+
+The installer still uses `apt-get` for the runtime packages in either case.
 
 ## Ports
 
@@ -57,9 +82,13 @@ Options, passed as environment variables to the installer:
 | **TCP 80** | web interface (`XONOTIC_WEBUI_PORT`) | your LAN only, see Security |
 | **UDP 26000** | the game (`XONOTIC_WEBUI_GAME_PORT`) | players |
 
+Both are the defaults; if you change a port in the settings below, open that one instead.
+The installer opens nothing itself, so allow these in any firewall on the host or in front
+of it.
+
 ## Upgrading
 
-Re-run the install command. It replaces the application, fetches the game only if it is
+Re-run the install command from Install, as root. It replaces the application, fetches the game only if it is
 missing, and leaves your server configuration, panel state and logs untouched. The new
 version is built beside the old one and checked before the old one is removed; if the new
 panel does not answer its health check, the previous version is restored and the installer
@@ -75,8 +104,15 @@ exits non-zero. Pin a version with `RELEASE_TAG`.
 | `/var/lib/xonotic-webui/settings.json` | the server settings saved from the panel (see Server settings) |
 | `/var/lib/xonotic-webui/userdir/data/server.cfg` | **your server configuration**, seeded once and never overwritten |
 | `/var/lib/xonotic-webui/userdir/data/xonotic-webui-settings.cfg` | generated from `settings.json` on every save and start; do not edit |
-| `/etc/xonotic-webui/xonotic-webui.env` | optional settings overrides |
+| `/etc/xonotic-webui/xonotic-webui.env` | optional settings overrides, seeded with commented examples and never overwritten |
+| `/etc/xonotic-webui/xonotic-webui.toml` | optional settings file, not created by the installer |
+| `/var/cache/xonotic-webui` | the resumable game download, removed once it is verified and extracted |
 | `/etc/systemd/system/xonotic-webui.service` | the service |
+
+The service is `xonotic-webui` and runs as the unprivileged user of the same name. Everything
+under `/var/lib/xonotic-webui` belongs to that user; `/opt` and `/etc` are root's, so the
+service cannot modify the application or the game. The panel's own log goes to the journal:
+`journalctl -u xonotic-webui`.
 
 You can configure the server in two places, which work together (next section): your
 `server.cfg`, and the panel's **Settings** and **Maps** sections.
@@ -149,7 +185,11 @@ map for it and the panel goes to that map.
 ## Settings
 
 Environment variables (put them in `/etc/xonotic-webui/xonotic-webui.env` as `KEY=value`),
-or a TOML file at `/etc/xonotic-webui/xonotic-webui.toml`. Environment wins over the file.
+or a TOML file at `/etc/xonotic-webui/xonotic-webui.toml` (or the path in
+`XONOTIC_WEBUI_CONFIG_FILE`) with the same names, lower-case and without the prefix, for
+example `port = 8080`; they may be at the top level or under an `[xonotic_webui]` table.
+Environment wins over the file. Restart the panel after changing either:
+`systemctl restart xonotic-webui`.
 
 | variable | default | meaning |
 | --- | --- | --- |
@@ -164,6 +204,10 @@ or a TOML file at `/etc/xonotic-webui/xonotic-webui.toml`. Environment wins over
 | `XONOTIC_WEBUI_CRASH_RESTART_WINDOW` | `300` | the window, in seconds |
 | `XONOTIC_WEBUI_CRASH_RESTART_DELAY` | `2` | seconds to wait before an automatic restart |
 | `XONOTIC_WEBUI_CONSOLE_BUFFER_LINES` | `2000` | console lines kept for new viewers |
+| `XONOTIC_WEBUI_CONFIG_FILE` | `/etc/xonotic-webui/xonotic-webui.toml` | the TOML file to read; only meaningful as an environment variable |
+
+The service unit itself sets `XONOTIC_WEBUI_GAME_ROOT` and `XONOTIC_WEBUI_STATE_DIR` in the
+environment, so under systemd the TOML file cannot change them; set them in the `.env` file.
 
 If you raise `XONOTIC_WEBUI_SHUTDOWN_TIMEOUT`, raise `TimeoutStopSec` in the unit by the
 same amount (the unit's comments explain the arithmetic).
