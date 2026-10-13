@@ -256,6 +256,7 @@ class Supervisor:
 
         self._sm.transition(RunState.RUNNING)
         self._restart_abandoned = False
+        self._last_start_failure = None
         self._notify_change()
         if operator:
             self._persist_desired(running=True)

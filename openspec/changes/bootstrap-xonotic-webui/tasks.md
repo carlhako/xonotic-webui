@@ -36,19 +36,19 @@
 
 ## 5. Console (server-console)
 
-- [ ] 5.1 Port the bounded console buffer and fan-out with replay-on-connect and no duplicated lines; verify tests for ordering, two clients, buffer overflow and the connect-time replay
-- [ ] 5.2 Insert a run-boundary marker across restarts while keeping earlier output; verify with a restart test
-- [ ] 5.3 Implement command submission: delivered while running, rejected while stopped, rejected when empty or multi-line; verify one test per scenario
-- [ ] 5.4 Expose the colour-stripped form of each line for matching and implement the matching-safe stripping (`^0-^9`, `^xRGB`, `^^`); verify unit tests with real captured names from the spike
-- [ ] 5.5 Add the `query(matcher, timeout)` helper used by the status tracker; verify tests for reply, timeout and server-stopped
+- [x] 5.1 Port the bounded console buffer and fan-out with replay-on-connect and no duplicated lines; verify tests for ordering, two clients, buffer overflow and the connect-time replay
+- [x] 5.2 Insert a run-boundary marker across restarts while keeping earlier output; verify with a restart test
+- [x] 5.3 Implement command submission: delivered while running, rejected while stopped, rejected when empty or multi-line; verify one test per scenario
+- [x] 5.4 Expose the colour-stripped form of each line for matching and implement the matching-safe stripping (`^0-^9`, `^xRGB`, `^^`); verify unit tests with real captured names from the spike
+- [x] 5.5 Add the `query(matcher, timeout)` helper used by the status tracker; verify tests for reply, timeout and server-stopped
 
 ## 6. Status (server-status)
 
-- [ ] 6.1 Implement the event-line pattern module and the status model (players with bot flag, map, gametype, last crash, restart abandoned); verify fixture-driven unit tests for join, part, rename, match start, bots vs humans
-- [ ] 6.2 Reconcile the player list with a `status` query when the server becomes ready and when a parse gap is detected; verify a test where events were missed
-- [ ] 6.3 Re-assert the event-log setting over stdin on readiness and report "event log unavailable" instead of an empty roster when it cannot be confirmed (design D3, Risks); verify a test with a config that disables it
-- [ ] 6.4 Clear players, map and gametype when the server stops or crashes; verify a crash-with-players test (server-status: not stale)
-- [ ] 6.5 Provide the snapshot and the live stream that sends the snapshot on connect and on every change; verify tests for connect, player join, state change and multi-client delivery
+- [x] 6.1 Implement the event-line pattern module and the status model (players with bot flag, map, gametype, last crash, restart abandoned); verify fixture-driven unit tests for join, part, rename, match start, bots vs humans
+- [x] 6.2 Reconcile the player list with a `status` query when the server becomes ready and when a parse gap is detected; verify a test where events were missed
+- [x] 6.3 Re-assert the event-log setting over stdin on readiness and report "event log unavailable" instead of an empty roster when it cannot be confirmed (design D3, Risks); verify a test with a config that disables it
+- [x] 6.4 Clear players, map and gametype when the server stops or crashes; verify a crash-with-players test (server-status: not stale)
+- [x] 6.5 Provide the snapshot and the live stream that sends the snapshot on connect and on every change; verify tests for connect, player join, state change and multi-client delivery
 
 ## 7. HTTP API
 
