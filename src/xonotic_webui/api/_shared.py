@@ -59,7 +59,33 @@ def http_error_from_command(exc: Exception) -> HTTPException:
     raise exc
 
 
+class EventStreamResponse(StreamingResponse):
+    """A server-sent-events response; its media type makes OpenAPI document the stream."""
+
+    media_type = "text/event-stream"
+
+
 _KEEPALIVE_SECONDS = 15.0
+# How often an idle stream checks whether the panel is shutting down.
+_POLL_SECONDS = 1.0
+
+_shutting_down = False
+
+
+def request_shutdown() -> None:
+    """Tell every open event stream to finish.
+
+    Called from the process's termination signal handler. uvicorn waits for open
+    connections before running the lifespan shutdown (which stops the game server), and
+    an SSE stream never ends on its own, so without this a connected browser would hold
+    the stop open until uvicorn's timeout cancels it.
+    """
+    global _shutting_down
+    _shutting_down = True
+
+
+def is_shutting_down() -> bool:
+    return _shutting_down
 
 
 def sse_response(
@@ -79,16 +105,21 @@ def sse_response(
     async def body() -> AsyncIterator[bytes]:
         yield b": connected\n\n"  # prelude so proxies flush headers immediately
         pending: asyncio.Future[Any] | None = None
+        idle = 0.0
         try:
-            while True:
+            while not is_shutting_down():
                 if pending is None:
                     pending = asyncio.ensure_future(anext(events))
-                done, _ = await asyncio.wait({pending}, timeout=_KEEPALIVE_SECONDS)
+                done, _ = await asyncio.wait({pending}, timeout=_POLL_SECONDS)
                 if not done:
-                    if await request.is_disconnected():
-                        return
-                    yield b": keepalive\n\n"
+                    idle += _POLL_SECONDS
+                    if idle >= _KEEPALIVE_SECONDS:
+                        idle = 0.0
+                        if await request.is_disconnected():
+                            return
+                        yield b": keepalive\n\n"
                     continue
+                idle = 0.0
                 task, pending = pending, None
                 try:
                     event = task.result()
@@ -107,9 +138,8 @@ def sse_response(
                 with contextlib.suppress(Exception):
                     await aclose()
 
-    return StreamingResponse(
+    return EventStreamResponse(
         body(),
-        media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Request
 
 from xonotic_webui.api._shared import (
+    EventStreamResponse,
     api_error,
     http_error_from_command,
     sse_response,
@@ -30,11 +31,12 @@ def build_console_router(runtime: Runtime) -> APIRouter:
 
     @router.get(
         "/stream",
-        summary="Stream console output (server-sent events of ConsoleLine)",
+        response_class=EventStreamResponse,
+        summary="Stream console output (server-sent events; each event is a ConsoleLine)",
         responses={
             200: {
+                "model": ConsoleLineModel,
                 "description": "An event stream; each event's data is a ConsoleLine.",
-                "content": {"text/event-stream": {"schema": ConsoleLineModel.model_json_schema()}},
             }
         },
     )

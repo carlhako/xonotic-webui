@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Request
 
-from xonotic_webui.api._shared import sse_response
+from xonotic_webui.api._shared import EventStreamResponse, sse_response
 from xonotic_webui.api.schemas import StatusModel
 
 if TYPE_CHECKING:
@@ -23,11 +23,12 @@ def build_status_router(runtime: Runtime) -> APIRouter:
 
     @router.get(
         "/stream",
-        summary="Stream status changes (server-sent events of Status)",
+        response_class=EventStreamResponse,
+        summary="Stream status changes (server-sent events; each event is a Status)",
         responses={
             200: {
+                "model": StatusModel,
                 "description": "An event stream; the first event is the current snapshot.",
-                "content": {"text/event-stream": {"schema": StatusModel.model_json_schema()}},
             }
         },
     )

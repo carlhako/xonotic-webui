@@ -58,14 +58,14 @@
 
 ## 8. Web interface (web-ui-shell, console and dashboard views)
 
-- [ ] 8.1 Scaffold the Vite/React/TS app with ESLint, Prettier and Vitest; verify `npm run build` emits into the Python package's `static/` and `npm test` runs
-- [ ] 8.2 Implement the shell: persistent header, the section registry (Dashboard, Console), active-section highlight and in-app navigation; verify tests that sections list and switch without reload (web-ui-shell: sections navigable)
-- [ ] 8.3 Implement the SSE transport with reconnect and the connection banner that refreshes state on reconnect and disables mutating controls while disconnected; verify tests with a fake EventSource for loss and recovery
-- [ ] 8.4 Implement the dashboard: state, map, gametype, players (humans and bots), lifecycle controls enabled per state, error display; verify one test per scenario in the dashboard requirement
-- [ ] 8.5 Implement the stop/restart confirmation when humans are connected, stating the count; verify tests with and without players
-- [ ] 8.6 Implement the Console section: scrolling output, auto-scroll with pause, command input, disabled when stopped, run-boundary marker display; verify component tests
-- [ ] 8.7 Implement the colour-code renderer (`^N`, `^xRGB`, `^^`, malformed input) and use it for console lines and player names; verify unit tests including the edge cases listed in design Risks
-- [ ] 8.8 Display all timestamps in the browser's local timezone and make the layout usable at 375px without horizontal scroll; verify a formatting test and a screenshot check at phone width
+- [x] 8.1 Scaffold the Vite/React/TS app with ESLint, Prettier and Vitest; verify `npm run build` emits into the Python package's `static/` and `npm test` runs
+- [x] 8.2 Implement the shell: persistent header, the section registry (Dashboard, Console), active-section highlight and in-app navigation; verify tests that sections list and switch without reload (web-ui-shell: sections navigable)
+- [x] 8.3 Implement the SSE transport with reconnect and the connection banner that refreshes state on reconnect and disables mutating controls while disconnected; verify tests with a fake EventSource for loss and recovery
+- [x] 8.4 Implement the dashboard: state, map, gametype, players (humans and bots), lifecycle controls enabled per state, error display; verify one test per scenario in the dashboard requirement
+- [x] 8.5 Implement the stop/restart confirmation when humans are connected, stating the count; verify tests with and without players
+- [x] 8.6 Implement the Console section: scrolling output, auto-scroll with pause, command input, disabled when stopped, run-boundary marker display; verify component tests
+- [x] 8.7 Implement the colour-code renderer (`^N`, `^xRGB`, `^^`, malformed input) and use it for console lines and player names; verify unit tests including the edge cases listed in design Risks
+- [x] 8.8 Display all timestamps in the browser's local timezone and make the layout usable at 375px without horizontal scroll; verify a formatting test and a screenshot check at phone width
 
 ## 9. Installer, service and release
 

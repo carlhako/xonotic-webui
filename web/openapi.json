@@ -35,6 +35,41 @@
         "title": "CommandRequest",
         "type": "object"
       },
+      "ConsoleLineModel": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "output",
+              "command",
+              "marker"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "plain": {
+            "description": "The line with colour codes removed.",
+            "title": "Plain",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "text": {
+            "description": "The raw line, colour codes intact.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "kind",
+          "text",
+          "plain"
+        ],
+        "title": "ConsoleLineModel",
+        "type": "object"
+      },
       "CrashModel": {
         "properties": {
           "at": {
@@ -329,51 +364,17 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
-              },
               "text/event-stream": {
                 "schema": {
-                  "properties": {
-                    "kind": {
-                      "enum": [
-                        "output",
-                        "command",
-                        "marker"
-                      ],
-                      "title": "Kind",
-                      "type": "string"
-                    },
-                    "plain": {
-                      "description": "The line with colour codes removed.",
-                      "title": "Plain",
-                      "type": "string"
-                    },
-                    "seq": {
-                      "title": "Seq",
-                      "type": "integer"
-                    },
-                    "text": {
-                      "description": "The raw line, colour codes intact.",
-                      "title": "Text",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "seq",
-                    "kind",
-                    "text",
-                    "plain"
-                  ],
-                  "title": "ConsoleLineModel",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ConsoleLineModel",
+                  "type": "string"
                 }
               }
             },
             "description": "An event stream; each event's data is a ConsoleLine."
           }
         },
-        "summary": "Stream console output (server-sent events of ConsoleLine)",
+        "summary": "Stream console output (server-sent events; each event is a ConsoleLine)",
         "tags": [
           "console"
         ]
@@ -589,223 +590,17 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
-              },
               "text/event-stream": {
                 "schema": {
-                  "$defs": {
-                    "CrashModel": {
-                      "properties": {
-                        "at": {
-                          "description": "ISO 8601 UTC time of the unexpected exit.",
-                          "title": "At",
-                          "type": "string"
-                        },
-                        "exit_code": {
-                          "anyOf": [
-                            {
-                              "type": "integer"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "title": "Exit Code"
-                        }
-                      },
-                      "required": [
-                        "at",
-                        "exit_code"
-                      ],
-                      "title": "CrashModel",
-                      "type": "object"
-                    },
-                    "PlayerModel": {
-                      "properties": {
-                        "bot": {
-                          "title": "Bot",
-                          "type": "boolean"
-                        },
-                        "ent": {
-                          "description": "The server's slot number for the client.",
-                          "title": "Ent",
-                          "type": "integer"
-                        },
-                        "id": {
-                          "anyOf": [
-                            {
-                              "type": "integer"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "Event-log player id, when a join was observed.",
-                          "title": "Id"
-                        },
-                        "name": {
-                          "description": "Display name with Xonotic colour codes intact.",
-                          "title": "Name",
-                          "type": "string"
-                        },
-                        "plain_name": {
-                          "description": "The name with colour codes removed.",
-                          "title": "Plain Name",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "ent",
-                        "name",
-                        "plain_name",
-                        "bot"
-                      ],
-                      "title": "PlayerModel",
-                      "type": "object"
-                    },
-                    "StartFailureModel": {
-                      "properties": {
-                        "at": {
-                          "title": "At",
-                          "type": "string"
-                        },
-                        "exit_code": {
-                          "anyOf": [
-                            {
-                              "type": "integer"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "title": "Exit Code"
-                        },
-                        "reason": {
-                          "title": "Reason",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "at",
-                        "reason",
-                        "exit_code"
-                      ],
-                      "title": "StartFailureModel",
-                      "type": "object"
-                    }
-                  },
-                  "properties": {
-                    "bot_count": {
-                      "title": "Bot Count",
-                      "type": "integer"
-                    },
-                    "event_log": {
-                      "anyOf": [
-                        {
-                          "enum": [
-                            "enabled",
-                            "unavailable"
-                          ],
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "description": "Whether live player tracking from the event log is working.",
-                      "title": "Event Log"
-                    },
-                    "gametype": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "title": "Gametype"
-                    },
-                    "human_count": {
-                      "title": "Human Count",
-                      "type": "integer"
-                    },
-                    "last_crash": {
-                      "anyOf": [
-                        {
-                          "$ref": "#/$defs/CrashModel"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "last_start_failure": {
-                      "anyOf": [
-                        {
-                          "$ref": "#/$defs/StartFailureModel"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "map": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "title": "Map"
-                    },
-                    "players": {
-                      "items": {
-                        "$ref": "#/$defs/PlayerModel"
-                      },
-                      "title": "Players",
-                      "type": "array"
-                    },
-                    "restart_abandoned": {
-                      "title": "Restart Abandoned",
-                      "type": "boolean"
-                    },
-                    "state": {
-                      "enum": [
-                        "stopped",
-                        "starting",
-                        "running",
-                        "stopping"
-                      ],
-                      "title": "State",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "state",
-                    "map",
-                    "gametype",
-                    "players",
-                    "human_count",
-                    "bot_count",
-                    "event_log",
-                    "last_crash",
-                    "restart_abandoned",
-                    "last_start_failure"
-                  ],
-                  "title": "StatusModel",
-                  "type": "object"
+                  "$ref": "#/components/schemas/StatusModel",
+                  "type": "string"
                 }
               }
             },
             "description": "An event stream; the first event is the current snapshot."
           }
         },
-        "summary": "Stream status changes (server-sent events of Status)",
+        "summary": "Stream status changes (server-sent events; each event is a Status)",
         "tags": [
           "status"
         ]

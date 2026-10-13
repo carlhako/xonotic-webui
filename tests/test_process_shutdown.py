@@ -110,3 +110,42 @@ def test_panel_restores_a_server_that_was_running(tmp_path: Path) -> None:
         if second.poll() is None:
             second.kill()
             second.wait()
+
+
+def test_open_event_streams_do_not_hold_up_shutdown(tmp_path: Path) -> None:
+    """A connected browser tab must not turn a service stop into a timeout."""
+    import threading
+
+    port = free_port()
+    base = f"http://127.0.0.1:{port}"
+    panel = _spawn_panel(tmp_path, port)
+    stream_ended = threading.Event()
+
+    def hold_stream() -> None:
+        try:
+            with httpx.stream("GET", f"{base}/api/status/stream", timeout=60) as response:
+                for _ in response.iter_lines():
+                    pass
+        except httpx.HTTPError:
+            pass
+        stream_ended.set()
+
+    try:
+        _wait_health(base, panel)
+        assert httpx.post(f"{base}/api/lifecycle/start", timeout=30).status_code == 200
+        thread = threading.Thread(target=hold_stream, daemon=True)
+        thread.start()
+        time.sleep(0.5)  # connected and receiving
+
+        started = time.monotonic()
+        panel.send_signal(signal.SIGTERM)
+        assert panel.wait(timeout=30) in CLEAN_EXIT
+        elapsed = time.monotonic() - started
+
+        # uvicorn's graceful window is 10s; ending the streams ourselves beats it easily.
+        assert elapsed < 8, f"shutdown took {elapsed:.1f}s with a stream open"
+        assert stream_ended.wait(5)
+    finally:
+        if panel.poll() is None:
+            panel.kill()
+            panel.wait()

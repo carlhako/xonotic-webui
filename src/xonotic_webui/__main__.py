@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import signal
 import sys
+from types import FrameType
 
 import uvicorn
 
+from xonotic_webui.api._shared import request_shutdown
 from xonotic_webui.logging import configure_logging
 from xonotic_webui.settings import get_settings
 
@@ -19,6 +22,14 @@ _STARTUP_FAILURE = 3
 GRACEFUL_SHUTDOWN_SECONDS = 10
 
 
+class _Server(uvicorn.Server):
+    def handle_exit(self, sig: int, frame: FrameType | None) -> None:
+        # End open event streams now so uvicorn's connection drain finishes at once.
+        if sig in (signal.SIGINT, signal.SIGTERM):
+            request_shutdown()
+        super().handle_exit(sig, frame)
+
+
 def main() -> None:
     configure_logging()
     settings = get_settings()
@@ -30,7 +41,7 @@ def main() -> None:
         log_config=None,
         timeout_graceful_shutdown=GRACEFUL_SHUTDOWN_SECONDS,
     )
-    server = uvicorn.Server(config)
+    server = _Server(config)
     server.run()
     if not server.started:
         sys.exit(_STARTUP_FAILURE)
