@@ -72,13 +72,79 @@ exits non-zero. Pin a version with `RELEASE_TAG`.
 | `/opt/xonotic-webui/venv` | the application, root-owned |
 | `/opt/xonotic/0.8.6` | the game tree, root-owned and read-only to the service |
 | `/var/lib/xonotic-webui/state.json` | whether the server should be running |
+| `/var/lib/xonotic-webui/settings.json` | the server settings saved from the panel (see Server settings) |
 | `/var/lib/xonotic-webui/userdir/data/server.cfg` | **your server configuration**, seeded once and never overwritten |
+| `/var/lib/xonotic-webui/userdir/data/xonotic-webui-settings.cfg` | generated from `settings.json` on every save and start; do not edit |
 | `/etc/xonotic-webui/xonotic-webui.env` | optional settings overrides |
 | `/etc/systemd/system/xonotic-webui.service` | the service |
 
-Edit `server.cfg` to name your server, set a message of the day, pick a map list and so
-on, then restart the server from the dashboard. The panel runs your `server.cfg` and then
-forces the few settings it depends on (the event log, plain colour codes).
+You can configure the server in two places, which work together (next section): your
+`server.cfg`, and the panel's **Settings** and **Maps** sections.
+
+## Server settings
+
+The panel keeps its own settings in `settings.json` and generates
+`xonotic-webui-settings.cfg` from them. The server is started with a wrapper config that
+runs, in this order:
+
+1. your `server.cfg`, which the panel **never edits**
+2. the generated `xonotic-webui-settings.cfg`
+3. the few cvars the panel depends on (the event log, plain colour codes)
+
+So **a value saved in the panel wins over the same setting in `server.cfg`**, and nothing
+can switch the event log off. A setting that `server.cfg` also sets is marked in the panel,
+as far as simple `name value`, `set` and `seta` lines reveal. With nothing saved in the
+panel, the server behaves exactly as `server.cfg` configures it. Settings can be changed
+while the server is stopped; they are then applied at its next start.
+
+Each saved setting says when it takes effect:
+
+| when | meaning | examples |
+| --- | --- | --- |
+| **now** | sent to the running server immediately | server name, bots, bot skill, a time limit |
+| **next map** | accepted at once, applied when the next map loads | mutators, voting, gametype, going back to a limit's "map default" |
+| **next start** | needs a restart | maximum players (the panel offers the restart) |
+
+Limits are written as the game's `*_override` cvars, so they apply to every map and not
+just the current match. **Raw cvars** lets you override any other cvar (search the game's
+full list, with defaults and descriptions); a raw override is applied after the curated
+settings, and may need a map change or restart to take effect. The panel refuses to
+override the cvars it forces, the game port and `rcon_password`.
+
+The panel lists maps from the `.pk3` packages in the game and in `userdir/data`, and keeps
+the gametype and the map rotation in `settings.json` too. An empty rotation means every map
+that supports the gametype.
+
+Values may not contain a line break, a double quote or a backslash; everything else,
+including `;`, `$` and colour codes such as `^1`, reaches the server exactly as typed.
+
+## Maps and match actions
+
+The **Maps** section lists the installed maps (title, supported gametypes, preview) even
+while the server is stopped, and lets you choose the gametype and the rotation. Three
+actions are also on the dashboard:
+
+| action | what the game does |
+| --- | --- |
+| **Go to map** | ends the match with the scoreboard, then loads that map; no vote |
+| **Skip** | ends the match early; then the game's normal vote (if players are connected and voting is on) or the next map in the rotation |
+| **Restart match** | reloads the current map at once and resets scores |
+
+With players connected you are asked to confirm, and told how many are in the match. Each
+action is shown as pending to every open browser until the next match actually starts, and
+as not completed if none starts within 90 seconds.
+
+**Idle auto-pause stays on.** An empty dedicated server pauses itself a few seconds after a
+map loads (the **Pause when empty** setting) and resumes when a player joins; that keeps an
+idle server's CPU use near zero. While it is paused the game accepts *go to map* and *skip*
+but does nothing until it resumes, so after sending one the panel resumes the server just
+long enough to carry it out; the new map pauses itself again. The panel does this only when
+nobody is connected, so players never see a pause message, and the pause commands do not
+appear in the console.
+
+A map without a `.mapinfo` file is listed with unknown gametypes and is not offered for any
+gametype. Changing the gametype takes effect at the next map; to switch immediately, pick a
+map for it and the panel goes to that map.
 
 ## Settings
 
