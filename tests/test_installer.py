@@ -232,6 +232,10 @@ export DESTDIR=/mnt/dest
 source "$INSTALL"
 ensure_user; ensure_user
 ensure_dirs; ensure_dirs
+# The release tree the helper is installed from.
+SRC="$tmp/rel/xonotic-webui"; mkdir -p "$SRC/deploy"
+cp "$(dirname "$INSTALL")"/xonotic-webui-upgrade* "$SRC/deploy/"
+install_upgrade_helper; install_upgrade_helper
 mkdir -p "$GAME_DIR/data" "$PREFIX/venv/bin"
 printf '#!/bin/sh\n' >"$GAME_DIR/xonotic-linux64-dedicated"
 chmod 0755 "$GAME_DIR/xonotic-linux64-dedicated"
@@ -239,19 +243,44 @@ echo d >"$GAME_DIR/data/a.pk3"; echo x >"$PREFIX/venv/bin/python"
 chmod 0755 "$PREFIX/venv/bin/python"
 repair_ownership; verify_layout; echo VERIFIED
 stat -c 'OWNER %U:%G %a %n' "$PREFIX" "$GAME_PARENT" "$GAME_DIR" \
-  "$STATE_DIR" "$USERDIR" "$USERDIR/data"
-for d in "$PREFIX" "$PREFIX/venv" "$GAME_PARENT" "$GAME_DIR" "$GAME_DIR/data" "$ETC_DIR"; do
+  "$STATE_DIR" "$USERDIR" "$USERDIR/data" "$REQUEST_DIR" "$HELPER_DIR" "$HELPER" \
+  "$HELPER_STATUS_DIR" "$UNIT_DIR/xonotic-webui-upgrade.path" \
+  "$UNIT_DIR/xonotic-webui-upgrade.service"
+for d in "$PREFIX" "$PREFIX/venv" "$GAME_PARENT" "$GAME_DIR" "$GAME_DIR/data" "$ETC_DIR" \
+  "$HELPER_DIR" "$HELPER_STATUS_DIR"; do
   as_service_user touch "$d/probe" 2>/dev/null && echo "WROTE $d" || echo "DENIED $d"
 done
-for d in "$STATE_DIR" "$USERDIR" "$USERDIR/data"; do
+for d in "$STATE_DIR" "$USERDIR" "$USERDIR/data" "$REQUEST_DIR"; do
   as_service_user touch "$d/probe" && echo "ALLOWED $d" || echo "BLOCKED $d"
 done
+# the helper, its units and its status: readable, never writable, by the service user
+as_service_user test -r "$HELPER_STATUS_DIR" && echo "READABLE status" || echo "UNREADABLE status"
+as_service_user test -r "$HELPER" && echo "READABLE helper" || echo "UNREADABLE helper"
+as_service_user test -w "$HELPER" && echo "WRITABLE helper" || echo "PROTECTED helper"
+for u in xonotic-webui-upgrade.path xonotic-webui-upgrade.service; do
+  as_service_user test -w "$UNIT_DIR/$u" && echo "WRITABLE $u" || echo "PROTECTED $u"
+done
+# the service user places a request, root can read it (and it cannot replace the helper)
+as_service_user sh -c "echo '{}' >'$REQUEST_DIR/request.json'" && echo "REQUEST-PLACED"
+as_service_user sh -c "echo x >'$HELPER'" 2>/dev/null \
+  && echo "HELPER-OVERWRITTEN" || echo "HELPER-INTACT"
+as_service_user sh -c "echo x >'$HELPER_STATUS_DIR/status.json'" 2>/dev/null \
+  && echo "STATUS-FORGED" || echo "STATUS-UNFORGEABLE"
+rm -f "$REQUEST_DIR/request.json"
 # sabotage: a group-writable app file, a service-user-owned game file, a root-owned state file
 chmod 0777 "$PREFIX/venv/bin"; chown 4242:4242 "$GAME_DIR/data/a.pk3"
 echo cfg >"$USERDIR/data/server.cfg"
 if ( verify_layout ) 2>/dev/null; then echo "MISSED-SABOTAGE"; else echo "CAUGHT-SABOTAGE"; fi
 repair_ownership; verify_layout; echo REPAIRED
 stat -c 'OWNER %U %n' "$GAME_DIR/data/a.pk3" "$USERDIR/data/server.cfg"
+# sabotage the helper: owned by the service user, then its unit group-writable
+chown 4242:4242 "$HELPER"
+if ( verify_layout ) 2>/dev/null; then echo "MISSED-HELPER"; else echo "CAUGHT-HELPER"; fi
+repair_ownership; verify_layout; echo HELPER-REPAIRED
+stat -c 'OWNER %U %n' "$HELPER"
+chmod 0666 "$UNIT_DIR/xonotic-webui-upgrade.path"
+if ( verify_layout ) 2>/dev/null; then echo "MISSED-UNIT"; else echo "CAUGHT-UNIT"; fi
+repair_ownership; verify_layout; echo UNIT-REPAIRED
 chown 4242:4242 "$PREFIX"
 if ( verify_layout ) 2>/dev/null; then echo MISSED-OWNED-PREFIX
 else echo CAUGHT-OWNED-PREFIX; fi
@@ -289,10 +318,31 @@ def test_layout_is_enforced_for_real_in_a_user_namespace(tmp_path: Path) -> None
         assert f"OWNER root:root 755 /mnt/dest/{rel}\n" in out, out
     for rel in ("var/lib/xonotic-webui", "var/lib/xonotic-webui/userdir"):
         assert f"OWNER xonotic-webui:xonotic-webui 755 /mnt/dest/{rel}\n" in out, out
-    assert out.count("DENIED") == 6
+    assert out.count("DENIED") == 8
     assert "WROTE" not in out
-    assert out.count("ALLOWED") == 3
+    assert out.count("ALLOWED") == 4
     assert "BLOCKED" not in out
+    # the upgrade helper: root's, with the request directory the service user's
+    assert "OWNER xonotic-webui:xonotic-webui 755 /mnt/dest/var/lib/xonotic-webui/upgrade\n" in out
+    assert "OWNER root:root 755 /mnt/dest/usr/local/libexec/xonotic-webui\n" in out
+    assert (
+        "OWNER root:root 755 /mnt/dest/usr/local/libexec/xonotic-webui/xonotic-webui-upgrade\n"
+        in out
+    )
+    assert "OWNER root:root 755 /mnt/dest/var/lib/xonotic-webui-upgrade\n" in out
+    assert "OWNER root:root 644 /mnt/dest/etc/systemd/system/xonotic-webui-upgrade.path\n" in out
+    assert "OWNER root:root 644 /mnt/dest/etc/systemd/system/xonotic-webui-upgrade.service\n" in out
+    assert "READABLE status" in out and "UNREADABLE" not in out
+    assert "READABLE helper" in out
+    assert "PROTECTED helper" in out and "WRITABLE" not in out
+    assert out.count("PROTECTED") == 3
+    assert "REQUEST-PLACED" in out
+    assert "HELPER-INTACT" in out and "HELPER-OVERWRITTEN" not in out
+    assert "STATUS-UNFORGEABLE" in out and "STATUS-FORGED" not in out
+    assert "CAUGHT-HELPER" in out and "HELPER-REPAIRED" in out
+    assert "OWNER root /mnt/dest/usr/local/libexec/xonotic-webui/xonotic-webui-upgrade" in out
+    assert "CAUGHT-UNIT" in out and "UNIT-REPAIRED" in out
+    assert "MISSED" not in out
     assert "CAUGHT-SABOTAGE" in out
     assert "REPAIRED" in out
     assert "OWNER root /mnt/dest/opt/xonotic/0.8.6/data/a.pk3" in out
@@ -424,6 +474,195 @@ def test_env_file_is_seeded_once(sb: Sandbox) -> None:
     assert env_file.read_text() == "XONOTIC_WEBUI_PORT=8080\n"
 
 
+# --- the upgrade helper ----------------------------------------------------------------
+
+
+def _shim_install(sb: Sandbox) -> None:
+    """A stand-in for install(1): directories, or copy-then-chmod, ignoring -o/-g."""
+    sb.shim(
+        "install",
+        r"""
+mode=""; dirs=0; ops=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -d) dirs=1 ;;
+    -m) mode="$2"; shift ;;
+    -o|-g) shift ;;
+    *) ops+=("$1") ;;
+  esac
+  shift
+done
+if [ "$dirs" -eq 1 ]; then
+  mkdir -p "${ops[@]}"
+  [ -n "$mode" ] && chmod "$mode" "${ops[@]}"
+else
+  cp "${ops[0]}" "${ops[1]}"
+  [ -n "$mode" ] && chmod "$mode" "${ops[1]}"
+fi
+exit 0
+""",
+    )
+
+
+def _release_tree(sb: Sandbox, *, with_helper: bool = True) -> Path:
+    src = sb.tmp / "rel" / "xonotic-webui"
+    deploy = src / "deploy"
+    deploy.mkdir(parents=True, exist_ok=True)
+    (deploy / "xonotic-webui.service").write_text("[Service]\n")
+    if with_helper:
+        for name in (
+            "xonotic-webui-upgrade",
+            "xonotic-webui-upgrade.path",
+            "xonotic-webui-upgrade.service",
+        ):
+            shutil.copy(ROOT / "deploy" / name, deploy / name)
+    return src
+
+
+HELPER_REL = "usr/local/libexec/xonotic-webui/xonotic-webui-upgrade"
+
+
+def test_fresh_install_installs_the_helper_units_and_directories(sb: Sandbox) -> None:
+    _shim_install(sb)
+    src = _release_tree(sb)
+    r = sb.call(f'SRC="{src}"; install_upgrade_helper')
+    assert r.returncode == 0, r.stderr
+    helper = sb.root / HELPER_REL
+    assert helper.is_file()
+    assert helper.stat().st_mode & 0o777 == 0o755
+    assert (sb.root / "var/lib/xonotic-webui-upgrade").is_dir()
+    assert (sb.root / "var/lib/xonotic-webui/upgrade").is_dir()
+    for unit in ("xonotic-webui-upgrade.path", "xonotic-webui-upgrade.service"):
+        installed = sb.root / "etc/systemd/system" / unit
+        assert installed.read_text() == (ROOT / "deploy" / unit).read_text()
+        assert installed.stat().st_mode & 0o777 == 0o644
+
+
+def test_the_helper_is_bound_to_the_default_repository(sb: Sandbox) -> None:
+    _shim_install(sb)
+    src = _release_tree(sb)
+    assert sb.call(f'SRC="{src}"; install_upgrade_helper').returncode == 0
+    lines = [
+        ln for ln in (sb.root / HELPER_REL).read_text().splitlines() if ln.startswith("REPO = ")
+    ]
+    assert lines == ['REPO = "carlhako/xonotic-webui"']
+
+
+def test_the_helper_is_bound_to_a_custom_repository(sb: Sandbox) -> None:
+    _shim_install(sb)
+    src = _release_tree(sb)
+    r = sb.call(f'SRC="{src}"; install_upgrade_helper', XONOTIC_WEBUI_REPO="someone/xonotic-fork")
+    assert r.returncode == 0, r.stderr
+    lines = [
+        ln for ln in (sb.root / HELPER_REL).read_text().splitlines() if ln.startswith("REPO = ")
+    ]
+    assert lines == ['REPO = "someone/xonotic-fork"']
+
+
+@pytest.mark.parametrize(
+    "repo",
+    ['evil"; touch /pwned #/x', "no-slash", "a/b/c", "a b/c", "a/b|c", "", "../x", "a/b&c"],
+)
+def test_a_repository_that_is_not_owner_slash_name_is_refused(sb: Sandbox, repo: str) -> None:
+    r = sb.call("require_repo", XONOTIC_WEBUI_REPO=repo)
+    if repo == "":
+        # empty means "use the default"
+        assert r.returncode == 0
+        return
+    assert r.returncode != 0
+    assert "owner/name" in r.stderr
+
+
+def test_rerunning_over_an_install_without_the_helper_adds_it(sb: Sandbox) -> None:
+    """A v0.1.x install: the application is there, the helper is not."""
+    _shim_install(sb)
+    prefix = sb.root / "opt" / "xonotic-webui"
+    (prefix / "venv" / "bin").mkdir(parents=True)
+    assert not (sb.root / HELPER_REL).exists()
+    src = _release_tree(sb)
+    assert sb.call(f'SRC="{src}"; install_upgrade_helper').returncode == 0
+    assert (sb.root / HELPER_REL).is_file()
+    # and again: refreshing is idempotent
+    (sb.root / HELPER_REL).write_text("stale")
+    assert sb.call(f'SRC="{src}"; install_upgrade_helper').returncode == 0
+    assert "stale" not in (sb.root / HELPER_REL).read_text()
+
+
+def test_a_release_without_the_helper_leaves_things_as_they_are(sb: Sandbox) -> None:
+    _shim_install(sb)
+    src = _release_tree(sb, with_helper=False)
+    r = sb.call(f'SRC="{src}"; install_upgrade_helper')
+    assert r.returncode == 0, r.stderr
+    assert "no upgrade helper" in r.stderr
+    assert not (sb.root / "usr/local").exists()
+    assert not (sb.root / "var/lib/xonotic-webui-upgrade").exists()
+
+
+def test_the_helper_trigger_is_enabled_when_the_panel_is_started(sb: Sandbox) -> None:
+    _shim_install(sb)
+    src = _release_tree(sb)
+    _prepare_swap(sb, previous=True)
+    sb.shim("curl", 'echo \'{"status":"ok","version":"9.9.9"}\'')
+    r = sb.call(f'SRC="{src}"; install_upgrade_helper; {SWAP.format(src=src)}')
+    assert r.returncode == 0, r.stderr
+    calls = sb.called("systemctl")
+    assert "systemctl enable --now xonotic-webui-upgrade.path" in calls
+    enable_path = calls.index("systemctl enable --now xonotic-webui-upgrade.path")
+    assert enable_path < calls.index("systemctl start xonotic-webui.service")
+
+
+def test_no_trigger_is_enabled_for_a_release_without_the_helper(sb: Sandbox) -> None:
+    src = _release_tree(sb, with_helper=False)
+    _prepare_swap(sb, previous=True)
+    sb.shim("curl", 'echo \'{"status":"ok","version":"9.9.9"}\'')
+    r = sb.call(SWAP.format(src=src))
+    assert r.returncode == 0, r.stderr
+    assert not [c for c in sb.called("systemctl") if "upgrade.path" in c]
+
+
+DROPIN = "etc/systemd/system/xonotic-webui.service.d/release-repo.conf"
+
+
+def test_default_repository_writes_no_dropin_and_removes_a_stale_one(sb: Sandbox) -> None:
+    stale = sb.root / DROPIN
+    stale.parent.mkdir(parents=True)
+    stale.write_text("[Service]\nEnvironment=XONOTIC_WEBUI_RELEASE_REPO=someone/old\n")
+    r = sb.call("sync_release_repo")
+    assert r.returncode == 0, r.stderr
+    assert not stale.exists()
+    assert not stale.parent.exists()  # the emptied drop-in directory goes too
+    # and with nothing there to begin with, nothing appears
+    assert sb.call("sync_release_repo").returncode == 0
+    assert not stale.parent.exists()
+
+
+def test_custom_repository_points_the_panel_at_it(sb: Sandbox) -> None:
+    _shim_install(sb)
+    r = sb.call("sync_release_repo", XONOTIC_WEBUI_REPO="someone/fork")
+    assert r.returncode == 0, r.stderr
+    conf = sb.root / DROPIN
+    assert conf.read_text() == "[Service]\nEnvironment=XONOTIC_WEBUI_RELEASE_REPO=someone/fork\n"
+    assert conf.stat().st_mode & 0o777 == 0o644
+    # changing it again replaces the value
+    sb.call("sync_release_repo", XONOTIC_WEBUI_REPO="another/fork")
+    assert "another/fork" in conf.read_text()
+    assert "someone/fork" not in conf.read_text()
+
+
+def test_a_dropin_the_operator_set_via_the_env_file_still_wins() -> None:
+    # The drop-in uses Environment=; the unit's EnvironmentFile= overrides it.
+    unit = UNIT.read_text()
+    assert "EnvironmentFile=-/etc/xonotic-webui/xonotic-webui.env" in unit
+
+
+def test_main_checks_the_repository_before_changing_anything() -> None:
+    text = INSTALL.read_text()
+    main = text[text.index("\nmain() {") :]
+    assert main.index("require_repo") < main.index("install_packages")
+    assert main.index("install_upgrade_helper") < main.index("verify_layout")
+    assert main.index("sync_release_repo") < main.index("swap_and_start")
+
+
 # --- 9.7 swap, health, rollback, report -------------------------------------------------
 
 
@@ -435,7 +674,7 @@ def _prepare_swap(sb: Sandbox, *, previous: bool) -> None:
         (prefix / "venv" / "bin").mkdir(parents=True)
         (prefix / "venv" / "marker").write_text("old")
     src = sb.tmp / "rel" / "xonotic-webui" / "deploy"
-    src.mkdir(parents=True)
+    src.mkdir(parents=True, exist_ok=True)
     (src / "xonotic-webui.service").write_text("[Service]\n")
     for name in ("systemctl", "sleep"):
         sb.shim(name, "exit 0")

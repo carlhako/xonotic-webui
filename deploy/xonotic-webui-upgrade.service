@@ -1,0 +1,19 @@
+[Unit]
+Description=xonotic-webui — install a requested panel release
+Documentation=https://github.com/carlhako/xonotic-webui
+# Deliberately no dependency on xonotic-webui.service: the installer this runs restarts
+# the panel, and this unit must outlive that restart.
+
+[Service]
+Type=oneshot
+User=root
+# The system python3, never the panel's venv: the venv is what gets replaced. The helper
+# only accepts a release tag from the request, fetches that release from the repository
+# fixed at install time, and verifies its sha256 digests before running its installer
+# (see the helper's header).
+ExecStart=/usr/bin/python3 /usr/local/libexec/xonotic-webui/xonotic-webui-upgrade
+# The download, the venv build and the panel's clean game shutdown (up to TimeoutStopSec
+# in xonotic-webui.service) all happen inside this run, and so can a ~1.2 GB game
+# download when a release changes the game version. XONOTIC_WEBUI_UPGRADE_TIMEOUT_SECONDS
+# MUST stay above this.
+TimeoutStartSec=60min

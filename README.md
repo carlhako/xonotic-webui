@@ -15,6 +15,8 @@ any **Debian 12 or 13** VM or bare-metal install.
 - **Console**: live server output (colours rendered) and a command line.
 - **Supervised**: crashes are restarted with a bound; the server is stopped cleanly when
   the panel stops; whether it should be running survives panel restarts.
+- **Self-updating**: the header shows the running version and turns orange when a newer
+  release exists; the Panel page upgrades the panel with one click (see Upgrading).
 
 Xonotic **0.8.6** is the only supported game version.
 
@@ -48,22 +50,22 @@ before changing anything, unless it is run as root on a 64-bit x86 Debian-family
 with `apt-get` and, if the game is not yet installed, enough free disk. It then installs `python3`, `python3-venv`, `curl`,
 `unzip`, `ca-certificates`, `libstdc++6` and `zlib1g`, creates the unprivileged
 `xonotic-webui` user, downloads the game and checks it against a pinned SHA-256, installs
-the panel into its own virtualenv, and enables and starts the `xonotic-webui` systemd
-service.
+the panel into its own virtualenv and the root upgrade helper (see Upgrading), and enables
+and starts the `xonotic-webui` systemd service.
 
 Options are environment variables that must reach `bash`, so put them after the pipe:
 
 ```bash
-curl -fsSL https://github.com/carlhako/xonotic-webui/releases/latest/download/install.sh | RELEASE_TAG=v0.1.0 bash
+curl -fsSL https://github.com/carlhako/xonotic-webui/releases/latest/download/install.sh | RELEASE_TAG=v0.1.1 bash
 ```
 
 | variable | effect |
 | --- | --- |
-| `RELEASE_TAG=v0.1.0` | install that release instead of the latest |
+| `RELEASE_TAG=v0.1.1` | install that release instead of the latest |
 | `XONOTIC_WEBUI_TARBALL=/path/xonotic-webui.tar.gz` | install the panel from a local release tarball |
 | `XONOTIC_ARCHIVE=/path/xonotic-0.8.6.zip` | use a local game archive instead of downloading (still digest-checked) |
 | `XONOTIC_WEBUI_WHEELHOUSE=/path` | resolve Python dependencies from a local directory of wheels |
-| `XONOTIC_WEBUI_REPO=owner/name` | take the release from another GitHub repository, such as a fork |
+| `XONOTIC_WEBUI_REPO=owner/name` | take the release from another GitHub repository, such as a fork; the upgrade helper and the panel's release check are bound to it too |
 
 The release assets are `install.sh` and `xonotic-webui.tar.gz`. To install without
 downloading anything from GitHub or `dl.xonotic.org`, save both from the release page,
@@ -88,11 +90,55 @@ of it.
 
 ## Upgrading
 
-Re-run the install command from Install, as root. It replaces the application, fetches the game only if it is
-missing, and leaves your server configuration, panel state and logs untouched. The new
-version is built beside the old one and checked before the old one is removed; if the new
-panel does not answer its health check, the previous version is restored and the installer
-exits non-zero. Pin a version with `RELEASE_TAG`.
+The panel checks GitHub for a newer release shortly after it starts and every 12 hours
+after that. The running version is shown in the header, in square brackets beside the name:
+green, `[0.2.0]`, when no newer release is known, and orange, `[0.2.0 update available]`,
+when there is one. Activating it opens the **Panel** page (`/panel`; it is not in the
+navigation bar), which shows the installed and latest versions, when the last check ran, a
+**Check now** action, and the latest release's notes.
+
+**One-click upgrade.** When an update is available the Panel page offers *Upgrade to
+x.y.z*. Confirming it hands the request to a small root-owned helper, which downloads that
+exact release, verifies its published SHA-256 digests and runs its installer. The panel
+restarts, and the game server with it: players are disconnected, and the game comes back
+by itself if it was running (a server you had stopped stays stopped). The page shows a
+banner while this happens, reloads onto the new version, and then reports the outcome. If
+the new panel does not come up, the installer restores the previous one and the page shows
+the installer's output. Nothing is backed up first: the installer never touches your
+configuration, settings or state.
+
+**Without the helper**, and for the one-time step below, upgrade as root, which is the same
+command as installing and is safe to repeat:
+
+```bash
+curl -fsSL https://github.com/carlhako/xonotic-webui/releases/latest/download/install.sh | bash
+```
+
+It replaces the application, fetches the game only if it is missing, and leaves your server
+configuration, panel state and logs untouched. The new version is built beside the old one
+and checked before the old one is removed; if the new panel does not answer its health
+check, the previous version is restored and the installer exits non-zero.
+
+**Installs of v0.1.x have no helper.** Upgrade them once with the command above; that run
+installs the helper, and every upgrade after it can be done from the Panel page. Until
+then the Panel page shows the command instead of an upgrade button.
+
+**Rolling back** is the same command with the release you want, as root; the interface
+never offers a downgrade:
+
+```bash
+curl -fsSL https://github.com/carlhako/xonotic-webui/releases/latest/download/install.sh | RELEASE_TAG=v0.1.1 bash
+```
+
+**Trust.** The helper is installed by the installer, runs as root only when the panel asks,
+and accepts nothing from the panel except a release tag (`vX.Y.Z`) and a request id. The
+repository it downloads from is fixed when it is installed (`XONOTIC_WEBUI_REPO` at install
+time, `carlhako/xonotic-webui` by default) and a file whose digest is missing or differs is
+never run. The panel can write only the request; it cannot change the helper, its units or
+the status the helper records.
+
+To stop the panel contacting GitHub at all, set `XONOTIC_WEBUI_RELEASE_CHECK_ENABLED=false`;
+the version is still shown, with no update indication, and **Check now** still works.
 
 ## Where things live
 
@@ -102,12 +148,20 @@ exits non-zero. Pin a version with `RELEASE_TAG`.
 | `/opt/xonotic/0.8.6` | the game tree, root-owned and read-only to the service |
 | `/var/lib/xonotic-webui/state.json` | whether the server should be running |
 | `/var/lib/xonotic-webui/settings.json` | the server settings saved from the panel (see Server settings) |
+| `/var/lib/xonotic-webui/release_check.json` | the last release check, kept so a restart while offline still knows |
+| `/var/lib/xonotic-webui/upgrade/request.json` | an upgrade request, present only while the helper has not yet taken it |
+| `/var/lib/xonotic-webui/upgrade_pending.json` | the upgrade in flight; `upgrade_last.json` beside it is the last outcome |
 | `/var/lib/xonotic-webui/userdir/data/server.cfg` | **your server configuration**, seeded once and never overwritten |
 | `/var/lib/xonotic-webui/userdir/data/xonotic-webui-settings.cfg` | generated from `settings.json` on every save and start; do not edit |
 | `/etc/xonotic-webui/xonotic-webui.env` | optional settings overrides, seeded with commented examples and never overwritten |
 | `/etc/xonotic-webui/xonotic-webui.toml` | optional settings file, not created by the installer |
 | `/var/cache/xonotic-webui` | the resumable game download, removed once it is verified and extracted |
 | `/etc/systemd/system/xonotic-webui.service` | the service |
+| `/usr/local/libexec/xonotic-webui/xonotic-webui-upgrade` | the root upgrade helper, root-owned |
+| `/etc/systemd/system/xonotic-webui-upgrade.path` | starts the helper when a request appears |
+| `/etc/systemd/system/xonotic-webui-upgrade.service` | runs the helper (root, up to 60 minutes) |
+| `/var/lib/xonotic-webui-upgrade/status.json` | the helper's recorded outcome, root-owned and read-only to the service |
+| `/etc/systemd/system/xonotic-webui.service.d/release-repo.conf` | only when installed from another repository: points the release check at it |
 
 The service is `xonotic-webui` and runs as the unprivileged user of the same name. Everything
 under `/var/lib/xonotic-webui` belongs to that user; `/opt` and `/etc` are root's, so the
@@ -204,6 +258,14 @@ Environment wins over the file. Restart the panel after changing either:
 | `XONOTIC_WEBUI_CRASH_RESTART_WINDOW` | `300` | the window, in seconds |
 | `XONOTIC_WEBUI_CRASH_RESTART_DELAY` | `2` | seconds to wait before an automatic restart |
 | `XONOTIC_WEBUI_CONSOLE_BUFFER_LINES` | `2000` | console lines kept for new viewers |
+| `XONOTIC_WEBUI_RELEASE_CHECK_ENABLED` | `true` | check GitHub for a newer panel release; `false` for a host with no internet |
+| `XONOTIC_WEBUI_RELEASE_CHECK_INTERVAL_HOURS` | `12` | hours between release checks |
+| `XONOTIC_WEBUI_RELEASE_REPO` | `carlhako/xonotic-webui` | the GitHub repository whose releases are checked; the installer keeps it in step with the helper |
+| `XONOTIC_WEBUI_RELEASE_API_URL` | `https://api.github.com` | the GitHub API base URL |
+| `XONOTIC_WEBUI_UPGRADE_HELPER_PATH` | `/usr/local/libexec/xonotic-webui/xonotic-webui-upgrade` | where the panel looks for the helper; its presence enables one-click upgrade |
+| `XONOTIC_WEBUI_UPGRADE_STATUS_DIR` | `/var/lib/xonotic-webui-upgrade` | the helper's root-owned status directory |
+| `XONOTIC_WEBUI_UPGRADE_TIMEOUT_SECONDS` | `3900` | how long the panel follows the helper before calling an upgrade interrupted; keep it above the unit's `TimeoutStartSec` (60 minutes) |
+| `XONOTIC_WEBUI_USER_AGENT` | `xonotic-webui/<version> (+https://github.com/<repo>)` | the user agent of the release check |
 | `XONOTIC_WEBUI_CONFIG_FILE` | `/etc/xonotic-webui/xonotic-webui.toml` | the TOML file to read; only meaningful as an environment variable |
 
 The service unit itself sets `XONOTIC_WEBUI_GAME_ROOT` and `XONOTIC_WEBUI_STATE_DIR` in the

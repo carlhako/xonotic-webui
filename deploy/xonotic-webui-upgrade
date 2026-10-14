@@ -1,0 +1,342 @@
+#!/usr/bin/python3
+"""xonotic-webui upgrade helper: runs as root, triggered by xonotic-webui-upgrade.path.
+
+The panel (unprivileged) asks for an upgrade by writing
+/var/lib/xonotic-webui/upgrade/request.json containing {"tag": "vX.Y.Z", "request_id":
+"<32 hex>"}. This helper:
+
+  1. takes the request (renamed to request.processing so the path unit cannot
+     retrigger) and treats it as untrusted: the request directory must be a real
+     directory owned by the service user, the request is never followed through a
+     symlink, it must be a small regular file, and only a well-formed version tag and
+     request id are accepted from it;
+  2. looks up that tag's release in REPO (fixed at install time, never taken from the
+     request);
+  3. downloads the release's install.sh and xonotic-webui.tar.gz into a private root
+     temp directory and verifies each against the sha256 digest GitHub publishes for
+     the asset, failing closed if a digest is missing or differs;
+  4. runs that release's installer in place (it restarts the panel, and rolls back if
+     the new panel does not come up);
+  5. records the outcome in /var/lib/xonotic-webui-upgrade/status.json, a root-owned
+     directory the panel can read but not write. Every status carries the request's id,
+     so the panel never mistakes an earlier attempt's outcome for this one's.
+
+Stdlib only, run by the system python3, never the venv it is replacing.
+Installed by install.sh to /usr/local/libexec/xonotic-webui/xonotic-webui-upgrade
+(root, 0755).
+"""
+
+from __future__ import annotations
+
+import collections
+import datetime
+import hashlib
+import json
+import os
+import pwd
+import re
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+import urllib.error
+import urllib.request
+
+# install.sh rewrites this line with its REPO when it installs the helper.
+REPO = "carlhako/xonotic-webui"
+
+# The unit sets none of these; they exist so the test suite can run the helper
+# unprivileged against a fake release server. Only root can edit the unit.
+REQUEST_DIR = os.environ.get("XONOTIC_WEBUI_UPGRADE_REQUEST_DIR", "/var/lib/xonotic-webui/upgrade")
+STATUS_DIR = os.environ.get("XONOTIC_WEBUI_UPGRADE_STATUS_DIR", "/var/lib/xonotic-webui-upgrade")
+API_URL = os.environ.get("XONOTIC_WEBUI_UPGRADE_API_URL", "https://api.github.com").rstrip("/")
+SERVICE_USER = os.environ.get("XONOTIC_WEBUI_UPGRADE_SERVICE_USER", "xonotic-webui")
+
+TAG_RE = re.compile(r"^v[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$")
+REQUEST_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+REPO_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_-][A-Za-z0-9_.-]*$")
+# The installer colours its output; the tail is shown in the web interface.
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+MAX_REQUEST_BYTES = 4096
+MAX_ASSET_BYTES = 256 * 1024 * 1024
+ASSETS = ("install.sh", "xonotic-webui.tar.gz")
+LOG_TAIL_LINES = 200
+HTTP_TIMEOUT = 60
+REQUEST_NAME = "request.json"
+PROCESSING_NAME = "request.processing"
+
+
+class Rejected(Exception):
+    """The request itself is unacceptable; nothing is downloaded. Carries the request's
+    id when one could be read, so the panel can match the rejection."""
+
+    def __init__(self, message: str, request_id: str | None = None) -> None:
+        super().__init__(message)
+        self.request_id = request_id
+
+
+class Failed(Exception):
+    """A well-formed request that could not be carried out."""
+
+
+def now() -> str:
+    return datetime.datetime.now(datetime.UTC).isoformat()
+
+
+def log(msg: str) -> None:
+    print(f"xonotic-webui-upgrade: {msg}", flush=True)
+
+
+def write_status(**fields) -> None:
+    os.makedirs(STATUS_DIR, mode=0o755, exist_ok=True)
+    path = os.path.join(STATUS_DIR, "status.json")
+    fd, tmp = tempfile.mkstemp(prefix=".status-", dir=STATUS_DIR)
+    try:
+        with os.fdopen(fd, "w") as fh:
+            json.dump(fields, fh)
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
+def open_request_dir() -> int:
+    """Open the request directory and return its descriptor. Raises Rejected.
+
+    Everything after this works relative to the descriptor, so a swap of the directory
+    for a symlink after this check changes nothing. The service user owns the
+    directory's contents, so its owner must be the service user and nobody else."""
+    try:
+        fd = os.open(REQUEST_DIR, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except OSError as exc:  # ELOOP / ENOTDIR: a symlink or not a directory
+        raise Rejected(f"request directory is not a plain directory ({exc.strerror})") from exc
+    try:
+        try:
+            expected = pwd.getpwnam(SERVICE_USER).pw_uid
+        except KeyError as exc:
+            raise Rejected(f"service user {SERVICE_USER!r} does not exist") from exc
+        if os.fstat(fd).st_uid != expected:
+            raise Rejected(f"request directory is not owned by {SERVICE_USER}")
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
+def take_request(dir_fd: int) -> tuple[str, str]:
+    """Move the request aside and return its (tag, request_id). Raises Rejected."""
+    try:
+        # Renames a symlink itself, never its target.
+        os.replace(REQUEST_NAME, PROCESSING_NAME, src_dir_fd=dir_fd, dst_dir_fd=dir_fd)
+    except OSError as exc:
+        raise Rejected(f"request could not be taken ({exc.strerror})") from exc
+    try:
+        fd = os.open(PROCESSING_NAME, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=dir_fd)
+    except OSError as exc:  # ELOOP: it is a symlink
+        raise Rejected(f"request is not a regular file ({exc.strerror})") from exc
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            raise Rejected("request is not a regular file")
+        if st.st_size > MAX_REQUEST_BYTES:
+            raise Rejected(f"request is larger than {MAX_REQUEST_BYTES} bytes")
+        raw = os.read(fd, MAX_REQUEST_BYTES + 1)
+    finally:
+        os.close(fd)
+    if len(raw) > MAX_REQUEST_BYTES:
+        raise Rejected(f"request is larger than {MAX_REQUEST_BYTES} bytes")
+    try:
+        data = json.loads(raw)
+    except ValueError as exc:
+        raise Rejected("request is not valid JSON") from exc
+    if not isinstance(data, dict):
+        raise Rejected("request is not a JSON object")
+    request_id = data.get("request_id")
+    if not isinstance(request_id, str) or not REQUEST_ID_RE.fullmatch(request_id):
+        raise Rejected("request does not carry a well-formed request id")
+    tag = data.get("tag")
+    if not isinstance(tag, str) or not TAG_RE.fullmatch(tag):
+        raise Rejected("request does not name a well-formed release tag", request_id)
+    return tag, request_id
+
+
+def http_get(url: str, *, accept: str):
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": f"xonotic-webui-upgrade (+https://github.com/{REPO})",
+            "Accept": accept,
+        },
+    )
+    return urllib.request.urlopen(req, timeout=HTTP_TIMEOUT)
+
+
+def release_assets(tag: str) -> dict[str, tuple[str, str]]:
+    """{name: (download_url, sha256_hex)} for the assets the upgrade needs."""
+    if not REPO_RE.fullmatch(REPO):
+        raise Failed(f"the release repository {REPO!r} is not owner/name")
+    url = f"{API_URL}/repos/{REPO}/releases/tags/{tag}"
+    try:
+        with http_get(url, accept="application/vnd.github+json") as resp:
+            release = json.load(resp)
+    except urllib.error.HTTPError as exc:
+        raise Failed(f"release {tag} could not be fetched from {REPO} (HTTP {exc.code})") from exc
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise Failed(f"release {tag} could not be fetched from {REPO}: {exc}") from exc
+    if release.get("draft") or release.get("prerelease"):
+        raise Failed(f"release {tag} is a draft or pre-release")
+    found: dict[str, tuple[str, str]] = {}
+    for asset in release.get("assets") or []:
+        name = asset.get("name")
+        if name not in ASSETS:
+            continue
+        digest = asset.get("digest") or ""
+        if not digest.startswith("sha256:") or len(digest) != len("sha256:") + 64:
+            raise Failed(f"release asset {name} has no published sha256 digest")
+        found[name] = (asset.get("browser_download_url") or "", digest.split(":", 1)[1].lower())
+    missing = [n for n in ASSETS if n not in found]
+    if missing:
+        raise Failed(f"release {tag} is missing {', '.join(missing)}")
+    return found
+
+
+def download_verified(url: str, expected_sha256: str, dest: str) -> None:
+    scheme = API_URL.split(":", 1)[0]
+    if not url.startswith(f"{scheme}://"):
+        raise Failed(f"refusing to download from {url!r}")
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        with http_get(url, accept="application/octet-stream") as resp, open(dest, "wb") as out:
+            while chunk := resp.read(1024 * 1024):
+                size += len(chunk)
+                if size > MAX_ASSET_BYTES:
+                    raise Failed(f"{os.path.basename(dest)} is larger than expected")
+                digest.update(chunk)
+                out.write(chunk)
+    except (urllib.error.URLError, OSError) as exc:
+        raise Failed(f"download of {os.path.basename(dest)} failed: {exc}") from exc
+    if digest.hexdigest() != expected_sha256:
+        raise Failed(f"{os.path.basename(dest)} does not match its published sha256 digest")
+
+
+def run_installer(workdir: str, tag: str, tail: collections.deque) -> int:
+    env = {
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "LANG": "C.UTF-8",
+        "XONOTIC_WEBUI_TARBALL": os.path.join(workdir, "xonotic-webui.tar.gz"),
+        "RELEASE_TAG": tag,
+        "XONOTIC_WEBUI_REPO": REPO,
+    }
+    proc = subprocess.Popen(
+        ["bash", os.path.join(workdir, "install.sh")],
+        cwd=workdir,
+        env=env,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+    )
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        sys.stdout.write(line)  # the full log goes to the journal
+        sys.stdout.flush()
+        tail.append(ANSI_RE.sub("", line.rstrip("\n")))
+    return proc.wait()
+
+
+def main() -> int:
+    started = now()
+    tag: str | None = None
+    request_id: str | None = None
+    dir_fd: int | None = None
+    tail: collections.deque[str] = collections.deque(maxlen=LOG_TAIL_LINES)
+    workdir = tempfile.mkdtemp(prefix="xonotic-webui-upgrade-")  # 0700, root-owned
+    try:
+        if not os.path.lexists(os.path.join(REQUEST_DIR, REQUEST_NAME)):
+            log("no upgrade request; nothing to do")
+            return 0
+        dir_fd = open_request_dir()
+        tag, request_id = take_request(dir_fd)
+        log(f"upgrading xonotic-webui to {tag} from {REPO}")
+        write_status(
+            request_id=request_id,
+            tag=tag,
+            state="running",
+            started_at=started,
+            finished_at=None,
+            exit_code=None,
+            error=None,
+            log_tail=None,
+        )
+        for name, (url, sha) in release_assets(tag).items():
+            log(f"downloading {name}")
+            download_verified(url, sha, os.path.join(workdir, name))
+        log("checksums verified; running the installer")
+        code = run_installer(workdir, tag, tail)
+        if code != 0:
+            raise Failed(f"the installer exited with status {code}")
+        log(f"xonotic-webui {tag} installed")
+        write_status(
+            request_id=request_id,
+            tag=tag,
+            state="succeeded",
+            started_at=started,
+            finished_at=now(),
+            exit_code=0,
+            error=None,
+            log_tail="\n".join(tail),
+        )
+        return 0
+    except Rejected as exc:
+        log(f"request rejected: {exc}")
+        write_status(
+            request_id=exc.request_id,
+            tag=None,
+            state="rejected",
+            started_at=started,
+            finished_at=now(),
+            exit_code=None,
+            error=str(exc),
+            log_tail=None,
+        )
+        return 1
+    except Exception as exc:  # Failed, or anything unexpected: never leave "running"
+        log(f"upgrade failed: {exc}")
+        write_status(
+            request_id=request_id,
+            tag=tag,
+            state="failed",
+            started_at=started,
+            finished_at=now(),
+            exit_code=None,
+            error=str(exc),
+            log_tail="\n".join(tail) or None,
+        )
+        return 1
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+        if dir_fd is not None:
+            remove_processing(dir_fd)
+            os.close(dir_fd)
+
+
+def remove_processing(dir_fd: int) -> None:
+    """Remove the taken request. lstat/unlink act on a link itself, never its target;
+    anything that is not a file or link (a planted directory) is left."""
+    try:
+        st = os.lstat(PROCESSING_NAME, dir_fd=dir_fd)
+    except FileNotFoundError:
+        return
+    if stat.S_ISDIR(st.st_mode):
+        log(f"leaving unexpected directory {PROCESSING_NAME}")
+        return
+    os.unlink(PROCESSING_NAME, dir_fd=dir_fd)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

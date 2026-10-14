@@ -16,6 +16,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The release notes are the changelog section for this version, and a release
+      # without one is not published: this fails the job, naming the version. A tag
+      # supplies the version; a manual dry run uses the one in pyproject.toml, so a
+      # missing entry is caught before anyone tags.
+      - name: Release notes from the changelog
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            version="${GITHUB_REF_NAME}"
+          else
+            version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml | head -n1)"
+          fi
+          echo "release notes for ${version}"
+          .github/scripts/release-notes.sh "${version}" | tee release-notes.md
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -58,7 +73,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: release-notes.md
           files: |
             release/*.tar.gz
             release/install.sh

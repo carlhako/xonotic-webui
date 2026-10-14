@@ -1,0 +1,13 @@
+[Unit]
+Description=xonotic-webui — watch for a requested panel upgrade
+Documentation=https://github.com/carlhako/xonotic-webui
+
+# The panel (unprivileged) requests an upgrade by writing this file into its own state
+# directory. The helper renames it before doing anything, so the path unit does not
+# retrigger once the helper has run.
+[Path]
+PathExists=/var/lib/xonotic-webui/upgrade/request.json
+Unit=xonotic-webui-upgrade.service
+
+[Install]
+WantedBy=multi-user.target

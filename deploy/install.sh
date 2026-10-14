@@ -11,6 +11,10 @@
 # application is built beside the old one and swapped in, and rolled back if the new
 # panel does not come up.
 #
+# It also installs the root upgrade helper (xonotic-webui-upgrade.path/.service) that the
+# web interface's one-click upgrade uses. Installs of v0.1.x have no helper yet: run the
+# curl command below once as root, and one-click upgrades work after that.
+#
 # Usage (as root; a minimal LXC lacks curl, so `apt-get install -y curl` first):
 #   curl -fsSL https://github.com/carlhako/xonotic-webui/releases/latest/download/install.sh | bash
 #   RELEASE_TAG=v0.1.0 bash install.sh                     # pin a panel release
@@ -45,6 +49,13 @@ PREFIX="${DESTDIR}/opt/${APP_NAME}"
 GAME_PARENT="${DESTDIR}/opt/xonotic"
 GAME_DIR="${GAME_PARENT}/${XONOTIC_VERSION}"
 STATE_DIR="${DESTDIR}/var/lib/${APP_NAME}"
+# The upgrade helper is root's: its directory and its status directory are outside the
+# state directory, which the service user owns (design D1). The request directory is the
+# one place the service user may write, and the path unit watches it.
+HELPER_DIR="${DESTDIR}/usr/local/libexec/${APP_NAME}"
+HELPER="${HELPER_DIR}/${APP_NAME}-upgrade"
+HELPER_STATUS_DIR="${DESTDIR}/var/lib/${APP_NAME}-upgrade"
+REQUEST_DIR="${STATE_DIR}/upgrade"
 USERDIR="${STATE_DIR}/userdir"
 ETC_DIR="${DESTDIR}/etc/${APP_NAME}"
 ENV_FILE="${ETC_DIR}/${APP_NAME}.env"
@@ -59,6 +70,7 @@ opt() { local v="${ENV_PREFIX}$1"; printf '%s' "${!v:-}"; }
 REPO="$(opt REPO)"
 REPO="${REPO:-$GITHUB_REPO}"
 RELEASE_TAG="${RELEASE_TAG:-latest}"
+HELPER_UNITS=("${APP_NAME}-upgrade.path" "${APP_NAME}-upgrade.service")
 
 log()  { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!! \033[0m %s\n' "$*" >&2; }
@@ -89,6 +101,13 @@ require_platform() {
     *) die "unsupported system '${id:-unknown}': a Debian-family system (Debian 12/13) is required" ;;
   esac
   command -v apt-get >/dev/null 2>&1 || die "apt-get was not found: a Debian-family system with apt is required"
+}
+
+# REPO is baked into the root upgrade helper (and may become a systemd drop-in): accept
+# only owner/name, so it can never carry anything a shell, sed or systemd would act on.
+require_repo() {
+  [[ "$REPO" =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_-][A-Za-z0-9_.-]*$ ]] \
+    || die "${ENV_PREFIX}REPO must look like owner/name, got '$REPO'"
 }
 
 # Free bytes on the filesystem that will hold $1 (its nearest existing ancestor).
@@ -134,7 +153,8 @@ ensure_user() {
 ensure_dirs() {
   log "creating directory layout"
   install -d -m 0755 -o root -g root "$PREFIX" "$GAME_PARENT"
-  install -d -m 0755 -o "$SERVICE_USER" -g "$SERVICE_USER" "$STATE_DIR" "$USERDIR" "$USERDIR/data"
+  install -d -m 0755 -o "$SERVICE_USER" -g "$SERVICE_USER" "$STATE_DIR" "$USERDIR" "$USERDIR/data" \
+    "$REQUEST_DIR"
   install -d -m 0755 -o root -g root "$ETC_DIR" "$CACHE_DIR"
 }
 
@@ -151,11 +171,20 @@ tampering_risk() {
 # rewritten, only their ownership and mode.
 repair_ownership() {
   local p
-  for p in "$PREFIX" "$GAME_PARENT"; do
+  for p in "$PREFIX" "$GAME_PARENT" "$HELPER_DIR" "$HELPER_STATUS_DIR"; do
     if [ -n "$(tampering_risk "$p")" ]; then
       log "restoring root ownership of $p"
       chown -R root:root "$p"
       chmod -R go-w "$p"
+    fi
+  done
+  local unit
+  for unit in "${HELPER_UNITS[@]}"; do
+    p="${UNIT_DIR}/${unit}"
+    if [ -n "$(tampering_risk "$p")" ]; then
+      log "restoring root ownership of $p"
+      chown root:root "$p"
+      chmod go-w "$p"
     fi
   done
   if [ -n "$(find "$STATE_DIR" ! -user "$SERVICE_USER" -print -quit)" ]; then
@@ -172,11 +201,17 @@ as_service_user() {
 
 # Prove the layout rather than assume it: the application and game trees are root's and
 # the service user can neither write to them nor leave anything behind in them, while it
-# can write its own state and read and run what it needs. Fails before the service is
-# touched.
+# can write its own state and read and run what it needs. The same holds for the upgrade
+# helper, its units and its status directory (root runs them), while the request
+# directory is the service user's to write. Fails before the service is touched.
 verify_layout() {
-  local p risk
-  for p in "$PREFIX" "$GAME_PARENT" "$ETC_DIR"; do
+  local p risk dirs=("$PREFIX" "$GAME_PARENT" "$ETC_DIR")
+  # Absent only when installing a release that predates the helper (see
+  # install_upgrade_helper); present, they are held to the same standard.
+  for p in "$HELPER_DIR" "$HELPER_STATUS_DIR"; do
+    if [ -d "$p" ]; then dirs+=("$p"); fi
+  done
+  for p in "${dirs[@]}"; do
     [ -d "$p" ] || die "layout check: $p is missing"
     [ "$(stat -c %u "$p")" -eq 0 ] || die "layout check: $p is not owned by root"
     risk="$(tampering_risk "$p")"
@@ -190,7 +225,25 @@ verify_layout() {
     as_service_user test -x "$GAME_DIR/xonotic-linux64-dedicated" \
       || die "layout check: the service user cannot run the game server"
   fi
-  for p in "$STATE_DIR" "$USERDIR" "$USERDIR/data"; do
+  # The helper and its units are what root will run on the panel's say-so, so the service
+  # user must be unable to replace them; the status it reads must be unforgeable.
+  if [ -e "$HELPER" ]; then
+    [ "$(stat -c %u "$HELPER")" -eq 0 ] || die "layout check: $HELPER is not owned by root"
+    if as_service_user test -w "$HELPER"; then
+      die "layout check: the service user can modify the upgrade helper"
+    fi
+    as_service_user test -r "$HELPER_STATUS_DIR" \
+      || die "layout check: the service user cannot read the upgrade status in $HELPER_STATUS_DIR"
+    local unit
+    for unit in "${HELPER_UNITS[@]}"; do
+      p="${UNIT_DIR}/${unit}"
+      [ -e "$p" ] || die "layout check: $p is missing"
+      [ "$(stat -c %u "$p")" -eq 0 ] || die "layout check: $p is not owned by root"
+      risk="$(tampering_risk "$p")"
+      [ -z "$risk" ] || die "layout check: $risk is changeable by the service user"
+    done
+  fi
+  for p in "$STATE_DIR" "$USERDIR" "$USERDIR/data" "$REQUEST_DIR"; do
     as_service_user test -w "$p" || die "layout check: the service user cannot write to $p"
   done
 }
@@ -353,6 +406,45 @@ build_venv() {
   fi
 }
 
+# The root upgrade helper (design D1, D5, D6): root-owned and outside $PREFIX and the state
+# directory, so root never runs a file the service user could edit. Its release repository
+# is baked in here, from the one this installer was run against.
+install_upgrade_helper() {
+  if [ ! -f "$SRC/deploy/${APP_NAME}-upgrade" ]; then
+    warn "this release has no upgrade helper; leaving any installed helper as it is"
+    return 0
+  fi
+  log "installing the upgrade helper"
+  install -d -m 0755 -o root -g root "$HELPER_DIR" "$HELPER_STATUS_DIR"
+  install -m 0755 -o root -g root "$SRC/deploy/${APP_NAME}-upgrade" "$HELPER"
+  sed -i "s|^REPO = .*|REPO = \"${REPO}\"|" "$HELPER"
+  install -d -m 0755 -o "$SERVICE_USER" -g "$SERVICE_USER" "$REQUEST_DIR"
+  install -d -m 0755 "$UNIT_DIR"
+  local unit
+  for unit in "${HELPER_UNITS[@]}"; do
+    install -m 0644 -o root -g root "$SRC/deploy/${unit}" "${UNIT_DIR}/${unit}"
+  done
+}
+
+# The panel's release check must look where the helper does. When this run was pointed at
+# a repository other than the default, a root-owned drop-in tells the panel; otherwise
+# any stale one is removed (design D7). Takes effect with the daemon-reload in
+# swap_and_start.
+sync_release_repo() {
+  local dir="${UNIT_DIR}/${APP_NAME}.service.d" conf
+  conf="${dir}/release-repo.conf"
+  if [ "$REPO" != "$GITHUB_REPO" ]; then
+    log "pointing the panel's release check at $REPO"
+    install -d -m 0755 -o root -g root "$dir"
+    printf '[Service]\nEnvironment=%sRELEASE_REPO=%s\n' "$ENV_PREFIX" "$REPO" >"$conf"
+    chmod 0644 "$conf"
+  elif [ -e "$conf" ]; then
+    log "removing the release repository override"
+    rm -f "$conf"
+    rmdir "$dir" 2>/dev/null || true
+  fi
+}
+
 wait_healthy() {
   local port url state
   port="$(env_value "${ENV_PREFIX}PORT" 80)"
@@ -390,6 +482,10 @@ swap_and_start() {
   install -m 0644 "$SRC/deploy/${APP_NAME}.service" "$unit"
   systemctl daemon-reload
   systemctl enable "${APP_NAME}.service"
+  # The helper's trigger. Enabling it again from inside the helper's own run is a no-op.
+  if [ -f "${UNIT_DIR}/${APP_NAME}-upgrade.path" ]; then
+    systemctl enable --now "${APP_NAME}-upgrade.path"
+  fi
   systemctl start "${APP_NAME}.service"
 
   log "waiting for ${APP_NAME} ${NEW_VERSION} to answer"
@@ -428,6 +524,7 @@ cleanup() { [ -n "$WORK" ] && rm -rf "$WORK"; return 0; }
 
 main() {
   require_root
+  require_repo
   require_platform
   require_space
   trap cleanup EXIT
@@ -441,6 +538,8 @@ main() {
   seed_env_file
   fetch_release
   build_venv
+  install_upgrade_helper
+  sync_release_repo
   verify_layout
   swap_and_start
   report
