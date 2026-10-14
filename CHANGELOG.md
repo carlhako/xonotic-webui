@@ -5,6 +5,13 @@ publishes that section as the GitHub release notes, which the panel shows on its
 page before you upgrade. A tag without a section here is not published, so add the entry
 with the version bump.
 
+## 0.2.1 - 2026-10-14
+
+### What's new
+
+- **Patch release to exercise one-click upgrade end to end.** There are no behaviour
+  changes. It is the first release that a 0.2.0 install can upgrade to from the Panel page.
+
 ## 0.2.0 - 2026-10-14
 
 ### What's new
