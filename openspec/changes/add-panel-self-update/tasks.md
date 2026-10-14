@@ -57,7 +57,7 @@ ported code (`src/cobble/selfupdate/`, `deploy/cobble-upgrade*`,
 ## 9. Changelog and release workflow (panel-self-update)
 
 - [x] 9.1 Copy `release-notes.sh` to `.github/scripts/` (D10) and add `CHANGELOG.md` with its header and backfilled 0.1.0 and 0.1.1 sections; verify tests in `tests/test_release.py` for a present section, a missing section, an empty section, `v`-prefixed input, a `0.1.1` vs `0.1.10` prefix, and that the version in `pyproject.toml` has a section
-- [ ] 9.2 Update `release.yml`: a first step producing `release-notes.md` from the tag, or from the `pyproject.toml` version on `workflow_dispatch`, and the publish step using `body_path` instead of `generate_release_notes`; add `shellcheck` of the script to the CI installer job; verify `shellcheck` passes, and a manual workflow dry run on the branch succeeds and its log shows the notes step
+- [x] 9.2 Update `release.yml`: a first step producing `release-notes.md` from the tag, or from the `pyproject.toml` version on `workflow_dispatch`, and the publish step using `body_path` instead of `generate_release_notes`; add `shellcheck` of the script to the CI installer job; verify `shellcheck` passes, and a manual workflow dry run on the branch succeeds and its log shows the notes step
 - [x] 9.3 Bump the version to 0.2.0 in `pyproject.toml` and `__init__.py` with a `## 0.2.0 - <date>` changelog entry describing the badge, the panel page and one-click upgrades, including the one-time manual upgrade for v0.1.x; verify `pytest -q`, `npm --prefix web test` and the changelog test pass
 
 ## 10. End-to-end on a real host
