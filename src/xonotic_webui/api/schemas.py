@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PlayerModel(BaseModel):
@@ -79,6 +79,55 @@ class ErrorResponse(BaseModel):
 class HealthModel(BaseModel):
     status: Literal["ok"]
     version: str
+
+
+# --- panel self-update -----------------------------------------------------------------
+
+
+class PanelUpgrade(BaseModel):
+    """An upgrade of the panel itself: in flight, or the last one that finished."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    state: Literal["pending", "running", "succeeded", "failed", "rejected"] = Field(
+        description=(
+            "pending until the helper takes the request; running while it installs; then "
+            "the outcome."
+        )
+    )
+    from_version: str | None = Field(
+        default=None, alias="from", description="The version that was running when requested."
+    )
+    to: str | None = Field(default=None, description="The version that was requested.")
+    requested_at: str | None = None
+    finished_at: str | None = None
+    error: str | None = Field(default=None, description="Why it did not succeed.")
+    log_tail: str | None = Field(
+        default=None, description="The end of the installer's output, for a failure."
+    )
+
+
+class PanelVersion(BaseModel):
+    current: str = Field(description="The version of the running panel.")
+    latest: str | None = Field(description="The latest stable release; null if never checked.")
+    update_available: bool
+    release_url: str | None = Field(description="The latest release's page on GitHub.")
+    release_name: str | None = Field(description="The latest release's title, as published.")
+    published_at: str | None
+    notes: str | None = Field(description="The latest release's notes (Markdown); null if none.")
+    checked_at: str | None = Field(description="When the last check ran, successful or not.")
+    check_error: str | None = Field(description="Why the last check failed, if it did.")
+    one_click_available: bool = Field(description="Whether the upgrade helper is installed.")
+    manual_command: str | None = Field(
+        description="The command to run as root to upgrade; null when one-click is available."
+    )
+    upgrade: PanelUpgrade | None = Field(
+        description="The upgrade in flight, else the last one that finished."
+    )
+
+
+class PanelUpgradeRequest(BaseModel):
+    version: str = Field(description="The release to upgrade to; must be the one reported.")
 
 
 # --- server settings -------------------------------------------------------------------

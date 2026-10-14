@@ -231,6 +231,10 @@ class Supervisor:
         binary = self._settings.game_binary
         return binary.is_file()
 
+    def transition_in_progress(self) -> bool:
+        """Whether a start, stop or restart is under way (or its lock is held)."""
+        return self._sm.state in (RunState.STARTING, RunState.STOPPING) or self._op_lock.locked()
+
     def _reject_if_closing(self) -> None:
         if self._closing:
             raise TransitionInProgressError("the panel is shutting down")
@@ -241,7 +245,7 @@ class Supervisor:
         state = self._sm.state
         if state in (RunState.STARTING, RunState.RUNNING):
             raise AlreadyRunningError("the server is already running")
-        if state is RunState.STOPPING or self._op_lock.locked():
+        if self.transition_in_progress():
             raise TransitionInProgressError("a lifecycle operation is in progress")
         async with self._op_lock:
             self._reject_if_closing()
@@ -496,7 +500,7 @@ class Supervisor:
         state = self._sm.state
         if state is RunState.STOPPED and not self._op_lock.locked():
             raise NotRunningError("the server is not running")
-        if state is not RunState.RUNNING or self._op_lock.locked():
+        if self.transition_in_progress():
             raise TransitionInProgressError("a lifecycle operation is in progress")
         async with self._op_lock:
             self._reject_if_closing()
@@ -560,8 +564,7 @@ class Supervisor:
     # -- lifecycle: restart --------------------------------------------------
     async def restart(self) -> None:
         self._reject_if_closing()
-        state = self._sm.state
-        if state in (RunState.STARTING, RunState.STOPPING) or self._op_lock.locked():
+        if self.transition_in_progress():
             raise TransitionInProgressError("a lifecycle operation is in progress")
         async with self._op_lock:
             self._reject_if_closing()

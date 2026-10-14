@@ -314,6 +314,33 @@ async def test_requests_during_a_start_are_rejected(
     assert sup.state is RunState.RUNNING
 
 
+async def test_transition_in_progress_reflects_each_state(
+    sup: Supervisor, fake: Callable[[str], None]
+) -> None:
+    assert sup.transition_in_progress() is False  # stopped
+
+    fake("startup_delay=1.0,quit_delay=1.0")
+    starting = asyncio.create_task(sup.start())
+    await wait_for(lambda: sup.state is RunState.STARTING)
+    assert sup.transition_in_progress() is True  # starting
+    await starting
+    assert sup.state is RunState.RUNNING
+    assert sup.transition_in_progress() is False  # running
+
+    stopping = asyncio.create_task(sup.stop())
+    await wait_for(lambda: sup.state is RunState.STOPPING)
+    assert sup.transition_in_progress() is True  # stopping
+    await stopping
+    assert sup.transition_in_progress() is False  # stopped again
+
+
+async def test_transition_in_progress_while_the_operation_lock_is_held(sup: Supervisor) -> None:
+    async with sup._op_lock:
+        assert sup.state is RunState.STOPPED
+        assert sup.transition_in_progress() is True
+    assert sup.transition_in_progress() is False
+
+
 async def test_requests_during_a_stop_are_rejected(
     sup: Supervisor, fake: Callable[[str], None]
 ) -> None:

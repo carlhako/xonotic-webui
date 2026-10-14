@@ -83,6 +83,10 @@ def make_settings(tmp_path: Path, **overrides: object) -> Settings:
         "readiness_timeout": 10.0,
         "crash_restart_delay": 0.0,
         "console_buffer_lines": 500,
+        # The suite never contacts GitHub or depends on a helper installed on the host.
+        "release_check_enabled": False,
+        "upgrade_helper_path": tmp_path / "libexec" / "xonotic-webui-upgrade",
+        "upgrade_status_dir": tmp_path / "upgrade-status",
     }
     values.update(overrides)
     return Settings(**values)  # type: ignore[arg-type]

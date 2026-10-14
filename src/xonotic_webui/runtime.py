@@ -11,6 +11,8 @@ from xonotic_webui.logging import get_logger
 from xonotic_webui.maps.actions import MatchActions
 from xonotic_webui.maps.catalogue import MapCatalogue
 from xonotic_webui.maps.control import MapControl
+from xonotic_webui.selfupdate.release_check import ReleaseChecker
+from xonotic_webui.selfupdate.upgrade import UpgradeService
 from xonotic_webui.serversettings.service import ServerSettingsService
 from xonotic_webui.serversettings.store import SettingsStore
 from xonotic_webui.settings import Settings
@@ -49,6 +51,8 @@ class Runtime:
             self.map_catalogue,
             self.map_control.effective_gametype,
         )
+        self.release_check = ReleaseChecker(settings)
+        self.upgrade = UpgradeService(settings, self.supervisor, self.release_check)
         self._restore_task: asyncio.Task[None] | None = None
 
     def effective_gametype(self) -> str | None:
@@ -63,9 +67,16 @@ class Runtime:
     async def startup(self) -> None:
         # Restore in the background so the web interface is up while the server starts.
         self._restore_task = asyncio.create_task(self.supervisor.restore(), name="xonotic-restore")
+        # The first release check waits in its own task; it never delays the above.
+        self.release_check.start()
+        # An upgrade requested before this start (the helper restarted the panel to install
+        # it) is followed to its outcome.
+        self.upgrade.start()
 
     async def shutdown(self) -> None:
         # Stop the game server cleanly before the panel goes away (no orphan).
+        await self.upgrade.stop()
+        await self.release_check.stop()
         await self.supervisor.aclose()
         if self._restore_task is not None:
             with contextlib.suppress(asyncio.CancelledError, Exception):

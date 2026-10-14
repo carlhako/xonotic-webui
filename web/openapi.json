@@ -619,6 +619,252 @@
         "title": "OverridesModel",
         "type": "object"
       },
+      "PanelUpgrade": {
+        "description": "An upgrade of the panel itself: in flight, or the last one that finished.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it did not succeed.",
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version that was running when requested.",
+            "title": "From"
+          },
+          "log_tail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The end of the installer's output, for a failure.",
+            "title": "Log Tail"
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested At"
+          },
+          "state": {
+            "description": "pending until the helper takes the request; running while it installs; then the outcome.",
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "rejected"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version that was requested.",
+            "title": "To"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "PanelUpgrade",
+        "type": "object"
+      },
+      "PanelUpgradeRequest": {
+        "properties": {
+          "version": {
+            "description": "The release to upgrade to; must be the one reported.",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "PanelUpgradeRequest",
+        "type": "object"
+      },
+      "PanelVersion": {
+        "properties": {
+          "check_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the last check failed, if it did.",
+            "title": "Check Error"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the last check ran, successful or not.",
+            "title": "Checked At"
+          },
+          "current": {
+            "description": "The version of the running panel.",
+            "title": "Current",
+            "type": "string"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest stable release; null if never checked.",
+            "title": "Latest"
+          },
+          "manual_command": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The command to run as root to upgrade; null when one-click is available.",
+            "title": "Manual Command"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest release's notes (Markdown); null if none.",
+            "title": "Notes"
+          },
+          "one_click_available": {
+            "description": "Whether the upgrade helper is installed.",
+            "title": "One Click Available",
+            "type": "boolean"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "release_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest release's title, as published.",
+            "title": "Release Name"
+          },
+          "release_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest release's page on GitHub.",
+            "title": "Release Url"
+          },
+          "update_available": {
+            "title": "Update Available",
+            "type": "boolean"
+          },
+          "upgrade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PanelUpgrade"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The upgrade in flight, else the last one that finished."
+          }
+        },
+        "required": [
+          "current",
+          "latest",
+          "update_available",
+          "release_url",
+          "release_name",
+          "published_at",
+          "notes",
+          "checked_at",
+          "check_error",
+          "one_click_available",
+          "manual_command",
+          "upgrade"
+        ],
+        "title": "PanelVersion",
+        "type": "object"
+      },
       "PlayerModel": {
         "properties": {
           "bot": {
@@ -1272,7 +1518,7 @@
   },
   "info": {
     "title": "xonotic-webui",
-    "version": "0.1.1"
+    "version": "0.2.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1977,6 +2223,99 @@
         "summary": "End the match early; the game then votes or rotates as usual",
         "tags": [
           "maps"
+        ]
+      }
+    },
+    "/api/panel/check": {
+      "post": {
+        "operationId": "check_api_panel_check_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Check for a newer panel release now",
+        "tags": [
+          "panel"
+        ]
+      }
+    },
+    "/api/panel/upgrade": {
+      "post": {
+        "operationId": "upgrade_api_panel_upgrade_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanelUpgradeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The upgrade was refused."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upgrade the panel to the release it reported",
+        "tags": [
+          "panel"
+        ]
+      }
+    },
+    "/api/panel/version": {
+      "get": {
+        "operationId": "get_version_api_panel_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Panel version and update state",
+        "tags": [
+          "panel"
         ]
       }
     },
