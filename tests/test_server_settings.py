@@ -335,7 +335,10 @@ async def test_an_override_saved_while_stopped_is_next_start(rig: Rig) -> None:
     assert await rig.svc.put_override("g_x", "1") is ApplyClass.NEXT_START
 
 
-@pytest.mark.parametrize("name", ["sv_eventlog", "SV_EVENTLOG_CONSOLE", "port", "rcon_password"])
+@pytest.mark.parametrize(
+    "name",
+    ["sv_eventlog", "SV_EVENTLOG_CONSOLE", "g_playerstats_gamereport_uri", "port", "rcon_password"],
+)
 async def test_reserved_cvars_are_refused_and_nothing_is_saved(rig: Rig, name: str) -> None:
     with pytest.raises(ReservedCvarError, match="reserved") as err:
         await rig.svc.put_override(name, "0")

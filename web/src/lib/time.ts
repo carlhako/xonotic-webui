@@ -19,3 +19,37 @@ export function formatTimestamp(iso: string): string {
   // Constructed per call so a changed browser/OS timezone is honoured.
   return formatter().format(date);
 }
+
+/** A length of time as `18h 2m`, `12m 5s` or `45s` (always whole units, never decimals). */
+export function formatDuration(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const rest = seconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${rest}s`;
+  return `${rest}s`;
+}
+
+/** An epoch-seconds instant in the browser's timezone, like {@link formatTimestamp}. */
+export function formatEpoch(epochSeconds: number): string {
+  return formatTimestamp(new Date(epochSeconds * 1000).toISOString());
+}
+
+const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 365 * 86400],
+  ["month", 30 * 86400],
+  ["day", 86400],
+  ["hour", 3600],
+  ["minute", 60],
+];
+
+/** "5 minutes ago", "2 days ago" or "just now"; `nowMs` is injectable for tests. */
+export function formatRelative(epochSeconds: number, nowMs: number = Date.now()): string {
+  const elapsed = Math.max(0, nowMs / 1000 - epochSeconds);
+  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "always" });
+  for (const [unit, size] of UNITS) {
+    if (elapsed >= size) return formatter.format(-Math.floor(elapsed / size), unit);
+  }
+  return elapsed < 10 ? "just now" : formatter.format(-Math.floor(elapsed), "second");
+}

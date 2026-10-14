@@ -299,3 +299,75 @@ class RotationResultModel(BaseModel):
 
 class GotoRequest(BaseModel):
     map: str
+
+
+# --- players (player-stats) ---------------------------------------------------------
+
+
+class PlayerRow(BaseModel):
+    id: int
+    name: str = Field(description="The most recently used name, colour codes intact.")
+    plain_name: str = Field(description="The name with colour codes removed.")
+    is_bot: bool
+    frags: int
+    deaths: int
+    kd: float = Field(description="frags / max(deaths, 1).")
+    suicides: int
+    teamkills: int
+    score: float
+    wins: int
+    matches: int = Field(description="Finished matches played.")
+    time_playing: float = Field(description="Seconds alive in matches (from the match report).")
+    time_on_server: float = Field(description="Seconds connected, spectating included.")
+    accuracy: float | None = Field(description="Hits over shots, or null when nothing was fired.")
+    first_seen: int = Field(description="UTC epoch seconds.")
+    last_seen: int = Field(description="UTC epoch seconds.")
+
+
+class PlayerList(BaseModel):
+    revision: int = Field(description="Changes whenever recorded data changes.")
+    total: int = Field(description="Players matching the filter, across all pages.")
+    players: list[PlayerRow]
+
+
+class PlayerAlias(BaseModel):
+    name: str
+    plain_name: str
+    last_used: int
+
+
+class PlayerWeapon(BaseModel):
+    weapon: str
+    frags: float
+    hit: float
+    fired: float
+    cnt_hit: float
+    cnt_fired: float
+    accuracy: float | None
+
+
+class PlayerAchievement(BaseModel):
+    name: str
+    count: int
+
+
+class PlayerExtra(BaseModel):
+    name: str
+    value: float
+
+
+class PlayerDetail(PlayerRow):
+    aliases: list[PlayerAlias] = Field(description="Every name used, most recent first.")
+    sessions: int = Field(description="How many visits are recorded.")
+    key_prefix: str | None = Field(
+        description="At most the first 8 characters of the key fingerprint, if there is one."
+    )
+    damage_dealt: float
+    damage_taken: float
+    avg_latency: float | None = Field(description="Average ping in milliseconds, if known.")
+    weapons: list[PlayerWeapon]
+    achievements: list[PlayerAchievement]
+    extra: list[PlayerExtra] = Field(description="Gametype specific figures, summed.")
+    has_match_stats: bool = Field(
+        description="False when the player has never been in an end-of-match report."
+    )

@@ -5,6 +5,29 @@ publishes that section as the GitHub release notes, which the panel shows on its
 page before you upgrade. A tag without a section here is not published, so add the entry
 with the version bump.
 
+## 0.3.0 - 2026-10-14
+
+### What's new
+
+- **A Players section.** The panel now keeps a history of everyone who plays on the server
+  and shows it as a table you can sort by any column (frags, deaths, K/D, score, wins,
+  matches, time playing, time on server, accuracy, last seen), search by name, and page
+  through. Click a player for their names, sessions, per-weapon accuracy and achievements.
+  Bots are recorded but hidden unless you show them. The history lives in
+  `/var/lib/xonotic-webui/players.db` and is kept across restarts and upgrades. No IP
+  addresses are stored.
+- **Players are identified by their key, not their name.** A rename or a new address keeps
+  one history; a player with no key falls back to their name.
+
+### Changes you should know about
+
+- **The server no longer submits matches to XonStat (stats.xonotic.org).** To read the
+  end-of-match report the panel sets `g_playerstats_gamereport_uri` to `-` at every start,
+  and the game can send the report to only one place. Matches played here stop counting
+  toward players' public XonStat profiles and Elo, and the server browser shows the server
+  as using custom stats. The cvar is now reserved, and the "Report match statistics" setting
+  is removed.
+
 ## 0.2.1 - 2026-10-14
 
 ### What's new

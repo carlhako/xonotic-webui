@@ -24,6 +24,38 @@ export type RotationResult = Schemas["RotationResultModel"];
 export type SettingValue = string | number | boolean;
 export type PanelVersion = Schemas["PanelVersion"];
 export type PanelUpgrade = NonNullable<PanelVersion["upgrade"]>;
+export type PlayerList = Schemas["PlayerList"];
+export type PlayerRow = Schemas["PlayerRow"];
+export type PlayerDetail = Schemas["PlayerDetail"];
+export type PlayerWeapon = Schemas["PlayerWeapon"];
+
+/** The columns the players table can be sorted by (the API's fixed list). */
+export type PlayerSort =
+  | "name"
+  | "frags"
+  | "deaths"
+  | "kd"
+  | "score"
+  | "wins"
+  | "matches"
+  | "time_playing"
+  | "time_on_server"
+  | "accuracy"
+  | "last_seen";
+
+export interface PlayersQuery {
+  sort: PlayerSort;
+  order: "asc" | "desc";
+  q: string;
+  bots: boolean;
+  limit: number;
+  offset: number;
+}
+
+/** A players request answers either a fresh list or "unchanged since `etag`". */
+export type PlayersResult =
+  | { notModified: true; etag: string | null }
+  | { notModified: false; etag: string | null; list: PlayerList };
 
 /** A non-2xx API response, carrying the server's stable code and message. */
 export class ApiCallError extends Error {
@@ -46,10 +78,9 @@ export class ApiCallError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let response: Response;
+async function fetchOrThrow(path: string, init?: RequestInit): Promise<Response> {
   try {
-    response = await fetch(path, init);
+    return await fetch(path, init);
   } catch (e) {
     throw new ApiCallError(
       0,
@@ -57,28 +88,60 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       e instanceof Error ? e.message : String(e),
     );
   }
-  if (!response.ok) {
-    let code = "http_error";
-    let message = `${response.status} ${response.statusText}`.trim();
-    let field: string | null = null;
-    try {
-      const body = (await response.json()) as {
-        detail?: { code?: string; message?: string; field?: string | null } | string;
-      };
-      if (typeof body.detail === "object" && body.detail) {
-        code = body.detail.code ?? code;
-        message = body.detail.message ?? message;
-        field = body.detail.field ?? null;
-      } else if (typeof body.detail === "string") {
-        message = body.detail;
-      }
-    } catch {
-      // not JSON: keep the status line
+}
+
+async function errorFrom(response: Response): Promise<ApiCallError> {
+  let code = "http_error";
+  let message = `${response.status} ${response.statusText}`.trim();
+  let field: string | null = null;
+  try {
+    const body = (await response.json()) as {
+      detail?: { code?: string; message?: string; field?: string | null } | string;
+    };
+    if (typeof body.detail === "object" && body.detail) {
+      code = body.detail.code ?? code;
+      message = body.detail.message ?? message;
+      field = body.detail.field ?? null;
+    } else if (typeof body.detail === "string") {
+      message = body.detail;
     }
-    throw new ApiCallError(response.status, code, message, field);
+  } catch {
+    // not JSON: keep the status line
   }
+  return new ApiCallError(response.status, code, message, field);
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetchOrThrow(path, init);
+  if (!response.ok) throw await errorFrom(response);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+/** The players list, conditional on the last answer's ETag (the table polls this). */
+async function requestPlayers(
+  query: PlayersQuery,
+  etag: string | null,
+): Promise<PlayersResult> {
+  const params = new URLSearchParams({
+    sort: query.sort,
+    order: query.order,
+    bots: String(query.bots),
+    limit: String(query.limit),
+    offset: String(query.offset),
+  });
+  if (query.q) params.set("q", query.q);
+  const response = await fetchOrThrow(
+    `/api/players?${params}`,
+    etag ? { headers: { "If-None-Match": etag } } : undefined,
+  );
+  if (response.status === 304) return { notModified: true, etag };
+  if (!response.ok) throw await errorFrom(response);
+  return {
+    notModified: false,
+    etag: response.headers.get("ETag"),
+    list: (await response.json()) as PlayerList,
+  };
 }
 
 const send = <T>(method: string, path: string, body?: unknown) =>
@@ -124,6 +187,11 @@ export const api = {
   gotoMap: (map: string) => post<MatchAction>("/api/match/goto", { map }),
   skipMap: () => post<MatchAction>("/api/match/skip"),
   restartMatch: () => post<MatchAction>("/api/match/restart"),
+
+  // recorded players
+  players: (query: PlayersQuery, etag: string | null = null) =>
+    requestPlayers(query, etag),
+  player: (id: number) => request<PlayerDetail>(`/api/players/${id}`),
 
   // the panel's own version and upgrade
   panelVersion: () => request<PanelVersion>("/api/panel/version"),

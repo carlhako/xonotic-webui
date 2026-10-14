@@ -1,0 +1,76 @@
+^7:scores:dm_atelier:43
+^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7:player:see-labels:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,0,0,0,0,0,0,0:31:-1:1:^5Private^7Pat
+^7:end
+^7V 9
+^7R xonotic-v0.8.6
+^7G dm
+^7O Xonotic
+^7M atelier
+^7I 0.1791950880.130110
+^7S Xonotic 0.8.6 Server
+^7C 1
+^7U 26969
+^7D 27.033394
+^7L 
+^7P player#1
+^7i 1
+^7r 1
+^7e scoreboard-elo -2
+^7e total-elo -1
+^7e anticheat-div0_snapback 0.479592
+^7e anticheat-idle_snapaim_m10 39.308
+^7e anticheat-idle_snapaim_m7 30.1872
+^7e anticheat-idle_snapaim_m4 15.643
+^7e anticheat-idle_snapaim_m3 9.69842
+^7e anticheat-idle_snapaim_m2 5.50023
+^7e anticheat-idle_snapaim_noise 4.00068
+^7e anticheat-idle_snapaim_signal 21.238
+^7e anticheat-idle_snapaim 17.2374
+^7e anticheat-div0_evade 0.002535
+^7e anticheat-div0_strafebot_new 0.198388
+^7e anticheat-speedhack_m5 1.00416
+^7e anticheat-speedhack_m4 1.00415
+^7e anticheat-speedhack_m3 1.00414
+^7e anticheat-speedhack_m2 1.00412
+^7e anticheat-speedhack_m1 1.00412
+^7e anticheat-speedhack 0.064197
+^7e anticheat-_time 31.1333
+^7e acc-shotgun-cnt-fired 26
+^7e acc-shotgun-fired 1490
+^7e rank 1
+^7e scoreboardpos 2
+^7e scoreboardvalid 1
+^7e joins 1
+^7e matches 1
+^7e avglatency 19.3758
+^7e alivetime 30.0666
+^7P bot#3#Resurrection
+^7i 2
+^7n [BOT]Resurrection
+^7e scoreboard-elo -2
+^7e anticheat-div0_snapback 0.100941
+^7e anticheat-idle_snapaim_m10 12.6238
+^7e anticheat-idle_snapaim_m7 9.89619
+^7e anticheat-idle_snapaim_m4 5.80646
+^7e anticheat-idle_snapaim_m3 4.2136
+^7e anticheat-idle_snapaim_m2 2.65978
+^7e anticheat-idle_snapaim_noise 1.1422
+^7e anticheat-idle_snapaim_signal 7.32675
+^7e anticheat-idle_snapaim 6.18455
+^7e anticheat-div0_strafebot_new 0.077739
+^7e anticheat-div0_strafebot_old 0.037622
+^7e anticheat-speedhack_m5 1.00281
+^7e anticheat-speedhack_m4 1.00281
+^7e anticheat-speedhack_m3 1.00281
+^7e anticheat-speedhack_m2 1.00281
+^7e anticheat-speedhack_m1 1.00281
+^7e anticheat-_time 31.1
+^7e rank 1
+^7e scoreboardpos 1
+^7e scoreboardvalid 1
+^7e joins 1
+^7e matches 1
+^7e alivetime 31.1
+^7
+^7:gameover

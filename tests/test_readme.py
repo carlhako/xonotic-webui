@@ -21,6 +21,7 @@ def test_the_where_things_live_paths_match_the_defaults() -> None:
         str(DEFAULT_GAME_ROOT),
         str(s.state_file),
         str(s.game_settings_file),
+        str(s.players_db),
         str(s.userdir / "data" / "server.cfg"),
         str(s.userdir / "data" / SETTINGS_CONFIG_NAME),
     }
@@ -85,3 +86,13 @@ def test_the_manual_upgrade_command_is_the_one_the_panel_shows() -> None:
     from xonotic_webui.selfupdate.upgrade import manual_command
 
     assert manual_command(Settings()) in README
+
+
+def test_the_players_section_names_the_reserved_report_cvar_and_the_xonstat_trade_off() -> None:
+    from xonotic_webui.serversettings.registry import FORCED_CVARS
+
+    value = dict(FORCED_CVARS)["g_playerstats_gamereport_uri"]
+    assert f"`g_playerstats_gamereport_uri` to `{value}`" in README
+    assert "XonStat" in README
+    assert "## Players" in README
+    assert "players.db" in README

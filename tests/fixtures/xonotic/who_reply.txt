@@ -1,0 +1,7 @@
+^7List of client information:
+^7|^7ent |^7nickname            |^7ping |^7pl |^7time     |^7ip              |^7crypto_id|^7
+^7|^7#1  |^7^1Spike^7Tester         |^710   |^70  |^700:00:28 |^7127.0.0.1       |^7pzccpd+7+o3Wal/UYuxcjuqhEyXP0u3nN2ep/DNZDWE=|^7
+^7|^7#2  |^7[BOT]Pegasus        |^70    |^70  |^700:00:28 |^7null/botclient  |^7null/botclient|^7
+^7|^7#3  |^7[BOT]Death          |^70    |^70  |^700:00:28 |^7null/botclient  |^7null/botclient|^7
+^7|^7#4  |^7Odd|Name^7With a very |^717   |^70  |^700:00:18 |^7127.0.0.1       |^726at9HsAeCtoiIFlbO7RLja2myn5t2v7e3Tu804ctPY=|^7
+^7Finished listing 4 client(s) out of 16 slots.

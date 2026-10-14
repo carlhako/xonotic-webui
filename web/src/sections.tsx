@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { Dashboard } from "./sections/Dashboard";
 import { Console } from "./sections/Console";
 import { Maps } from "./sections/Maps";
+import { Players } from "./sections/Players";
 import { Settings } from "./sections/Settings";
 import { Panel } from "./sections/Panel";
 
@@ -17,6 +18,7 @@ export interface Section {
 // here and no change to App.tsx (design D11).
 export const sections: Section[] = [
   { path: "/", label: "Dashboard", element: <Dashboard /> },
+  { path: "/players", label: "Players", element: <Players /> },
   { path: "/maps", label: "Maps", element: <Maps /> },
   { path: "/settings", label: "Settings", element: <Settings /> },
   { path: "/console", label: "Console", element: <Console /> },

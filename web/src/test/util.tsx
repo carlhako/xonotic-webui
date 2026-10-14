@@ -209,3 +209,69 @@ export function routeFetch(routes: Record<string, (init?: RequestInit) => Respon
     return route(init);
   });
 }
+
+// -- fixtures for the players section ----------------------------------------------------
+
+import type { PlayerDetail, PlayerRow } from "../api/client";
+
+export function makePlayerRow(overrides: Partial<PlayerRow> = {}): PlayerRow {
+  return {
+    id: 1,
+    name: "^1Ann",
+    plain_name: "Ann",
+    is_bot: false,
+    frags: 10,
+    deaths: 5,
+    kd: 2,
+    suicides: 1,
+    teamkills: 0,
+    score: 30,
+    wins: 2,
+    matches: 4,
+    time_playing: 3600,
+    time_on_server: 7500,
+    accuracy: 0.42,
+    first_seen: 1_790_000_000,
+    last_seen: 1_790_100_000,
+    ...overrides,
+  };
+}
+
+export function makePlayerDetail(overrides: Partial<PlayerDetail> = {}): PlayerDetail {
+  return {
+    ...makePlayerRow(),
+    aliases: [
+      { name: "^1Ann", plain_name: "Ann", last_used: 1_790_100_000 },
+      { name: "Old Ann", plain_name: "Old Ann", last_used: 1_790_000_000 },
+    ],
+    sessions: 3,
+    key_prefix: "dRXbACYQ",
+    damage_dealt: 1234.4,
+    damage_taken: 800,
+    avg_latency: 31.6,
+    weapons: [
+      {
+        weapon: "vortex",
+        frags: 7,
+        hit: 50,
+        fired: 100,
+        cnt_hit: 5,
+        cnt_fired: 10,
+        accuracy: 0.5,
+      },
+      {
+        weapon: "shotgun",
+        frags: 3,
+        hit: 10,
+        fired: 100,
+        cnt_hit: 1,
+        cnt_fired: 10,
+        accuracy: null,
+      },
+    ],
+    achievements: [{ name: "firstblood", count: 2 }],
+    extra: [],
+    has_match_stats: true,
+    ...overrides,
+  };
+}

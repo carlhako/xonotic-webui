@@ -214,6 +214,11 @@ class Settings(BaseSettings):
         return self.state_dir / "settings.json"
 
     @property
+    def players_db(self) -> Path:
+        """The persistent player history (SQLite)."""
+        return self.state_dir / "players.db"
+
+    @property
     def upgrade_request_dir(self) -> Path:
         """Where the panel drops an upgrade request for the root helper's path unit."""
         return self.state_dir / "upgrade"

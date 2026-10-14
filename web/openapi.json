@@ -865,6 +865,284 @@
         "title": "PanelVersion",
         "type": "object"
       },
+      "PlayerAchievement": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "count"
+        ],
+        "title": "PlayerAchievement",
+        "type": "object"
+      },
+      "PlayerAlias": {
+        "properties": {
+          "last_used": {
+            "title": "Last Used",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plain_name": {
+            "title": "Plain Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "plain_name",
+          "last_used"
+        ],
+        "title": "PlayerAlias",
+        "type": "object"
+      },
+      "PlayerDetail": {
+        "properties": {
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hits over shots, or null when nothing was fired.",
+            "title": "Accuracy"
+          },
+          "achievements": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerAchievement"
+            },
+            "title": "Achievements",
+            "type": "array"
+          },
+          "aliases": {
+            "description": "Every name used, most recent first.",
+            "items": {
+              "$ref": "#/components/schemas/PlayerAlias"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "avg_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average ping in milliseconds, if known.",
+            "title": "Avg Latency"
+          },
+          "damage_dealt": {
+            "title": "Damage Dealt",
+            "type": "number"
+          },
+          "damage_taken": {
+            "title": "Damage Taken",
+            "type": "number"
+          },
+          "deaths": {
+            "title": "Deaths",
+            "type": "integer"
+          },
+          "extra": {
+            "description": "Gametype specific figures, summed.",
+            "items": {
+              "$ref": "#/components/schemas/PlayerExtra"
+            },
+            "title": "Extra",
+            "type": "array"
+          },
+          "first_seen": {
+            "description": "UTC epoch seconds.",
+            "title": "First Seen",
+            "type": "integer"
+          },
+          "frags": {
+            "title": "Frags",
+            "type": "integer"
+          },
+          "has_match_stats": {
+            "description": "False when the player has never been in an end-of-match report.",
+            "title": "Has Match Stats",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_bot": {
+            "title": "Is Bot",
+            "type": "boolean"
+          },
+          "kd": {
+            "description": "frags / max(deaths, 1).",
+            "title": "Kd",
+            "type": "number"
+          },
+          "key_prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "At most the first 8 characters of the key fingerprint, if there is one.",
+            "title": "Key Prefix"
+          },
+          "last_seen": {
+            "description": "UTC epoch seconds.",
+            "title": "Last Seen",
+            "type": "integer"
+          },
+          "matches": {
+            "description": "Finished matches played.",
+            "title": "Matches",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The most recently used name, colour codes intact.",
+            "title": "Name",
+            "type": "string"
+          },
+          "plain_name": {
+            "description": "The name with colour codes removed.",
+            "title": "Plain Name",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "sessions": {
+            "description": "How many visits are recorded.",
+            "title": "Sessions",
+            "type": "integer"
+          },
+          "suicides": {
+            "title": "Suicides",
+            "type": "integer"
+          },
+          "teamkills": {
+            "title": "Teamkills",
+            "type": "integer"
+          },
+          "time_on_server": {
+            "description": "Seconds connected, spectating included.",
+            "title": "Time On Server",
+            "type": "number"
+          },
+          "time_playing": {
+            "description": "Seconds alive in matches (from the match report).",
+            "title": "Time Playing",
+            "type": "number"
+          },
+          "weapons": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerWeapon"
+            },
+            "title": "Weapons",
+            "type": "array"
+          },
+          "wins": {
+            "title": "Wins",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "plain_name",
+          "is_bot",
+          "frags",
+          "deaths",
+          "kd",
+          "suicides",
+          "teamkills",
+          "score",
+          "wins",
+          "matches",
+          "time_playing",
+          "time_on_server",
+          "accuracy",
+          "first_seen",
+          "last_seen",
+          "aliases",
+          "sessions",
+          "key_prefix",
+          "damage_dealt",
+          "damage_taken",
+          "avg_latency",
+          "weapons",
+          "achievements",
+          "extra",
+          "has_match_stats"
+        ],
+        "title": "PlayerDetail",
+        "type": "object"
+      },
+      "PlayerExtra": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "PlayerExtra",
+        "type": "object"
+      },
+      "PlayerList": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerRow"
+            },
+            "title": "Players",
+            "type": "array"
+          },
+          "revision": {
+            "description": "Changes whenever recorded data changes.",
+            "title": "Revision",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Players matching the filter, across all pages.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "total",
+          "players"
+        ],
+        "title": "PlayerList",
+        "type": "object"
+      },
       "PlayerModel": {
         "properties": {
           "bot": {
@@ -907,6 +1185,165 @@
           "bot"
         ],
         "title": "PlayerModel",
+        "type": "object"
+      },
+      "PlayerRow": {
+        "properties": {
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hits over shots, or null when nothing was fired.",
+            "title": "Accuracy"
+          },
+          "deaths": {
+            "title": "Deaths",
+            "type": "integer"
+          },
+          "first_seen": {
+            "description": "UTC epoch seconds.",
+            "title": "First Seen",
+            "type": "integer"
+          },
+          "frags": {
+            "title": "Frags",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_bot": {
+            "title": "Is Bot",
+            "type": "boolean"
+          },
+          "kd": {
+            "description": "frags / max(deaths, 1).",
+            "title": "Kd",
+            "type": "number"
+          },
+          "last_seen": {
+            "description": "UTC epoch seconds.",
+            "title": "Last Seen",
+            "type": "integer"
+          },
+          "matches": {
+            "description": "Finished matches played.",
+            "title": "Matches",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The most recently used name, colour codes intact.",
+            "title": "Name",
+            "type": "string"
+          },
+          "plain_name": {
+            "description": "The name with colour codes removed.",
+            "title": "Plain Name",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "suicides": {
+            "title": "Suicides",
+            "type": "integer"
+          },
+          "teamkills": {
+            "title": "Teamkills",
+            "type": "integer"
+          },
+          "time_on_server": {
+            "description": "Seconds connected, spectating included.",
+            "title": "Time On Server",
+            "type": "number"
+          },
+          "time_playing": {
+            "description": "Seconds alive in matches (from the match report).",
+            "title": "Time Playing",
+            "type": "number"
+          },
+          "wins": {
+            "title": "Wins",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "plain_name",
+          "is_bot",
+          "frags",
+          "deaths",
+          "kd",
+          "suicides",
+          "teamkills",
+          "score",
+          "wins",
+          "matches",
+          "time_playing",
+          "time_on_server",
+          "accuracy",
+          "first_seen",
+          "last_seen"
+        ],
+        "title": "PlayerRow",
+        "type": "object"
+      },
+      "PlayerWeapon": {
+        "properties": {
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy"
+          },
+          "cnt_fired": {
+            "title": "Cnt Fired",
+            "type": "number"
+          },
+          "cnt_hit": {
+            "title": "Cnt Hit",
+            "type": "number"
+          },
+          "fired": {
+            "title": "Fired",
+            "type": "number"
+          },
+          "frags": {
+            "title": "Frags",
+            "type": "number"
+          },
+          "hit": {
+            "title": "Hit",
+            "type": "number"
+          },
+          "weapon": {
+            "title": "Weapon",
+            "type": "string"
+          }
+        },
+        "required": [
+          "weapon",
+          "frags",
+          "hit",
+          "fired",
+          "cnt_hit",
+          "cnt_fired",
+          "accuracy"
+        ],
+        "title": "PlayerWeapon",
         "type": "object"
       },
       "RotationItemModel": {
@@ -2316,6 +2753,204 @@
         "summary": "Panel version and update state",
         "tags": [
           "panel"
+        ]
+      }
+    },
+    "/api/players": {
+      "get": {
+        "operationId": "list_players_api_players_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "frags",
+              "enum": [
+                "name",
+                "frags",
+                "deaths",
+                "kd",
+                "score",
+                "wins",
+                "matches",
+                "time_playing",
+                "time_on_server",
+                "accuracy",
+                "last_seen"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Name search.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Name search.",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "bots",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Bots",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "At most 200 are returned.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "At most 200 are returned.",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Unchanged since If-None-Match."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Player history is not being recorded."
+          }
+        },
+        "summary": "Recorded players with their totals, sorted, filtered and paged",
+        "tags": [
+          "players"
+        ]
+      }
+    },
+    "/api/players/{player_id}": {
+      "get": {
+        "operationId": "get_player_api_players__player_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "player_id",
+            "required": true,
+            "schema": {
+              "title": "Player Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such player."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Player history is not being recorded."
+          }
+        },
+        "summary": "Everything recorded for one player",
+        "tags": [
+          "players"
         ]
       }
     },

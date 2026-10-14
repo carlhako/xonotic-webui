@@ -276,6 +276,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/players": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recorded players with their totals, sorted, filtered and paged */
+        get: operations["list_players_api_players_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/players/{player_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Everything recorded for one player */
+        get: operations["get_player_api_players__player_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/rotation": {
         parameters: {
             query?: never;
@@ -767,6 +801,146 @@ export interface components {
             /** @description The upgrade in flight, else the last one that finished. */
             upgrade: components["schemas"]["PanelUpgrade"] | null;
         };
+        /** PlayerAchievement */
+        PlayerAchievement: {
+            /** Count */
+            count: number;
+            /** Name */
+            name: string;
+        };
+        /** PlayerAlias */
+        PlayerAlias: {
+            /** Last Used */
+            last_used: number;
+            /** Name */
+            name: string;
+            /** Plain Name */
+            plain_name: string;
+        };
+        /** PlayerDetail */
+        PlayerDetail: {
+            /**
+             * Accuracy
+             * @description Hits over shots, or null when nothing was fired.
+             */
+            accuracy: number | null;
+            /** Achievements */
+            achievements: components["schemas"]["PlayerAchievement"][];
+            /**
+             * Aliases
+             * @description Every name used, most recent first.
+             */
+            aliases: components["schemas"]["PlayerAlias"][];
+            /**
+             * Avg Latency
+             * @description Average ping in milliseconds, if known.
+             */
+            avg_latency: number | null;
+            /** Damage Dealt */
+            damage_dealt: number;
+            /** Damage Taken */
+            damage_taken: number;
+            /** Deaths */
+            deaths: number;
+            /**
+             * Extra
+             * @description Gametype specific figures, summed.
+             */
+            extra: components["schemas"]["PlayerExtra"][];
+            /**
+             * First Seen
+             * @description UTC epoch seconds.
+             */
+            first_seen: number;
+            /** Frags */
+            frags: number;
+            /**
+             * Has Match Stats
+             * @description False when the player has never been in an end-of-match report.
+             */
+            has_match_stats: boolean;
+            /** Id */
+            id: number;
+            /** Is Bot */
+            is_bot: boolean;
+            /**
+             * Kd
+             * @description frags / max(deaths, 1).
+             */
+            kd: number;
+            /**
+             * Key Prefix
+             * @description At most the first 8 characters of the key fingerprint, if there is one.
+             */
+            key_prefix: string | null;
+            /**
+             * Last Seen
+             * @description UTC epoch seconds.
+             */
+            last_seen: number;
+            /**
+             * Matches
+             * @description Finished matches played.
+             */
+            matches: number;
+            /**
+             * Name
+             * @description The most recently used name, colour codes intact.
+             */
+            name: string;
+            /**
+             * Plain Name
+             * @description The name with colour codes removed.
+             */
+            plain_name: string;
+            /** Score */
+            score: number;
+            /**
+             * Sessions
+             * @description How many visits are recorded.
+             */
+            sessions: number;
+            /** Suicides */
+            suicides: number;
+            /** Teamkills */
+            teamkills: number;
+            /**
+             * Time On Server
+             * @description Seconds connected, spectating included.
+             */
+            time_on_server: number;
+            /**
+             * Time Playing
+             * @description Seconds alive in matches (from the match report).
+             */
+            time_playing: number;
+            /** Weapons */
+            weapons: components["schemas"]["PlayerWeapon"][];
+            /** Wins */
+            wins: number;
+        };
+        /** PlayerExtra */
+        PlayerExtra: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: number;
+        };
+        /** PlayerList */
+        PlayerList: {
+            /** Players */
+            players: components["schemas"]["PlayerRow"][];
+            /**
+             * Revision
+             * @description Changes whenever recorded data changes.
+             */
+            revision: number;
+            /**
+             * Total
+             * @description Players matching the filter, across all pages.
+             */
+            total: number;
+        };
         /** PlayerModel */
         PlayerModel: {
             /** Bot */
@@ -791,6 +965,87 @@ export interface components {
              * @description The name with colour codes removed.
              */
             plain_name: string;
+        };
+        /** PlayerRow */
+        PlayerRow: {
+            /**
+             * Accuracy
+             * @description Hits over shots, or null when nothing was fired.
+             */
+            accuracy: number | null;
+            /** Deaths */
+            deaths: number;
+            /**
+             * First Seen
+             * @description UTC epoch seconds.
+             */
+            first_seen: number;
+            /** Frags */
+            frags: number;
+            /** Id */
+            id: number;
+            /** Is Bot */
+            is_bot: boolean;
+            /**
+             * Kd
+             * @description frags / max(deaths, 1).
+             */
+            kd: number;
+            /**
+             * Last Seen
+             * @description UTC epoch seconds.
+             */
+            last_seen: number;
+            /**
+             * Matches
+             * @description Finished matches played.
+             */
+            matches: number;
+            /**
+             * Name
+             * @description The most recently used name, colour codes intact.
+             */
+            name: string;
+            /**
+             * Plain Name
+             * @description The name with colour codes removed.
+             */
+            plain_name: string;
+            /** Score */
+            score: number;
+            /** Suicides */
+            suicides: number;
+            /** Teamkills */
+            teamkills: number;
+            /**
+             * Time On Server
+             * @description Seconds connected, spectating included.
+             */
+            time_on_server: number;
+            /**
+             * Time Playing
+             * @description Seconds alive in matches (from the match report).
+             */
+            time_playing: number;
+            /** Wins */
+            wins: number;
+        };
+        /** PlayerWeapon */
+        PlayerWeapon: {
+            /** Accuracy */
+            accuracy: number | null;
+            /** Cnt Fired */
+            cnt_fired: number;
+            /** Cnt Hit */
+            cnt_hit: number;
+            /** Fired */
+            fired: number;
+            /** Frags */
+            frags: number;
+            /** Hit */
+            hit: number;
+            /** Weapon */
+            weapon: string;
         };
         /** RotationItemModel */
         RotationItemModel: {
@@ -1675,6 +1930,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PanelVersion"];
+                };
+            };
+        };
+    };
+    list_players_api_players_get: {
+        parameters: {
+            query?: {
+                sort?: "name" | "frags" | "deaths" | "kd" | "score" | "wins" | "matches" | "time_playing" | "time_on_server" | "accuracy" | "last_seen";
+                order?: "asc" | "desc";
+                /** @description Name search. */
+                q?: string | null;
+                bots?: boolean;
+                /** @description At most 200 are returned. */
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayerList"];
+                };
+            };
+            /** @description Unchanged since If-None-Match. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Player history is not being recorded. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_player_api_players__player_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                player_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayerDetail"];
+                };
+            };
+            /** @description No such player. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Player history is not being recorded. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

@@ -11,6 +11,9 @@ from xonotic_webui.logging import get_logger
 from xonotic_webui.maps.actions import MatchActions
 from xonotic_webui.maps.catalogue import MapCatalogue
 from xonotic_webui.maps.control import MapControl
+from xonotic_webui.players.recorder import PlayerRecorder
+from xonotic_webui.players.report import StatsReportFilter
+from xonotic_webui.players.store import PlayerStore
 from xonotic_webui.selfupdate.release_check import ReleaseChecker
 from xonotic_webui.selfupdate.upgrade import UpgradeService
 from xonotic_webui.serversettings.service import ServerSettingsService
@@ -30,7 +33,11 @@ class Runtime:
         self.settings = settings
         self.supervisor = Supervisor(settings)
         self.console = Console(self.supervisor)
+        # The end-of-match statistics report is for the panel, not for the console tab.
+        self.console.add_filter(StatsReportFilter())
         self.status = StatusTracker(self.supervisor, self.console)
+        self.players_store = PlayerStore(settings.players_db)
+        self.recorder = PlayerRecorder(self.supervisor, self.console, self.players_store)
         self.map_catalogue = MapCatalogue(settings.game_root, settings.userdir)
         self.server_settings = ServerSettingsService(
             settings,
@@ -65,6 +72,9 @@ class Runtime:
         app.include_router(build_api_router(self))
 
     async def startup(self) -> None:
+        # Player history: opening the database is quick, and a failure only turns the
+        # history off (it is logged, and the rest of the panel is unaffected).
+        await self.recorder.start()
         # Restore in the background so the web interface is up while the server starts.
         self._restore_task = asyncio.create_task(self.supervisor.restore(), name="xonotic-restore")
         # The first release check waits in its own task; it never delays the above.
@@ -81,5 +91,7 @@ class Runtime:
         if self._restore_task is not None:
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await self._restore_task
+        # After the server has stopped: everything pending is written, then the file closed.
+        await self.recorder.aclose()
         await self.match_actions.aclose()
         await self.status.aclose()

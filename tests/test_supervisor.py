@@ -113,6 +113,7 @@ async def test_start_reaches_running_and_launches_as_designed(
     assert "sv_eventlog_console 1" in wrapper
     assert "sv_eventlog_ipv6_delimiter 1" in wrapper
     assert "sys_colortranslation 2" in wrapper
+    assert "g_playerstats_gamereport_uri -" in wrapper
 
 
 async def test_wrapper_line_order_is_server_cfg_then_settings_then_forced_cvars(
@@ -129,7 +130,25 @@ async def test_wrapper_line_order_is_server_cfg_then_settings_then_forced_cvars(
         "sv_eventlog_console 1",
         "sv_eventlog_ipv6_delimiter 1",
         "sys_colortranslation 2",
+        "g_playerstats_gamereport_uri -",
     ]
+
+
+async def test_a_raising_line_sink_does_not_stop_the_next(
+    settings: Settings, make_sup: Callable[..., Supervisor], caplog: pytest.LogCaptureFixture
+) -> None:
+    seen: list[str] = []
+
+    def bad(_line: str) -> None:
+        raise RuntimeError("boom")
+
+    sup = make_sup(settings, probe_after=0.3, probe_interval=0.2)
+    sup.add_line_sink(bad)
+    sup.add_line_sink(seen.append)
+    await sup.start()
+
+    assert any(":gamestart:" in line for line in seen)
+    assert "line sink raised" in caplog.text
 
 
 async def test_an_empty_store_produces_a_header_only_settings_config(

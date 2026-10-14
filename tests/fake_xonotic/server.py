@@ -34,11 +34,20 @@ inside quotes, before the command is split into arguments.
 
 Test-only commands (written to stdin like any other, never parsed as console commands):
 
-    fake_join <id> <ent> <bot|ip> <raw name>   print a :join: line and add to the roster
+    fake_join <id> <ent> <bot|ip> [fp=<fingerprint>] <raw name>
+                                               print a :join: line and add to the roster;
+                                               the fingerprint is what ``who`` reports
     fake_silent_join <ent> <bot|ip> <raw name> add to the roster without logging it
     fake_name <id> <raw name>                  print a :name: line
     fake_part <id>                             print a :part: line and drop from roster
-    fake_map <gametype> <map>                  print a :gamestart: line
+    fake_map <gametype> <map>                  print a :gamestart: line, then re-join every
+                                               rostered client with a fresh id (bots first),
+                                               as a map change on the real server does
+    fake_kill <mode> <killer> <victim> [type]  print a :kill: line (mode: frag, tk, suicide,
+                                               accident; ids are the event log's player ids)
+    fake_report <fixture>                      print the report block of a captured fixture
+                                               (``report_finished.txt``, ...), as the game
+                                               does at match end
     fake_emit <raw line>                       print a line verbatim
     fake_crash                                 exit 139 immediately
 """
@@ -123,7 +132,7 @@ def flag_float(name: str, default: float = 0.0) -> float:
 class State:
     map = PRE_MAP
     gametype = "dm"
-    roster: ClassVar[dict[int, dict]] = {}  # ent -> {id, bot, name}
+    roster: ClassVar[dict[int, dict]] = {}  # ent -> {id, bot, name, fp}
     # lower-cased name -> [display name, value, default or None]
     cvars: ClassVar[dict[str, list]] = {}
     maps: ClassVar[dict[str, list[str]]] = {}
@@ -387,6 +396,7 @@ def announce_match() -> None:
         emit(f"^7:gamestart:{State.gametype}_{State.map}:{match_id}")
         emit(f"^7:gameinfo:mutators:LIST:{':'.join(mutator_list())}")
         emit("^7:gameinfo:end")
+        rejoin_roster()
 
 
 def load_map(name: str, *, apply_maxplayers: bool = False, announce: bool = True) -> None:
@@ -472,7 +482,7 @@ def finish_match(had_humans: bool) -> None:
             time.sleep(flag_float("vote_delay", 0.0))
     else:
         time.sleep(flag_float("endmatch_delay", 0.1))
-    if cv("g_playerstats_gamereport_uri"):
+    if cv("g_playerstats_gamereport_uri") not in ("", "-"):
         emit("^7^7uri_multi_ready: got HTTP error 422, data is in unusable format - not continuing")
         emit("^7^7Player stats writing failed: -422")
     nxt = cv("nextmap")
@@ -485,6 +495,85 @@ def finish_match(had_humans: bool) -> None:
 
 
 # ---------------------------------------------------------------------- commands
+def _plain(text: str) -> str:
+    return re.sub(r"\^(\^|\d|x[0-9a-fA-F]{3})", lambda m: "^" if m.group(1) == "^" else "", text)
+
+
+def _cut(name: str, width: int = 20) -> str:
+    """The first ``width`` visible characters of ``name``, colour codes kept (as ``who``)."""
+    out: list[str] = []
+    visible = 0
+    i = 0
+    while i < len(name) and visible < width:
+        m = re.match(r"\^(\d|x[0-9a-fA-F]{3})", name[i:])
+        if m:
+            out.append(m.group(0))
+            i += len(m.group(0))
+            continue
+        out.append(name[i])
+        i += 1
+        visible += 1
+    text = "".join(out)
+    return text + " " * (width - len(_plain(text)))
+
+
+def who_reply(separator: str | None) -> None:
+    """``who`` in the captured format: ``|`` columns for ``who "|"``, else spaces."""
+    with State.lock:
+        rows = sorted(State.roster.items())
+    emit("^7List of client information:")
+    if separator is None:
+        emit(
+            "^7 ^7ent  ^7nickname             ^7ping  ^7pl  ^7time      ^7ip               "
+            "^7crypto_id ^7"
+        )
+    else:
+        emit(
+            "^7|^7ent |^7nickname            |^7ping |^7pl |^7time     |^7ip              "
+            "|^7crypto_id|^7"
+        )
+    for ent, p in rows:
+        ip = "null/botclient" if p["bot"] else "127.0.0.1"
+        crypto = "null/botclient" if p["bot"] else p.get("fp", "")
+        ping = "0" if p["bot"] else "20"
+        if separator is None:
+            emit(
+                f"^7 ^7#{ent:<5}^7{_cut(p['name'])}  ^7{ping:<6}^70   ^700:00:10   "
+                f"^7{ip:<17}^7{crypto} ^7"
+            )
+        else:
+            emit(
+                f"^7|^7#{ent:<4}|^7{_cut(p['name'])}|^7{ping:<5}|^70  |^700:00:10 "
+                f"|^7{ip:<15} |^7{crypto}|^7"
+            )
+    emit(f"^7Finished listing {len(rows)} client(s) out of 16 slots.")
+
+
+def report_block(fixture: str) -> list[str]:
+    """The ``V`` ... blank-line block of a captured fixture."""
+    path = Path(fixture)
+    if not path.is_absolute():
+        path = FIXTURES / fixture
+    lines = path.read_text().splitlines()
+    start = next(i for i, ln in enumerate(lines) if _plain(ln).strip() == "V 9")
+    end = next(i for i in range(start, len(lines)) if _plain(lines[i]).strip() == "")
+    return lines[start : end + 1]
+
+
+def rejoin_roster() -> None:
+    """A map change: every client joins again with a new id on its slot, bots first."""
+    with State.lock:
+        order = sorted(
+            ((e, p) for e, p in State.roster.items() if not p.get("silent")),
+            key=lambda kv: (not kv[1]["bot"], kv[0]),
+        )
+        for new_id, (_ent, p) in enumerate(order, start=1):
+            p["id"] = new_id
+    for ent, p in order:
+        ip = "bot" if p["bot"] else "127.0.0.1"
+        emit(f"^7:join:{p['id']}:{ent}:{ip}:{p['name']}")
+
+
 def status_reply() -> None:
     with State.lock:
         rows = sorted(State.roster.items())
@@ -592,6 +681,9 @@ def run(args: list[str], startup: bool) -> None:
         os._exit(0)
     elif verb == "status":
         status_reply()
+    elif verb == "who" or (verb == "sv_cmd" and rest[:1] == ["who"]):
+        who_args = rest if verb == "who" else rest[1:]
+        who_reply(who_args[0] if who_args else None)
     elif verb == "echo":
         emit("^7" + " ".join(rest))
     elif verb in ("set", "seta"):
@@ -650,10 +742,29 @@ def fake_command(verb: str, rest: str) -> None:
         with State.lock:
             State.map, State.gametype, State.ending = name, gametype, False
         emit(f"^7:gamestart:{gametype}_{name}:0.1.1")
+        rejoin_roster()
+    elif verb == "fake_kill":
+        mode, killer, victim, *kind = rest.split()
+        weapon = kind[0] if kind else "258"
+        line = f"^7:kill:{mode}:{killer}:{victim}:type={weapon}:items=2-1"
+        if killer != victim:
+            line += ":victimitems=2-1"
+        emit(line)
+    elif verb == "fake_report":
+        for line in report_block(rest.strip()):
+            emit(line)
     elif verb == "fake_join":
         pid, ent, ip, name = rest.split(" ", 3)
+        fingerprint = ""
+        if name.startswith("fp="):
+            fingerprint, _, name = name[3:].partition(" ")
         with State.lock:
-            State.roster[int(ent)] = {"id": int(pid), "bot": ip == "bot", "name": name}
+            State.roster[int(ent)] = {
+                "id": int(pid),
+                "bot": ip == "bot",
+                "name": name,
+                "fp": fingerprint,
+            }
         if ip != "bot":
             for action in unpause():  # the first player joining unpauses the server
                 action()
@@ -661,7 +772,13 @@ def fake_command(verb: str, rest: str) -> None:
     elif verb == "fake_silent_join":
         ent, ip, name = rest.split(" ", 2)
         with State.lock:
-            State.roster[int(ent)] = {"id": 0, "bot": ip == "bot", "name": name}
+            State.roster[int(ent)] = {
+                "id": 0,
+                "bot": ip == "bot",
+                "name": name,
+                "fp": "",
+                "silent": True,
+            }
     elif verb == "fake_name":
         pid, name = rest.split(" ", 1)
         with State.lock:

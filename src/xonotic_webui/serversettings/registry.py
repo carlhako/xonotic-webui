@@ -18,6 +18,9 @@ FORCED_CVARS: tuple[tuple[str, str], ...] = (
     ("sv_eventlog_console", "1"),
     ("sv_eventlog_ipv6_delimiter", "1"),
     ("sys_colortranslation", "2"),
+    # The end-of-match statistics report is printed to the console, where the player
+    # recorder reads it, instead of being submitted to an external statistics service.
+    ("g_playerstats_gamereport_uri", "-"),
 )
 
 # ``port`` is owned by the panel's own settings (bootstrap D6) and secrets are out of
@@ -312,17 +315,6 @@ CURATED: tuple[CuratedSetting, ...] = (
         kind="bool",
         default=True,
         apply=ApplyClass.NOW,
-    ),
-    CuratedSetting(
-        key="g_playerstats_gamereport_uri",
-        group="server",
-        label="Report match statistics",
-        help="Upload match results to stats.xonotic.org when a match ends.",
-        kind="bool",
-        default=True,
-        apply=ApplyClass.NOW,
-        on="https://stats.xonotic.org/stats/submit",
-        off="",
     ),
 )
 

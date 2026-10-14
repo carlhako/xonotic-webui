@@ -86,7 +86,6 @@ def test_saved_values_are_written_quoted_in_registry_order() -> None:
             "g_norecoil": False,
             "timelimit_override": 10,
             "sv_public": False,
-            "g_playerstats_gamereport_uri": False,
         }
     )
     lines = [ln for ln in render_settings_cfg(data).splitlines() if not ln.startswith("//")]
@@ -97,7 +96,7 @@ def test_saved_values_are_written_quoted_in_registry_order() -> None:
     assert 'g_instagib "1"' in lines
     assert 'g_norecoil "0"' in lines
     assert 'timelimit_override "10"' in lines
-    assert 'g_playerstats_gamereport_uri ""' in lines
+    assert 'sv_public "0"' in lines
 
 
 def test_hostile_values_cannot_start_a_second_command() -> None:

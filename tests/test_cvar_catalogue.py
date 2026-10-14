@@ -58,7 +58,13 @@ def test_the_capture_values_are_not_taken_for_defaults(catalogue: CvarCatalogue)
 
 
 def test_reserved_and_secret_cvars_are_marked_not_editable(catalogue: CvarCatalogue) -> None:
-    for name in ("sv_eventlog", "sv_eventlog_console", "sys_colortranslation", "port"):
+    for name in (
+        "sv_eventlog",
+        "sv_eventlog_console",
+        "sys_colortranslation",
+        "g_playerstats_gamereport_uri",
+        "port",
+    ):
         assert catalogue.get(name).editable is False  # type: ignore[union-attr]
     rcon = catalogue.get("rcon_password")
     assert rcon is not None and not rcon.editable

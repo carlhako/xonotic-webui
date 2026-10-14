@@ -10,6 +10,7 @@ from xonotic_webui.colors import strip_colors, strip_leading_codes
 from xonotic_webui.events import (
     GameStart,
     PlayerJoin,
+    PlayerKill,
     PlayerName,
     PlayerPart,
     StatusReplyCollector,
@@ -189,3 +190,46 @@ def test_map_line_helper() -> None:
     assert is_map_line("map:      atelier") == "atelier"
     assert is_map_line("map:      _init/_init") == "_init/_init"
     assert is_map_line("host:     spike") is None
+
+
+# --- kills (player-stats) ---------------------------------------------------------------
+
+
+def test_every_captured_kill_shape_parses() -> None:
+    lines = fixture_lines("kill_variants.txt")
+    events = [parse_event(line) for line in lines]
+    assert all(isinstance(e, PlayerKill) for e in events)
+    assert {e.mode for e in events if isinstance(e, PlayerKill)} == {
+        "frag",
+        "tk",
+        "suicide",
+        "accident",
+    }
+
+
+def test_kill_fields() -> None:
+    assert parse_event("^7:kill:frag:3:2:type=258:items=2-1:victimitems=2-1") == PlayerKill(
+        "frag", 3, 2
+    )
+    assert parse_event("^7:kill:tk:4:8:type=522:items=10-1:victimitems=8-1") == PlayerKill(
+        "tk", 4, 8
+    )
+    # a suicide and an accident carry the victim as the killer
+    assert parse_event("^7:kill:suicide:1:1:type=KILL:items=2-1T") == PlayerKill("suicide", 1, 1)
+    assert parse_event("^7:kill:accident:3:3:type=HURTTRIGGER:items=2-1") == PlayerKill(
+        "accident", 3, 3
+    )
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "^7:kill:frag:x:2:type=1",
+        "^7:kill:frag:2",
+        "^7:kill",
+        "^7:kill::1:2",
+        "^7:kill:teleport:1:2:type=1",  # a mode this version does not know
+    ],
+)
+def test_malformed_or_unknown_kills_are_ignored(line: str) -> None:
+    assert parse_event(line) is None

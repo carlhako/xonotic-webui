@@ -148,6 +148,7 @@ the version is still shown, with no update indication, and **Check now** still w
 | `/opt/xonotic/0.8.6` | the game tree, root-owned and read-only to the service |
 | `/var/lib/xonotic-webui/state.json` | whether the server should be running |
 | `/var/lib/xonotic-webui/settings.json` | the server settings saved from the panel (see Server settings) |
+| `/var/lib/xonotic-webui/players.db` | the player history, a SQLite database (see Players) |
 | `/var/lib/xonotic-webui/release_check.json` | the last release check, kept so a restart while offline still knows |
 | `/var/lib/xonotic-webui/upgrade/request.json` | an upgrade request, present only while the helper has not yet taken it |
 | `/var/lib/xonotic-webui/upgrade_pending.json` | the upgrade in flight; `upgrade_last.json` beside it is the last outcome |
@@ -179,7 +180,8 @@ runs, in this order:
 
 1. your `server.cfg`, which the panel **never edits**
 2. the generated `xonotic-webui-settings.cfg`
-3. the few cvars the panel depends on (the event log, plain colour codes)
+3. the few cvars the panel depends on (the event log, plain colour codes, and where the
+   end-of-match statistics report goes)
 
 So **a value saved in the panel wins over the same setting in `server.cfg`**, and nothing
 can switch the event log off. A setting that `server.cfg` also sets is marked in the panel,
@@ -200,6 +202,15 @@ just the current match. **Raw cvars** lets you override any other cvar (search t
 full list, with defaults and descriptions); a raw override is applied after the curated
 settings, and may need a map change or restart to take effect. The panel refuses to
 override the cvars it forces, the game port and `rcon_password`.
+
+**Match statistics are no longer sent to XonStat.** The panel sets
+`g_playerstats_gamereport_uri` to `-` at every start, which makes the game print its
+end-of-match report to the console, where the panel reads it (see Players). The game's
+default sends that report to `stats.xonotic.org` instead, and the game can only do one of
+the two. So matches played here stop counting toward players' public XonStat profiles and
+Elo, and the server browser lists the server as using custom stats. The cvar is reserved:
+a setting or raw override cannot put it back. The panel's older "Report match statistics"
+setting is gone for the same reason.
 
 The panel lists maps from the `.pk3` packages in the game and in `userdir/data`, and keeps
 the gametype and the map rotation in `settings.json` too. An empty rotation means every map
@@ -235,6 +246,38 @@ appear in the console.
 A map without a `.mapinfo` file is listed with unknown gametypes and is not offered for any
 gametype. Changing the gametype takes effect at the next map; to switch immediately, pick a
 map for it and the panel goes to that map.
+
+## Players
+
+The **Players** section keeps a history of everyone who plays on the server, in
+`/var/lib/xonotic-webui/players.db` (SQLite, under the same state directory as everything
+else). It is recorded from the game's own event log and end-of-match report, with no extra
+process, and survives restarts, crashes and upgrades. History is **kept forever**; nothing
+is purged.
+
+- **Who is who.** A human is identified by the key fingerprint the server reports for their
+  connection, so a rename or a new address keeps one history. Xonotic clients make a key on
+  first run, and nobody can present another player's. A player with no fingerprint is
+  identified by their name with colours removed, so two keyless players called `Player` are
+  one history. Every name a player has used is kept, and searching matches any of them.
+  Bots are recorded by name and marked; they are hidden unless you turn on **Show bots**.
+- **Time on server and time playing.** *Time on server* is how long someone was connected,
+  spectating included, and runs through map changes. *Time playing* is the time they were
+  alive in matches, as the game reports it at match end. A server that stops or crashes ends
+  every session at that moment.
+- **Counts as they happen.** Frags, deaths and suicides are counted from the event log
+  live. The rest (score, wins, finished matches, damage, per-weapon accuracy, achievements,
+  average ping) is added when a match ends, including one cut short by a map change or a
+  clean stop. A crash loses that match's report but nothing already counted.
+- **The table.** Click a column to sort by it and again to reverse it; the search, sort and
+  page are kept in the address, so a link restores the view. It refreshes by itself every
+  few seconds while open. Click a row for a player's details: names used, first and last
+  seen, sessions, a per-weapon table and achievements.
+- **What is not kept.** No IP addresses are stored, and only the first eight characters of
+  a key fingerprint are ever shown.
+
+The report lines are not shown in the **Console** tab. They are the reason XonStat
+submission stops (see Server settings).
 
 ## Settings
 

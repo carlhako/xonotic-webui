@@ -1,0 +1,74 @@
+^7V 9
+^7R xonotic-v0.8.6
+^7G dm
+^7O Xonotic
+^7M atelier
+^7I 0.1791950647.489966
+^7S Xonotic 0.8.6 Server
+^7C 1
+^7U 26981
+^7D 28.166725
+^7L 
+^7P eYsiCuCqmFh8IQFcKJJZub6P8W095DarHNvFZimBGVg=
+^7i 1
+^7n ^2Map^7Changer
+^7r 1
+^7e scoreboard-elo -2
+^7e total-elo -1
+^7e anticheat-div0_snapback 0.14848
+^7e anticheat-idle_snapaim_m10 33.5424
+^7e anticheat-idle_snapaim_m7 25.3907
+^7e anticheat-idle_snapaim_m4 12.9383
+^7e anticheat-idle_snapaim_m3 8.17799
+^7e anticheat-idle_snapaim_m2 5.17694
+^7e anticheat-idle_snapaim_noise 4.00989
+^7e anticheat-idle_snapaim_signal 17.6489
+^7e anticheat-idle_snapaim 13.639
+^7e anticheat-div0_evade 0.002863
+^7e anticheat-div0_strafebot_new 0.164805
+^7e anticheat-speedhack_m5 1.0051
+^7e anticheat-speedhack_m4 1.00508
+^7e anticheat-speedhack_m3 1.00507
+^7e anticheat-speedhack_m2 1.00506
+^7e anticheat-speedhack_m1 1.00505
+^7e anticheat-speedhack 0.060245
+^7e anticheat-_time 32.0333
+^7e acc-shotgun-cnt-fired 27
+^7e acc-shotgun-fired 1560
+^7e rank 1
+^7e scoreboardpos 2
+^7e scoreboardvalid 1
+^7e joins 1
+^7e avglatency 20.3349
+^7e alivetime 31
+^7P bot#3#Mystery
+^7i 2
+^7n [BOT]Mystery
+^7e scoreboard-elo -2
+^7e anticheat-div0_snapback 0.173148
+^7e anticheat-idle_snapaim_m10 23.908
+^7e anticheat-idle_snapaim_m7 18.095
+^7e anticheat-idle_snapaim_m4 9.33655
+^7e anticheat-idle_snapaim_m3 5.86631
+^7e anticheat-idle_snapaim_m2 2.79511
+^7e anticheat-idle_snapaim_noise 0.865147
+^7e anticheat-idle_snapaim_signal 12.6259
+^7e anticheat-idle_snapaim 11.7608
+^7e anticheat-div0_strafebot_new 0.133965
+^7e anticheat-div0_strafebot_old 0.004248
+^7e anticheat-speedhack_m5 1.00282
+^7e anticheat-speedhack_m4 1.00282
+^7e anticheat-speedhack_m3 1.00283
+^7e anticheat-speedhack_m2 1.00283
+^7e anticheat-speedhack_m1 1.00283
+^7e anticheat-speedhack 1e-06
+^7e anticheat-_time 32
+^7e rank 1
+^7e scoreboardpos 1
+^7e scoreboardvalid 1
+^7e joins 1
+^7e alivetime 32.0333
+^7
+^7:gamestart:dm_boil:0.1791950691.438350
+^7:gameinfo:mutators:LIST:norecoil
+^7:gameinfo:end

@@ -215,6 +215,7 @@ async def test_override_while_running_is_sent_and_may_need_a_restart(live: LiveF
     ("name", "code"),
     [
         ("sv_eventlog", "reserved_cvar"),
+        ("g_playerstats_gamereport_uri", "reserved_cvar"),
         ("port", "reserved_cvar"),
         ("rcon_password", "reserved_cvar"),
         ("has%20space", "invalid_cvar_name"),

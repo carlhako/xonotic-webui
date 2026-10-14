@@ -17,6 +17,7 @@ def build_api_router(runtime: Runtime) -> APIRouter:
     from xonotic_webui.api.lifecycle import build_lifecycle_router
     from xonotic_webui.api.maps import build_maps_router
     from xonotic_webui.api.panel import build_panel_router
+    from xonotic_webui.api.players import build_players_router
     from xonotic_webui.api.settings import build_settings_router
     from xonotic_webui.api.status import build_status_router
 
@@ -27,4 +28,5 @@ def build_api_router(runtime: Runtime) -> APIRouter:
     router.include_router(build_settings_router(runtime))
     router.include_router(build_maps_router(runtime))
     router.include_router(build_panel_router(runtime))
+    router.include_router(build_players_router(runtime))
     return router

@@ -25,7 +25,21 @@ D3). Each line is exactly as the server printed it (including the leading `^7`).
 | `session_humans_only.txt` | whole run: join, rename, part, no bots |
 | `session_humans_bots_v6.txt` | whole run: two humans (IPv4 and IPv6), a bot, rename, parts, match end |
 | `session_ansi_translated.txt` | whole run with the engine's default ANSI colour translation (`sys_colortranslation` not set) |
+| `who_reply.txt` | `sv_cmd who "|"` from the server console: two humans (one nickname containing `\|` and cut to 20 characters) and two bots |
+| `kill_variants.txt` | one `:kill:` line per shape: `frag`, `tk`, `suicide` (a `KILL` and a weapon death type) and `accident`, with and without item flags |
+| `report_finished.txt` | the end of a match (`:scores` to `:gameover`) with `g_playerstats_gamereport_uri -`: a human who fired two weapons, two bots, `wins`, `matches`, achievements |
+| `report_unfinished.txt` | the report printed by `changelevel` (a match cut short): no `:end`, no `matches`, no `wins`, and the next `:gamestart:` straight after the blank line |
+| `report_privacy_optout.txt` | a finished-match report for a human who allows neither uidtracking nor uid2name: `P player#1`, no `n` line |
+| `session_map_change_rejoin.txt` | whole run: a human and a bot, `who`, a `changelevel` with the human connected (every client re-joins with a new id, no `:part`), `who` again, an accident, quit |
+| `session_leave_during_map_change.txt` | whole run: a `gotomap` match end, and the human's client closed while the next map loads: `Client ... dropped` and no `:part` for it |
 | `cvarlist.txt` | full `cvarlist` reply (6,097 cvars: `name is "value" ["default"] description`), source of the bundled cvar catalogue |
+
+The player-statistics files (`who_reply.txt` onwards) were captured for the `add-player-stats`
+change with `g_playerstats_gamereport_uri "-"`, `sv_spectate 0` (a joining client plays at once)
+and `bot_number` set, with a headless client whose `autoexec.cfg` set `cl_allow_uid2name 1` and
+`cl_welcome 0` (otherwise a dialog takes the keyboard) and used `defer` to hold `+fire`, `+left`
+and `+forward` and to `kill` itself. Team kills needed real friendly fire (`teamplay_mode 2`,
+`g_friendlyfire_virtual 0`) in `tdm`, and accidents came from bots on `afterslime`.
 
 ## Transcripts (`transcripts/`)
 

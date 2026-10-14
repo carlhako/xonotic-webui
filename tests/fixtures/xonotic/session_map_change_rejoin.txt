@@ -1,0 +1,301 @@
+Game is Xonotic using base gamedir data
+gamename for server filtering: Xonotic
+Xonotic Linux 03:14:05 Jun 20 2023 - release
+Current nice level is below the soft limit - cannot use niceness
+Skeletal animation uses SSE code path
+execing quake.rc
+execing default.cfg
+execing xonotic-common.cfg
+execing xonotic-client.cfg
+Warning: Could not expand $vid_width
+Warning: Could not expand $vid_height
+Warning: Could not expand $vid_pixelheight
+Warning: Could not expand $vid_desktopfullscreen
+execing sRGB-disable.cfg
+execing binds-xonotic.cfg
+execing effects-normal.cfg
+execing crosshairs.cfg
+execing gamemodes-client.cfg
+execing notifications.cfg
+execing _hud_common.cfg
+execing _hud_descriptions.cfg
+execing hud_luma.cfg
+execing xonotic-server.cfg
+execing testing.cfg
+execing balance-xonotic.cfg
+execing bal-wep-xonotic.cfg
+execing physicsX.cfg
+execing turrets.cfg
+execing vehicles.cfg
+execing gamemodes-server.cfg
+execing ctfscoring-samual.cfg
+execing mutators.cfg
+execing randomitems-xonotic.cfg
+execing monsters.cfg
+execing minigames.cfg
+execing physics.cfg
+execing cdtracks.cfg
+execing commands.cfg
+Warning: Could not expand $qport in alias _if_dedicated
+execing help.cfg
+couldn't exec config.cfg
+"maxplayers" set to "16"
+execing data/campaign.cfg
+execing config_update.cfg
+execing font-xolonium.cfg
+Warning: Could not expand $scr_loadingscreen_barheight
+Warning: Could not expand $scr_infobar_height
+This command only works on clients: cl_cmd hud scoreboard_columns_set 
+execing autoexec/empty.cfg
+execing autoexec.cfg
+^7Loaded public key key_0.d0pk (fingerprint: Xon//KssdlzGkFKdnnN4sgg8H+koTbBn5JTi37BAW1Q=)
+^7Generated private ID key_0.d0pk (public key fingerprint: MAdCFjN93vdv17Gfr+/9/g0TzJc49qAbFhDHTaGBfa4=)
+^7Saved unsigned key to key_0.d0si
+^7Signature generation in progress...
+^7execing post-config.cfg
+^7Server using port 26981
+^7Server listening on address 0.0.0.0:26981
+^7Server listening on address [0:0:0:0:0:0:0:0]:26981
+^7execing capture.cfg
+^7^7Switching to map atelier
+^7Server using port 26981
+^7Server listening on address 0.0.0.0:26981
+^7Server listening on address [0:0:0:0:0:0:0:0]:26981
+^7:gamestart:dm_atelier:0.1791950647.489966
+^7:gameinfo:mutators:LIST:norecoil
+^7:gameinfo:end
+^7Error response from keygen server: Not allowed
+^7Authenticated connection to 127.0.0.1:58619 has been established: client is eYsiCuCqmFh8IQFcKJJZub6P8W095DarHNvFZimBGVg=@~Xon//Ks, I am MAdCFjN@~Xon//Ks
+^7^7^2Map^7Changer^7 is connecting...
+^7^7^2Map^7Changer^4 connected
+^7:join:1:1:127.0.0.1:^2Map^7Changer
+^7^2Map^7Changer connected
+^7:team:1:-1:4
+^7^7[BOT]Mystery^4 connected
+^7:join:2:2:bot:[BOT]Mystery
+^7:team:2:-1:4
+^7unconnected ^7changed name to [BOT]Mystery
+^7^7^2Map^7Changer^4 is now playing
+^7^7Receiving player stats failed: -404
+^7:startdelay_ended
+^7List of client information:
+^7|^7ent |^7nickname            |^7ping |^7pl |^7time     |^7ip              |^7crypto_id|^7
+^7|^7#1  |^7^2Map^7Changer          |^75    |^70  |^700:00:30 |^7127.0.0.1       |^7eYsiCuCqmFh8IQFcKJJZub6P8W095DarHNvFZimBGVg=|^7
+^7|^7#2  |^7[BOT]Mystery        |^70    |^70  |^700:00:30 |^7null/botclient  |^7null/botclient|^7
+^7Finished listing 2 client(s) out of 16 slots.
+^7V 9
+^7R xonotic-v0.8.6
+^7G dm
+^7O Xonotic
+^7M atelier
+^7I 0.1791950647.489966
+^7S Xonotic 0.8.6 Server
+^7C 1
+^7U 26981
+^7D 28.166725
+^7L 
+^7P eYsiCuCqmFh8IQFcKJJZub6P8W095DarHNvFZimBGVg=
+^7i 1
+^7n ^2Map^7Changer
+^7r 1
+^7e scoreboard-elo -2
+^7e total-elo -1
+^7e anticheat-div0_snapback 0.14848
+^7e anticheat-idle_snapaim_m10 33.5424
+^7e anticheat-idle_snapaim_m7 25.3907
+^7e anticheat-idle_snapaim_m4 12.9383
+^7e anticheat-idle_snapaim_m3 8.17799
+^7e anticheat-idle_snapaim_m2 5.17694
+^7e anticheat-idle_snapaim_noise 4.00989
+^7e anticheat-idle_snapaim_signal 17.6489
+^7e anticheat-idle_snapaim 13.639
+^7e anticheat-div0_evade 0.002863
+^7e anticheat-div0_strafebot_new 0.164805
+^7e anticheat-speedhack_m5 1.0051
+^7e anticheat-speedhack_m4 1.00508
+^7e anticheat-speedhack_m3 1.00507
+^7e anticheat-speedhack_m2 1.00506
+^7e anticheat-speedhack_m1 1.00505
+^7e anticheat-speedhack 0.060245
+^7e anticheat-_time 32.0333
+^7e acc-shotgun-cnt-fired 27
+^7e acc-shotgun-fired 1560
+^7e rank 1
+^7e scoreboardpos 2
+^7e scoreboardvalid 1
+^7e joins 1
+^7e avglatency 20.3349
+^7e alivetime 31
+^7P bot#3#Mystery
+^7i 2
+^7n [BOT]Mystery
+^7e scoreboard-elo -2
+^7e anticheat-div0_snapback 0.173148
+^7e anticheat-idle_snapaim_m10 23.908
+^7e anticheat-idle_snapaim_m7 18.095
+^7e anticheat-idle_snapaim_m4 9.33655
+^7e anticheat-idle_snapaim_m3 5.86631
+^7e anticheat-idle_snapaim_m2 2.79511
+^7e anticheat-idle_snapaim_noise 0.865147
+^7e anticheat-idle_snapaim_signal 12.6259
+^7e anticheat-idle_snapaim 11.7608
+^7e anticheat-div0_strafebot_new 0.133965
+^7e anticheat-div0_strafebot_old 0.004248
+^7e anticheat-speedhack_m5 1.00282
+^7e anticheat-speedhack_m4 1.00282
+^7e anticheat-speedhack_m3 1.00283
+^7e anticheat-speedhack_m2 1.00283
+^7e anticheat-speedhack_m1 1.00283
+^7e anticheat-speedhack 1e-06
+^7e anticheat-_time 32
+^7e rank 1
+^7e scoreboardpos 1
+^7e scoreboardvalid 1
+^7e joins 1
+^7e alivetime 32.0333
+^7
+^7:gamestart:dm_boil:0.1791950691.438350
+^7:gameinfo:mutators:LIST:norecoil
+^7:gameinfo:end
+^7^7[BOT]Mystery^4 connected
+^7:join:1:2:bot:[BOT]Lion
+^7:team:1:-1:4
+^7[BOT]Mystery ^7changed name to [BOT]Lion
+^7^7^2Map^7Changer^7 is connecting...
+^7^7^2Map^7Changer^4 connected
+^7:join:2:1:127.0.0.1:^2Map^7Changer
+^7^2Map^7Changer connected
+^7:team:2:-1:4
+^7^7Receiving player stats failed: -404
+^7^7^2Map^7Changer^4 is now playing
+^7:startdelay_ended
+^7^7^2Map^7Changer^1 was in the wrong place^1
+^7:kill:accident:2:2:type=HURTTRIGGER:items=8-1
+^7List of client information:
+^7|^7ent |^7nickname            |^7ping |^7pl |^7time     |^7ip              |^7crypto_id|^7
+^7|^7#1  |^7^2Map^7Changer          |^733   |^70  |^700:00:17 |^7127.0.0.1       |^7eYsiCuCqmFh8IQFcKJJZub6P8W095DarHNvFZimBGVg=|^7
+^7|^7#2  |^7[BOT]Lion           |^70    |^70  |^700:00:20 |^7null/botclient  |^7null/botclient|^7
+^7Finished listing 2 client(s) out of 16 slots.
+^7V 9
+^7R xonotic-v0.8.6
+^7G dm
+^7O Xonotic
+^7M boil
+^7I 0.1791950691.438350
+^7S Xonotic 0.8.6 Server
+^7C 1
+^7U 26981
+^7D 7.366745
+^7L 
+^7P eYsiCuCqmFh8IQFcKJJZub6P8W095DarHNvFZimBGVg=
+^7i 2
+^7n ^2Map^7Changer
+^7r 1
+^7e scoreboard-elo -2
+^7e scoreboard-dmgtaken 100
+^7e total-dmgtaken 100
+^7e scoreboard-suicides 1
+^7e total-suicides 1
+^7e scoreboard-deaths 1
+^7e total-deaths 1
+^7e scoreboard-score -1
+^7e total-score -1
+^7e anticheat-div0_snapback 0.274825
+^7e anticheat-idle_snapaim_m10 33.353
+^7e anticheat-idle_snapaim_m7 23.506
+^7e anticheat-idle_snapaim_m4 10.9918
+^7e anticheat-idle_snapaim_m3 7.09358
+^7e anticheat-idle_snapaim_m2 5.30191
+^7e anticheat-idle_snapaim_noise 4.82712
+^7e anticheat-idle_snapaim_signal 15.4474
+^7e anticheat-idle_snapaim 10.6203
+^7e anticheat-div0_evade 0.002317
+^7e anticheat-div0_strafebot_new 0.100016
+^7e anticheat-speedhack_m5 1.00542
+^7e anticheat-speedhack_m4 1.00542
+^7e anticheat-speedhack_m3 1.00541
+^7e anticheat-speedhack_m2 1.00541
+^7e anticheat-speedhack_m1 1.00541
+^7e anticheat-speedhack 0.04136
+^7e anticheat-_time 19.8
+^7e acc-vortex-cnt-fired 1
+^7e acc-vortex-fired 64.8
+^7e acc-shotgun-cnt-fired 5
+^7e acc-shotgun-fired 240
+^7e rank 2
+^7e scoreboardpos 2
+^7e scoreboardvalid 1
+^7e joins 1
+^7e avglatency 12.4917
+^7e alivetime 16.1667
+^7P bot#0#Lion
+^7i 1
+^7n [BOT]Lion
+^7e scoreboard-elo -2
+^7e anticheat-div0_snapback 0.046881
+^7e anticheat-idle_snapaim_m10 49.2109
+^7e anticheat-idle_snapaim_m7 37.2595
+^7e anticheat-idle_snapaim_m4 18.7271
+^7e anticheat-idle_snapaim_m3 11.1751
+^7e anticheat-idle_snapaim_m2 4.41686
+^7e anticheat-idle_snapaim_noise 0.691698
+^7e anticheat-idle_snapaim_signal 25.7618
+^7e anticheat-idle_snapaim 25.0701
+^7e anticheat-div0_strafebot_new 0.27334
+^7e anticheat-speedhack_m5 1.0026
+^7e anticheat-speedhack_m4 1.0026
+^7e anticheat-speedhack_m3 1.0026
+^7e anticheat-speedhack_m2 1.0026
+^7e anticheat-speedhack_m1 1.0026
+^7e anticheat-speedhack 1e-06
+^7e anticheat-_time 22.2333
+^7e rank 1
+^7e scoreboardpos 1
+^7e scoreboardvalid 1
+^7e joins 1
+^7e alivetime 22.1666
+^7
+^7Client "^2Map^7Changer" dropped
+^7:part:2
+^7^7^2Map^7Changer^4 disconnected
+^7:anticheat:_time:2:23.333412
+^7:anticheat:speedhack:0:-
+^7:anticheat:speedhack_m1:0:-
+^7:anticheat:speedhack_m2:0:-
+^7:anticheat:speedhack_m3:0:-
+^7:anticheat:speedhack_m4:0:-
+^7:anticheat:speedhack_m5:0:-
+^7:anticheat:div0_strafebot_old:0:-
+^7:anticheat:div0_strafebot_new:0:-
+^7:anticheat:div0_evade:0:-
+^7:anticheat:idle_snapaim:0:-
+^7:anticheat:idle_snapaim_signal:0:-
+^7:anticheat:idle_snapaim_noise:0:-
+^7:anticheat:idle_snapaim_m2:0:-
+^7:anticheat:idle_snapaim_m3:0:-
+^7:anticheat:idle_snapaim_m4:0:-
+^7:anticheat:idle_snapaim_m7:0:-
+^7:anticheat:idle_snapaim_m10:0:-
+^7:anticheat:div0_snapback:0:-
+^7Client "[BOT]Lion" dropped
+^7:part:1
+^7^7[BOT]Lion^4 disconnected
+^7:anticheat:_time:1:23.333412
+^7:anticheat:speedhack:0:-
+^7:anticheat:speedhack_m1:0:-
+^7:anticheat:speedhack_m2:0:-
+^7:anticheat:speedhack_m3:0:-
+^7:anticheat:speedhack_m4:0:-
+^7:anticheat:speedhack_m5:0:-
+^7:anticheat:div0_strafebot_old:0:-
+^7:anticheat:div0_strafebot_new:0:-
+^7:anticheat:div0_evade:0:-
+^7:anticheat:idle_snapaim:0:-
+^7:anticheat:idle_snapaim_signal:0:-
+^7:anticheat:idle_snapaim_noise:0:-
+^7:anticheat:idle_snapaim_m2:0:-
+^7:anticheat:idle_snapaim_m3:0:-
+^7:anticheat:idle_snapaim_m4:0:-
+^7:anticheat:idle_snapaim_m7:0:-
+^7:anticheat:idle_snapaim_m10:0:-
+^7:anticheat:div0_snapback:0:-

@@ -269,3 +269,89 @@ async def test_multi_line_query_collects_a_status_reply(
     collector = await console.query("status 1", StatusReplyCollector())
     assert collector.map == "atelier"
     assert [(r.ent, r.bot) for r in collector.rows] == [(1, False), (2, True)]
+
+
+# --- standing filters (the end-of-match statistics report) ----------------------------------
+
+
+async def test_a_statistics_report_is_withheld_live_and_from_replay(
+    started: tuple[Supervisor, Console],
+) -> None:
+    from xonotic_webui.players.report import StatsReportFilter
+
+    sup, console = started
+    console.add_filter(StatsReportFilter())
+    stream = console.stream()
+    await take(stream, len(console.buffer))
+
+    await sup.send_command("fake_emit ^7:end")
+    await sup.send_command("fake_report report_finished.txt")
+    await sup.send_command("fake_emit ^7:gameover")
+    seen: list[ConsoleLine] = []
+
+    async def collect() -> None:
+        async for line in stream:
+            seen.append(line)
+            if line.plain == ":gameover":
+                return
+
+    await asyncio.wait_for(collect(), 5)
+    await stream.aclose()
+    # the ordinary lines around the report arrive, in order; the report does not
+    assert [line.plain for line in seen] == [":end", ":gameover"]
+
+    fresh = console.stream()
+    replay: list[ConsoleLine] = []
+
+    async def replayed() -> None:
+        async for line in fresh:
+            replay.append(line)
+            if line.plain == ":gameover":
+                return
+
+    await asyncio.wait_for(replayed(), 5)
+    await fresh.aclose()
+    assert not any(line.plain.startswith(("V ", "P ", "e ")) for line in replay)
+    assert {":end", ":gameover"} <= {line.plain for line in replay}
+    # the buffer itself still holds every line (the recorder is fed from the supervisor)
+    assert any(line.plain == "V 9" for line in console.buffer.snapshot())
+
+
+async def test_a_report_with_a_pending_query_collector_going_first(
+    started: tuple[Supervisor, Console],
+) -> None:
+    from xonotic_webui.players.report import StatsReportFilter
+
+    _sup, console = started
+    seen_by_filter: list[str] = []
+
+    class Recorder:
+        def feed(self, raw_line: str) -> bool:
+            seen_by_filter.append(raw_line)
+            return False
+
+    console.add_filter(Recorder())
+    console.add_filter(StatsReportFilter())
+    reply = await console.query_line(
+        "fake_emit ^7answer-42", lambda plain: plain == "answer-42", reply_timeout=3
+    )
+    assert reply.endswith("answer-42")
+    # the collector took the line, so no standing filter saw it
+    assert not any(line.endswith("answer-42") for line in seen_by_filter)
+
+
+async def test_a_raising_filter_passes_the_line_through(
+    started: tuple[Supervisor, Console],
+) -> None:
+    sup, console = started
+
+    class Broken:
+        def feed(self, raw_line: str) -> bool:
+            raise RuntimeError("boom")
+
+    console.add_filter(Broken())
+    stream = console.stream()
+    await take(stream, len(console.buffer))
+    await sup.send_command("fake_emit ^7still-delivered")
+    assert (await next_matching(stream, lambda line: line.plain == "still-delivered")).seq
+    await stream.aclose()

@@ -83,8 +83,9 @@ def test_the_required_curated_options_are_all_offered() -> None:
         "g_maplist_votable",
         "g_instagib",
         "sv_autopause",
-        "g_playerstats_gamereport_uri",
     } <= keys
+    # the statistics report target is forced by the panel, never a setting
+    assert "g_playerstats_gamereport_uri" not in keys
 
 
 def test_limits_are_the_override_cvars_and_apply_to_the_current_match_too() -> None:

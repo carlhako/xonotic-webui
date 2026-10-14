@@ -429,3 +429,122 @@ def test_bots_do_not_unpause(session: Callable[..., Session]) -> None:
     s.send("endmatch")
     time.sleep(0.4)
     assert s.count(":gameover") == 0
+
+
+# --- player statistics paths: who, kills, reports and map-change re-joins -------------
+
+FIXTURES = Path(__file__).parent / "fixtures" / "xonotic"
+FINGERPRINT = "dRXbACYQr56HZ6KBw0zOIi7K1hQ3sUdDvO+DxBuUlSA="
+
+
+def test_who_with_a_pipe_separator_parses_with_the_real_collector(tmp_path: Path) -> None:
+    from xonotic_webui.players.who import WhoReplyCollector
+
+    lines = run_fake(
+        tmp_path,
+        f"fake_join 1 1 127.0.0.1 fp={FINGERPRINT} ^1Red^7Name\n"
+        "fake_join 2 2 bot [BOT]x\n"
+        "fake_join 3 3 127.0.0.1 Keyless\n"
+        'sv_cmd who "|"\nquit\n',
+    )
+    collector = WhoReplyCollector()
+    consumed = [line for line in lines if collector.feed(line)]
+    assert collector.done
+    assert {ent: row.fingerprint for ent, row in collector.rows.items()} == {
+        1: FINGERPRINT,
+        2: None,
+        3: None,
+    }
+    assert any("Finished listing 3 client(s)" in line for line in consumed)
+
+
+def test_who_without_a_separator_uses_spaces(tmp_path: Path) -> None:
+    lines = run_fake(tmp_path, f"fake_join 1 1 127.0.0.1 fp={FINGERPRINT} Name\nwho\nquit\n")
+    rows = [line for line in lines if "#1 " in line and FINGERPRINT in line]
+    assert len(rows) == 1
+    assert "|" not in rows[0]
+
+
+def test_who_cuts_a_long_nickname_to_twenty_visible_characters(tmp_path: Path) -> None:
+    lines = run_fake(
+        tmp_path,
+        'fake_join 1 1 127.0.0.1 Odd|Name^7With a very long nickname\nsv_cmd who "|"\nquit\n',
+    )
+    row = next(line for line in lines if "#1" in line and "Odd" in line)
+    assert "With a very |" in row
+    assert "long" not in row
+
+
+def test_fake_kill_prints_a_kill_event(tmp_path: Path) -> None:
+    from xonotic_webui.events import PlayerKill
+
+    lines = run_fake(
+        tmp_path,
+        "fake_kill frag 2 3\nfake_kill suicide 1 1\nfake_kill tk 4 5 522\nquit\n",
+    )
+    kills = [e for line in lines if isinstance(e := parse_event(line), PlayerKill)]
+    assert kills == [
+        PlayerKill("frag", 2, 3),
+        PlayerKill("suicide", 1, 1),
+        PlayerKill("tk", 4, 5),
+    ]
+    assert any(line.endswith("type=522:items=2-1:victimitems=2-1") for line in lines)
+
+
+@pytest.mark.parametrize("fixture", ["report_finished.txt", "report_unfinished.txt"])
+def test_fake_report_prints_the_captured_block_verbatim(tmp_path: Path, fixture: str) -> None:
+    from xonotic_webui.players.report import ReportParser
+
+    lines = run_fake(tmp_path, f"fake_report {fixture}\nquit\n")
+    parser = ReportParser()
+    consumed = [line for line in lines if parser.feed(line)]
+    assert parser.report is not None
+    captured = (FIXTURES / fixture).read_text().splitlines()
+    assert consumed == captured[captured.index("^7V 9") : captured.index("^7V 9") + len(consumed)]
+    assert parser.report.players
+
+
+def test_fake_map_rejoins_every_client_with_fresh_ids_bots_first(tmp_path: Path) -> None:
+    from xonotic_webui.events import PlayerJoin
+
+    lines = run_fake(
+        tmp_path,
+        "fake_join 7 1 127.0.0.1 Human\nfake_join 8 2 bot [BOT]a\nfake_join 9 3 bot [BOT]b\n"
+        "fake_map dm boil\nstatus 1\nquit\n",
+    )
+    start = max(i for i, line in enumerate(lines) if ":gamestart:dm_boil" in line)
+    joins = [e for line in lines[start:] if isinstance(e := parse_event(line), PlayerJoin)]
+    assert [(j.player_id, j.ent, j.bot) for j in joins] == [
+        (1, 2, True),
+        (2, 3, True),
+        (3, 1, False),
+    ]
+
+
+def test_a_silent_join_is_not_rejoined(tmp_path: Path) -> None:
+    from xonotic_webui.events import PlayerJoin
+
+    lines = run_fake(tmp_path, "fake_silent_join 4 127.0.0.1 Quiet\nfake_map dm boil\nquit\n")
+    start = max(i for i, line in enumerate(lines) if ":gamestart:dm_boil" in line)
+    assert not [e for line in lines[start:] if isinstance(e := parse_event(line), PlayerJoin)]
+
+
+def test_no_submission_error_when_the_report_target_is_the_console(
+    session: Callable[..., Session],
+) -> None:
+    s = session(flags="endmatch_delay=0.05")
+    s.ask("set g_playerstats_gamereport_uri -")
+    start = len(s.lines)
+    s.send("endmatch")
+    s.wait_for(":gamestart:", after=start)
+    assert not any("uri_multi_ready" in line for line in s.lines[start:])
+
+
+def test_submission_failure_is_still_printed_for_the_default_target(
+    session: Callable[..., Session],
+) -> None:
+    s = session(flags="endmatch_delay=0.05")
+    start = len(s.lines)
+    s.send("endmatch")
+    s.wait_for(":gamestart:", after=start)
+    assert any("uri_multi_ready" in line for line in s.lines[start:])

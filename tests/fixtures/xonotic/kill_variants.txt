@@ -1,0 +1,9 @@
+^7:kill:frag:3:2:type=1546:items=10-1:victimitems=3-1
+^7:kill:frag:3:2:type=258:items=2-1:victimitems=2-1
+^7:kill:frag:2:3:type=8:items=8-1S:victimitems=2-1
+^7:kill:tk:4:8:type=522:items=10-1:victimitems=8-1
+^7:kill:tk:8:3:type=2:items=2-1:victimitems=2-1
+^7:kill:suicide:1:1:type=521:items=9-1
+^7:kill:suicide:1:1:type=KILL:items=2-1T
+^7:kill:accident:3:3:type=HURTTRIGGER:items=2-1
+^7:kill:accident:2:2:type=HURTTRIGGER:items=8-1

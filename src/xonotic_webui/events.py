@@ -11,6 +11,7 @@ Event lines start with ``:`` after the leading colour reset::
     :join:<playerid>:<ent>:<ip|bot>:<name>
     :name:<playerid>:<name>
     :part:<playerid>
+    :kill:<mode>:<killerid>:<victimid>:type=<deathtype>:items=...
 
 The panel launches the server with ``sv_eventlog_ipv6_delimiter 1`` so the address field
 never contains a colon, which keeps ``<name>`` (the last field, which may contain colons
@@ -51,7 +52,19 @@ class PlayerPart:
     player_id: int
 
 
-Event = GameStart | PlayerJoin | PlayerName | PlayerPart
+KILL_MODES = frozenset({"frag", "tk", "suicide", "accident"})
+
+
+@dataclass(frozen=True)
+class PlayerKill:
+    """A death. ``suicide`` and ``accident`` carry the victim as the killer."""
+
+    mode: str  # one of KILL_MODES
+    killer_id: int
+    victim_id: int
+
+
+Event = GameStart | PlayerJoin | PlayerName | PlayerPart | PlayerKill
 
 
 def parse_event(raw_line: str) -> Event | None:
@@ -75,6 +88,11 @@ def parse_event(raw_line: str) -> Event | None:
             return PlayerName(int(player_id), name)
         if kind == "part":
             return PlayerPart(int(rest.split(":", 1)[0]))
+        if kind == "kill":
+            mode, killer, victim = rest.split(":", 3)[:3]
+            if mode not in KILL_MODES:
+                return None
+            return PlayerKill(mode, int(killer), int(victim))
     except ValueError:
         return None
     return None

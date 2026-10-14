@@ -21,6 +21,7 @@ describe("shell (8.2)", () => {
     const links = within(nav).getAllByRole("link");
     expect(links.map((l) => l.textContent)).toEqual([
       "Dashboard",
+      "Players",
       "Maps",
       "Settings",
       "Console",

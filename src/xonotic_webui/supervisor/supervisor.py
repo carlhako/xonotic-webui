@@ -160,7 +160,7 @@ class Supervisor:
         # Renders the panel-owned settings config at every start. Without one the file is
         # header-only, which changes nothing.
         self._settings_cfg = settings_cfg
-        self._sink = line_sink
+        self._sinks: list[LineSink] = [line_sink] if line_sink is not None else []
         self._clock = clock
         self._probe_after = probe_after
         self._probe_interval = probe_interval
@@ -212,8 +212,12 @@ class Supervisor:
         """Fired when observable facts other than the state change (crash, abandoned)."""
         self._change_listeners.append(listener)
 
-    def set_line_sink(self, sink: LineSink) -> None:
-        self._sink = sink
+    def add_line_sink(self, sink: LineSink) -> None:
+        """Call ``sink`` with every line the server writes, after earlier sinks.
+
+        A sink that raises is logged and does not stop the others.
+        """
+        self._sinks.append(sink)
 
     def set_settings_cfg(self, render: Callable[[], str]) -> None:
         """Provide what the generated settings config contains at every start."""
@@ -398,9 +402,9 @@ class Supervisor:
         try:
             async for line in run.proc.readlines():
                 self.console.add_output(line)
-                if self._sink is not None:
+                for sink in list(self._sinks):
                     try:
-                        self._sink(line)
+                        sink(line)
                     except Exception:
                         log.exception("line sink raised; continuing")
                 if not run.ready.is_set() and self._is_ready_line(line):

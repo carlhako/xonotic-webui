@@ -69,6 +69,7 @@ def test_defaults_match_design() -> None:
     assert s.crash_restart_window == 300
     assert s.userdir == DEFAULT_STATE_DIR / "userdir"
     assert s.state_file == DEFAULT_STATE_DIR / "state.json"
+    assert s.players_db == DEFAULT_STATE_DIR / "players.db"
     assert s.game_binary.name == "xonotic-linux64-dedicated"
 
 

@@ -70,7 +70,7 @@ class StatusTracker:
         self._ready_task: asyncio.Task[None] | None = None
         self._reconcile_task: asyncio.Task[None] | None = None
 
-        supervisor.set_line_sink(self.on_line)
+        supervisor.add_line_sink(self.on_line)
         supervisor.subscribe_state(self._on_state)
         supervisor.subscribe_change(self._publish)
 

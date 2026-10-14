@@ -10,6 +10,8 @@ operator commands to the server's stdin (server-console spec).
 * The panel can also query the server on its own behalf via :meth:`Console.query`: the
   command is not echoed and the reply lines are withheld from client fan-out and from
   replayed history. This path is not reachable from the HTTP API.
+* Standing filters (:meth:`Console.add_filter`) do the same for unsolicited blocks the
+  server prints on its own, such as the end-of-match statistics report.
 """
 
 from __future__ import annotations
@@ -74,6 +76,12 @@ class LineCollector:
         return False
 
 
+class LineFilter(Protocol):
+    """A standing filter. ``feed`` says whether a line belongs to a block to withhold."""
+
+    def feed(self, raw_line: str) -> bool: ...
+
+
 C = TypeVar("C", bound=ReplyCollector)
 
 
@@ -120,6 +128,7 @@ class Console:
         self._command_lock = asyncio.Lock()
         self._pending: list[_PendingQuery] = []
         self._suppressed_seqs: set[int] = set()
+        self._filters: list[LineFilter] = []
         self._buffer.add_listener(self._on_line)
 
     @property
@@ -129,6 +138,14 @@ class Console:
     @property
     def subscriber_count(self) -> int:
         return len(self._subscribers)
+
+    def add_filter(self, line_filter: LineFilter) -> None:
+        """Withhold, from clients and from replay, the lines ``line_filter`` consumes.
+
+        The filter is fed every output line that no pending query consumed, before the
+        line is fanned out.
+        """
+        self._filters.append(line_filter)
 
     # -- fan-out ---------------------------------------------------------
     def _on_line(self, line: ConsoleLine) -> None:
@@ -148,6 +165,17 @@ class Console:
                         pending.future.set_result(None)
                         self._discard(pending)
                     return  # withheld from client fan-out
+        if line.kind is LineKind.OUTPUT and self._filters:
+            for line_filter in list(self._filters):
+                try:
+                    consumed = line_filter.feed(line.text)
+                except Exception:
+                    log.exception("console filter raised; passing the line through")
+                    consumed = False
+                if consumed:
+                    self._suppressed_seqs.add(line.seq)
+                    self._bound_suppressed()
+                    return
         for sub in list(self._subscribers):
             sub.offer(line)
 
