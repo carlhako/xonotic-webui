@@ -74,6 +74,74 @@ export function stubFetch(handler: (url: string, init?: RequestInit) => Response
   return fn;
 }
 
+// -- fixtures for the panel's own version and upgrade --------------------------------------
+
+import type { PanelVersion } from "../api/client";
+
+export const RUNNING = "0.2.0";
+
+export function makePanelVersion(overrides: Partial<PanelVersion> = {}): PanelVersion {
+  return {
+    current: RUNNING,
+    latest: RUNNING,
+    update_available: false,
+    release_url: "https://github.com/carlhako/xonotic-webui/releases/tag/v0.2.0",
+    release_name: "v0.2.0",
+    published_at: "2026-10-01T00:00:00Z",
+    notes: "## What's new\n\n- the **panel** page",
+    checked_at: "2026-10-01T01:00:00+00:00",
+    check_error: null,
+    one_click_available: true,
+    manual_command: null,
+    upgrade: null,
+    ...overrides,
+  };
+}
+
+/** A newer release is available (0.3.0 over the running 0.2.0). */
+export function makeUpdate(overrides: Partial<PanelVersion> = {}): PanelVersion {
+  return makePanelVersion({
+    latest: "0.3.0",
+    update_available: true,
+    release_url: "https://github.com/carlhako/xonotic-webui/releases/tag/v0.3.0",
+    release_name: "v0.3.0",
+    published_at: "2026-10-10T00:00:00Z",
+    notes: "## Fixes\n\n- maps list, see [the docs](https://example.test/docs)",
+    ...overrides,
+  });
+}
+
+export function makeUpgrade(
+  overrides: Partial<NonNullable<PanelVersion["upgrade"]>> = {},
+): NonNullable<PanelVersion["upgrade"]> {
+  return {
+    state: "pending",
+    from: RUNNING,
+    to: "0.3.0",
+    requested_at: "2026-10-10T01:00:00+00:00",
+    finished_at: null,
+    error: null,
+    log_tail: null,
+    ...overrides,
+  };
+}
+
+/** Route fetches for the panel's own endpoints (and `/health`), by "METHOD path". A
+ *  function value is called per request, so a test can change answers over time or throw
+ *  to simulate the panel being down. Anything unrouted answers `{}` like an idle API. */
+export function mockPanelFetch(routes: Record<string, unknown | (() => unknown)>) {
+  const fn = vi.fn(async (url: string, init?: RequestInit) => {
+    const key = `${init?.method ?? "GET"} ${url}`;
+    const entry = routes[key];
+    if (entry === undefined) return jsonResponse({});
+    const body = typeof entry === "function" ? (entry as () => unknown)() : entry;
+    if (body instanceof Response) return body;
+    return jsonResponse(body);
+  });
+  vi.stubGlobal("fetch", fn);
+  return fn;
+}
+
 // -- fixtures for the settings and maps sections ---------------------------------------
 
 import type { MapInfo, Setting, SettingsView } from "../api/client";

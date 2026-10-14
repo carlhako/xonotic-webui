@@ -102,6 +102,37 @@ p {
   content: "▪ ";
   color: var(--brand);
 }
+.brand-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.5rem;
+  min-width: 0;
+}
+.version-badge {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.version-badge:hover {
+  text-decoration: underline;
+}
+.version-badge.is-current {
+  color: var(--ok);
+}
+.version-badge.is-update {
+  color: var(--warn);
+  font-weight: 600;
+}
+.upgrade-banner {
+  background: var(--brand);
+  color: #fff;
+  padding: 0.5rem var(--gutter);
+  font-size: 0.9rem;
+  text-align: center;
+}
 .app-nav {
   display: flex;
   flex-wrap: wrap;
@@ -635,4 +666,65 @@ p {
   .btn {
     flex: 1 1 auto;
   }
+}
+
+/* -- panel page -- */
+.panel-actions {
+  margin-top: 0.75rem;
+}
+.release-notes h2 {
+  margin: 0 0 0.25rem;
+}
+.release-notes-body {
+  margin-top: 0.75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.release-notes-body h1,
+.release-notes-body h2,
+.release-notes-body h3 {
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  margin: 1rem 0 0.4rem;
+}
+.release-notes-body ul {
+  padding-left: 1.25rem;
+}
+.release-notes-body code,
+.manual-upgrade code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  overflow-wrap: anywhere;
+}
+.manual-upgrade {
+  margin-top: 0.75rem;
+}
+.manual-upgrade p {
+  margin-bottom: 0.5rem;
+}
+.panel-card .ok {
+  margin-top: 0.75rem;
+  color: var(--ok);
+}
+.panel-card .warn {
+  margin-top: 0.75rem;
+  color: var(--danger);
+}
+.diag-output {
+  margin: 0.5rem 0 0;
+  padding: 0.6rem 0.75rem;
+  background: var(--console-bg);
+  color: var(--console-fg);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  border-radius: 6px;
+  max-height: 20rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

@@ -3,6 +3,7 @@ import { Dashboard } from "./sections/Dashboard";
 import { Console } from "./sections/Console";
 import { Maps } from "./sections/Maps";
 import { Settings } from "./sections/Settings";
+import { Panel } from "./sections/Panel";
 
 export interface Section {
   path: string;
@@ -19,4 +20,6 @@ export const sections: Section[] = [
   { path: "/maps", label: "Maps", element: <Maps /> },
   { path: "/settings", label: "Settings", element: <Settings /> },
   { path: "/console", label: "Console", element: <Console /> },
+  // Reached from the header version badge, so it is routed but not listed in the navigation.
+  { path: "/panel", label: "Panel", element: <Panel />, nav: false },
 ];

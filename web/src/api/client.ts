@@ -22,6 +22,8 @@ export type MapsView = Schemas["MapsModel"];
 export type RotationView = Schemas["RotationModel"];
 export type RotationResult = Schemas["RotationResultModel"];
 export type SettingValue = string | number | boolean;
+export type PanelVersion = Schemas["PanelVersion"];
+export type PanelUpgrade = NonNullable<PanelVersion["upgrade"]>;
 
 /** A non-2xx API response, carrying the server's stable code and message. */
 export class ApiCallError extends Error {
@@ -122,4 +124,10 @@ export const api = {
   gotoMap: (map: string) => post<MatchAction>("/api/match/goto", { map }),
   skipMap: () => post<MatchAction>("/api/match/skip"),
   restartMatch: () => post<MatchAction>("/api/match/restart"),
+
+  // the panel's own version and upgrade
+  panelVersion: () => request<PanelVersion>("/api/panel/version"),
+  panelCheck: () => post<PanelVersion>("/api/panel/check"),
+  panelUpgrade: (version: string) =>
+    post<PanelVersion>("/api/panel/upgrade", { version }),
 };

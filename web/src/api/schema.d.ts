@@ -225,6 +225,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/panel/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check for a newer panel release now */
+        post: operations["check_api_panel_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/panel/upgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upgrade the panel to the release it reported */
+        post: operations["upgrade_api_panel_upgrade_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/panel/version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Panel version and update state */
+        get: operations["get_version_api_panel_version_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/rotation": {
         parameters: {
             query?: never;
@@ -617,6 +668,104 @@ export interface components {
             overrides: components["schemas"]["OverrideModel"][];
             /** Running */
             running: boolean;
+        };
+        /**
+         * PanelUpgrade
+         * @description An upgrade of the panel itself: in flight, or the last one that finished.
+         */
+        PanelUpgrade: {
+            /**
+             * Error
+             * @description Why it did not succeed.
+             */
+            error?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+            /**
+             * From
+             * @description The version that was running when requested.
+             */
+            from?: string | null;
+            /**
+             * Log Tail
+             * @description The end of the installer's output, for a failure.
+             */
+            log_tail?: string | null;
+            /** Requested At */
+            requested_at?: string | null;
+            /**
+             * State
+             * @description pending until the helper takes the request; running while it installs; then the outcome.
+             * @enum {string}
+             */
+            state: "pending" | "running" | "succeeded" | "failed" | "rejected";
+            /**
+             * To
+             * @description The version that was requested.
+             */
+            to?: string | null;
+        };
+        /** PanelUpgradeRequest */
+        PanelUpgradeRequest: {
+            /**
+             * Version
+             * @description The release to upgrade to; must be the one reported.
+             */
+            version: string;
+        };
+        /** PanelVersion */
+        PanelVersion: {
+            /**
+             * Check Error
+             * @description Why the last check failed, if it did.
+             */
+            check_error: string | null;
+            /**
+             * Checked At
+             * @description When the last check ran, successful or not.
+             */
+            checked_at: string | null;
+            /**
+             * Current
+             * @description The version of the running panel.
+             */
+            current: string;
+            /**
+             * Latest
+             * @description The latest stable release; null if never checked.
+             */
+            latest: string | null;
+            /**
+             * Manual Command
+             * @description The command to run as root to upgrade; null when one-click is available.
+             */
+            manual_command: string | null;
+            /**
+             * Notes
+             * @description The latest release's notes (Markdown); null if none.
+             */
+            notes: string | null;
+            /**
+             * One Click Available
+             * @description Whether the upgrade helper is installed.
+             */
+            one_click_available: boolean;
+            /** Published At */
+            published_at: string | null;
+            /**
+             * Release Name
+             * @description The latest release's title, as published.
+             */
+            release_name: string | null;
+            /**
+             * Release Url
+             * @description The latest release's page on GitHub.
+             */
+            release_url: string | null;
+            /** Update Available */
+            update_available: boolean;
+            /** @description The upgrade in flight, else the last one that finished. */
+            upgrade: components["schemas"]["PanelUpgrade"] | null;
         };
         /** PlayerModel */
         PlayerModel: {
@@ -1444,6 +1593,88 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    check_api_panel_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PanelVersion"];
+                };
+            };
+        };
+    };
+    upgrade_api_panel_upgrade_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PanelUpgradeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PanelVersion"];
+                };
+            };
+            /** @description The upgrade was refused. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_version_api_panel_version_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PanelVersion"];
                 };
             };
         };

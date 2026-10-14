@@ -68,7 +68,15 @@ def test_tarball_is_wheel_plus_docs_and_deploy_assets(built: dict[str, Path]) ->
     assert any(
         n.startswith("xonotic-webui/dist/xonotic_webui-") and n.endswith(".whl") for n in names
     )
-    for asset in ("deploy/install.sh", "deploy/xonotic-webui.service", "README.md", "LICENSE"):
+    for asset in (
+        "deploy/install.sh",
+        "deploy/xonotic-webui.service",
+        "deploy/xonotic-webui-upgrade",
+        "deploy/xonotic-webui-upgrade.path",
+        "deploy/xonotic-webui-upgrade.service",
+        "README.md",
+        "LICENSE",
+    ):
         assert f"xonotic-webui/{asset}" in names, asset
     for n in names:
         assert "/web/" not in n and "node_modules" not in n, n
@@ -128,3 +136,124 @@ print(xonotic_webui.__version__)"
     venv = dest / "opt" / "xonotic-webui" / "venv.new"
     static = next(venv.glob("lib/python*/site-packages/xonotic_webui/static/index.html"))
     assert static.is_file()
+
+
+# --- changelog and release notes (panel-self-update) ----------------------------------
+
+NOTES_SCRIPT = ROOT / ".github" / "scripts" / "release-notes.sh"
+CHANGELOG = ROOT / "CHANGELOG.md"
+
+SAMPLE = """# Changelog
+
+Preamble that belongs to no release.
+
+## 0.2.0 - 2026-10-20
+
+### What's new
+
+- the **panel** page
+- one-click upgrades
+
+## 0.1.10 - 2026-10-15
+
+- ten
+
+## 0.1.1 - 2026-10-13
+
+- one-one
+
+## 0.1.0 - 2026-10-12
+
+## 0.0.9 - 2026-10-01
+- nine
+"""
+
+
+def _notes(
+    tmp_path: Path, version: str, changelog: str = SAMPLE
+) -> subprocess.CompletedProcess[str]:
+    path = tmp_path / "CHANGELOG.md"
+    path.write_text(changelog)
+    return subprocess.run(
+        ["bash", str(NOTES_SCRIPT), version, str(path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_notes_script_prints_a_present_section(tmp_path: Path) -> None:
+    r = _notes(tmp_path, "0.2.0")
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == "### What's new\n\n- the **panel** page\n- one-click upgrades\n"
+
+
+def test_notes_script_accepts_a_v_prefixed_tag(tmp_path: Path) -> None:
+    assert _notes(tmp_path, "v0.2.0").stdout == _notes(tmp_path, "0.2.0").stdout
+
+
+def test_notes_script_fails_naming_a_missing_version(tmp_path: Path) -> None:
+    r = _notes(tmp_path, "0.3.0")
+    assert r.returncode != 0
+    assert "0.3.0" in r.stderr
+    assert r.stdout == ""
+
+
+def test_notes_script_fails_on_an_empty_section(tmp_path: Path) -> None:
+    r = _notes(tmp_path, "0.1.0")  # a heading with nothing under it
+    assert r.returncode != 0
+    assert "0.1.0" in r.stderr
+    assert r.stdout == ""
+
+
+def test_notes_script_does_not_confuse_a_version_with_a_longer_one(tmp_path: Path) -> None:
+    only_long = "# Changelog\n\n## 0.1.10 - 2026-10-15\n\n- ten\n"
+    assert _notes(tmp_path, "0.1.1", only_long).returncode != 0
+    both = _notes(tmp_path, "0.1.1")
+    assert both.returncode == 0
+    assert both.stdout == "- one-one\n"
+    assert _notes(tmp_path, "0.1.10").stdout == "- ten\n"
+
+
+def test_notes_script_needs_a_version_and_a_changelog(tmp_path: Path) -> None:
+    no_args = subprocess.run(["bash", str(NOTES_SCRIPT)], capture_output=True, text=True)
+    assert no_args.returncode == 2
+    missing = subprocess.run(
+        ["bash", str(NOTES_SCRIPT), "0.1.0", str(tmp_path / "nope.md")],
+        capture_output=True,
+        text=True,
+    )
+    assert missing.returncode != 0
+
+
+def _project_version() -> str:
+    import tomllib
+
+    return tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+
+
+def test_the_project_version_has_a_changelog_section() -> None:
+    version = _project_version()
+    r = subprocess.run(
+        ["bash", str(NOTES_SCRIPT), version, str(CHANGELOG)], capture_output=True, text=True
+    )
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip()
+
+
+def test_every_changelog_section_has_content() -> None:
+    import re
+
+    versions = re.findall(r"^## (\S+)", CHANGELOG.read_text(), flags=re.MULTILINE)
+    assert versions, "the changelog has no release sections"
+    for version in versions:
+        r = subprocess.run(
+            ["bash", str(NOTES_SCRIPT), version, str(CHANGELOG)], capture_output=True, text=True
+        )
+        assert r.returncode == 0, f"{version}: {r.stderr}"
+
+
+def test_the_package_version_and_the_project_version_agree() -> None:
+    from xonotic_webui import __version__
+
+    assert __version__ == _project_version()
