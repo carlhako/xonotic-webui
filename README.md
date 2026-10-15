@@ -1,7 +1,11 @@
 # xonotic-webui
 
-A web control panel for a **Xonotic 0.8.6 dedicated server**. One small Python service,
-built for a Proxmox LXC or any Debian 12/13 box on your LAN.
+A web control panel for a **Xonotic 0.8.6 dedicated server** on **Linux**. One small Python
+service, built for a Proxmox LXC or any Debian 12/13 box on your LAN.
+
+> [!NOTE]
+> Built and tested against Xonotic **0.8.6** only. The panel reads the game's console and
+> logs, so a newer Xonotic release is untested and may not work.
 
 ![The dashboard: match clock and live scoreboard](docs/screenshots/dashboard-deathmatch.png)
 
@@ -53,8 +57,9 @@ apt-get install -y curl
 curl -fsSL https://github.com/carlhako/xonotic-webui/releases/latest/download/install.sh | bash
 ```
 
-It prints the web address when it finishes. Run the same command again to upgrade, or use
-the one-click upgrade in the panel.
+The installer downloads Xonotic 0.8.6 (about 1.2 GB) from `dl.xonotic.org` for you and
+checks it against a pinned SHA-256. It prints the web address when it finishes. Run the
+same command again to upgrade, or use the one-click upgrade in the panel.
 
 Open **TCP 80** (the panel) to your LAN and **UDP 26000** (the game) to players.
 
