@@ -54,6 +54,21 @@ class Choice:
 
 
 @dataclass(frozen=True)
+class Switch:
+    """An on/off control fronting a setting whose ``off_value`` means "disabled".
+
+    The switch is not a cvar of its own: it is carried by the setting it fronts (the
+    master), which stays the only key written. While it is off the master's value is
+    ``off_value`` and the settings in ``enables`` are not editable.
+    """
+
+    label: str
+    help: str
+    off_value: int
+    enables: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class CuratedSetting:
     key: str  # the cvar written to the generated config; also the setting's id
     group: str
@@ -74,6 +89,8 @@ class CuratedSetting:
     unit: Literal["minutes", "score"] | None = None
     # Labels for special numeric values, e.g. ``-1`` = "Map default".
     value_labels: tuple[tuple[int, str], ...] = ()
+    # An on/off switch for the setting, shown above it in the panel.
+    switch: Switch | None = None
 
     def wire(self, value: Any) -> str:
         """The value as the console text it is written as."""
@@ -270,6 +287,14 @@ CURATED: tuple[CuratedSetting, ...] = (
         min=0,
         max=20,
         value_labels=((0, "Voting off"),),
+        switch=Switch(
+            label="Voting enabled",
+            help=(
+                "When off, players do not vote and the server plays the next map in the rotation."
+            ),
+            off_value=0,
+            enables=("g_maplist_votable_timeout",),
+        ),
     ),
     CuratedSetting(
         key="g_maplist_votable_timeout",
@@ -319,6 +344,36 @@ CURATED: tuple[CuratedSetting, ...] = (
 )
 
 CURATED_BY_KEY: dict[str, CuratedSetting] = {s.key: s for s in CURATED}
+
+
+def check_switches(settings: tuple[CuratedSetting, ...]) -> None:
+    """Fail loudly on an inconsistent switch definition (design D2)."""
+    by_key = {s.key: s for s in settings}
+    for master in settings:
+        switch = master.switch
+        if switch is None:
+            continue
+        where = f"switch on {master.key}"
+        if master.kind == "int":
+            off = switch.off_value
+            if (
+                isinstance(off, bool)
+                or not isinstance(off, int)
+                or (master.min is not None and off < master.min)
+                or (master.max is not None and off > master.max)
+            ):
+                raise ValueError(f"{where}: off_value {off!r} is not an int within the range")
+        for key in switch.enables:
+            dependent = by_key.get(key)
+            if dependent is None:
+                raise ValueError(f"{where}: enables unknown setting {key!r}")
+            if dependent.group != master.group:
+                raise ValueError(f"{where}: {key!r} is in another group")
+            if dependent.switch is not None:
+                raise ValueError(f"{where}: {key!r} is itself a switch")
+
+
+check_switches(CURATED)
 
 
 @dataclass(frozen=True)

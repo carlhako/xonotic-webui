@@ -163,6 +163,7 @@ export function makeSetting(overrides: Partial<Setting> = {}): Setting {
     choices: [],
     unit: null,
     value_labels: [],
+    switch: null,
     server_cfg: false,
     ...overrides,
   };
@@ -195,6 +196,9 @@ export function makeMap(overrides: Partial<MapInfo> = {}): MapInfo {
     has_mapinfo: true,
     preview: true,
     source: "game",
+    package: "xonotic-data-maps.pk3",
+    package_size: 41_943_040,
+    pending_restart: false,
     ...overrides,
   };
 }

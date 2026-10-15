@@ -151,6 +151,15 @@ class SettingGroupModel(BaseModel):
     label: str
 
 
+class SwitchModel(BaseModel):
+    label: str
+    help: str
+    off_value: int = Field(description="The setting's value while the switch is off.")
+    enables: list[str] = Field(
+        description="Settings that are only editable while the switch is on."
+    )
+
+
 class SettingModel(BaseModel):
     key: str = Field(description="The setting's id, which is the cvar it is written as.")
     group: str
@@ -173,6 +182,9 @@ class SettingModel(BaseModel):
     choices: list[ChoiceModel]
     unit: Literal["minutes", "score"] | None
     value_labels: list[ValueLabelModel] = Field(description="Names for special numeric values.")
+    switch: SwitchModel | None = Field(
+        description="An on/off switch for this setting, or null for an ordinary one."
+    )
     server_cfg: bool = Field(description="server.cfg also sets this; the panel's value wins.")
 
 
@@ -266,10 +278,50 @@ class MapModel(BaseModel):
     has_mapinfo: bool
     preview: bool = Field(description="A preview image is available at /api/maps/{name}/preview.")
     source: Literal["game", "user"]
+    package: str = Field(description="File name of the package the map comes from.")
+    package_size: int = Field(description="Size of that package in bytes.")
+    pending_restart: bool = Field(
+        description=(
+            "The package was added after the server started: the game has not loaded it, "
+            "so the map cannot be gone to until the server is restarted."
+        )
+    )
 
 
 class MapsModel(BaseModel):
     maps: list[MapModel]
+
+
+class FavouritesModel(BaseModel):
+    maps: list[str] = Field(
+        description="Starred map names, sorted. A map that is not installed may be listed."
+    )
+
+
+class PackageDuplicateModel(BaseModel):
+    map: str
+    package: str = Field(description="File name of the other installed package.")
+    source: Literal["game", "user"]
+    used: bool = Field(description="The uploaded map is the one the game uses.")
+
+
+class PackageInstalledModel(BaseModel):
+    name: str
+    size: int = Field(description="Bytes.")
+    maps: list[str] = Field(description="The maps the package contains.")
+    duplicates: list[PackageDuplicateModel] = Field(
+        description="Maps in the upload whose name another installed package also provides."
+    )
+    restart_required: bool = Field(
+        description=(
+            "The server is running and has not loaded this package: restart it to use the maps."
+        )
+    )
+
+
+class PackageRemovedModel(BaseModel):
+    name: str
+    maps: list[str] = Field(description="The maps that were in the package.")
 
 
 class RotationItemModel(BaseModel):

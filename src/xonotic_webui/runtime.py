@@ -11,6 +11,8 @@ from xonotic_webui.logging import get_logger
 from xonotic_webui.maps.actions import MatchActions
 from xonotic_webui.maps.catalogue import MapCatalogue
 from xonotic_webui.maps.control import MapControl
+from xonotic_webui.maps.favourites import FavouritesStore
+from xonotic_webui.maps.packages import PackageStore
 from xonotic_webui.players.recorder import PlayerRecorder
 from xonotic_webui.players.report import StatsReportFilter
 from xonotic_webui.players.store import PlayerStore
@@ -39,6 +41,10 @@ class Runtime:
         self.players_store = PlayerStore(settings.players_db)
         self.recorder = PlayerRecorder(self.supervisor, self.console, self.players_store)
         self.map_catalogue = MapCatalogue(settings.game_root, settings.userdir)
+        # The game scans its packages when it starts; the catalogue notes which it had.
+        self.supervisor.subscribe_state(self.map_catalogue.on_state)
+        self.package_store = PackageStore(settings.userdir / "data", self.map_catalogue)
+        self.favourites = FavouritesStore(settings.favourites_file)
         self.server_settings = ServerSettingsService(
             settings,
             self.supervisor,
@@ -72,6 +78,8 @@ class Runtime:
         app.include_router(build_api_router(self))
 
     async def startup(self) -> None:
+        # A crash mid-upload can leave a temp file; it is never a package, so just remove it.
+        self.package_store.clean_stale_uploads()
         # Player history: opening the database is quick, and a failure only turns the
         # history off (it is logged, and the rest of the panel is unaffected).
         await self.recorder.start()

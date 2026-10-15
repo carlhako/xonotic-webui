@@ -1,8 +1,10 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Maps } from "../sections/Maps";
+import { FakeEventSource } from "./fakeEventSource";
 import {
+  STATUS_URL,
   jsonResponse,
   makeMap,
   makeStatus,
@@ -61,10 +63,16 @@ const rotation = (extra = {}) => ({
 async function openMaps(
   status = makeStatus({ state: "running", map: "stormkeep", gametype: "dm" }),
   routes: Record<string, (init?: RequestInit) => Response> = {},
-  extra: { gametypes?: object; rotation?: object } = {},
+  extra: {
+    gametypes?: object;
+    rotation?: object;
+    favourites?: string[];
+    maps?: ReturnType<typeof makeMap>[];
+  } = {},
 ) {
   const fetchMock = routeFetch({
-    "GET /api/maps": () => jsonResponse({ maps }),
+    "GET /api/maps": () => jsonResponse({ maps: extra.maps ?? maps }),
+    "GET /api/favourites": () => jsonResponse({ maps: extra.favourites ?? [] }),
     "GET /api/gametypes": () => jsonResponse(gametypes(extra.gametypes)),
     "GET /api/rotation": () => jsonResponse(rotation(extra.rotation)),
     ...routes,
@@ -320,5 +328,578 @@ describe("rotation", () => {
       maps: ["boil"],
       shuffle: null,
     });
+  });
+});
+
+// -- favourites, the Files view and map packages ---------------------------------------
+
+const userMaps = [
+  makeMap({
+    name: "stormkeep",
+    title: "Stormkeep",
+    gametypes: ["dm", "tdm"],
+    package: "xonotic-data-maps.pk3",
+    package_size: 41_943_040,
+  }),
+  makeMap({
+    name: "boil",
+    title: "Boil",
+    gametypes: ["dm"],
+    package: "xonotic-data-maps.pk3",
+    package_size: 41_943_040,
+  }),
+  makeMap({
+    name: "mymap",
+    title: "My Map",
+    gametypes: ["dm"],
+    source: "user",
+    package: "mymap_v2.pk3",
+    package_size: 2_516_582,
+  }),
+  makeMap({
+    name: "mysecond",
+    title: "My Second",
+    gametypes: ["ctf"],
+    source: "user",
+    package: "mymap_v2.pk3",
+    package_size: 2_516_582,
+  }),
+  makeMap({
+    name: "latemap",
+    title: "Late Map",
+    gametypes: ["dm"],
+    source: "user",
+    package: "late.pk3",
+    package_size: 1_024,
+    pending_restart: true,
+  }),
+];
+
+const withUserMaps = { maps: userMaps };
+
+function row(title: string): HTMLElement {
+  return screen.getByText(title, { selector: ".map-title" }).closest("tr") as HTMLElement;
+}
+
+async function openFiles(
+  status?: ReturnType<typeof makeStatus>,
+  routes: Record<string, (init?: RequestInit) => Response> = {},
+  extra: Parameters<typeof openMaps>[2] = {},
+) {
+  const fetchMock = await openMaps(status, routes, { maps: userMaps, ...extra });
+  await userEvent.click(screen.getByRole("button", { name: "Files" }));
+  await screen.findByRole("table", { name: "Installed map files" });
+  return fetchMock;
+}
+
+describe("favourites", () => {
+  it("stars a map and shows it starred in both views", async () => {
+    const fetchMock = await openMaps(
+      undefined,
+      {
+        "PUT /api/favourites/boil": () => jsonResponse({ maps: ["boil"] }),
+      },
+      withUserMaps,
+    );
+    const star = within(card("Boil")).getByRole("button", {
+      name: "Add boil to favourites",
+    });
+    expect(star).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(star);
+    expect(
+      await within(card("Boil")).findByRole("button", {
+        name: "Remove boil from favourites",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/favourites/boil",
+      expect.objectContaining({ method: "PUT" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    expect(
+      within(row("Boil")).getByRole("button", { name: "Remove boil from favourites" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("unstars a map from the table", async () => {
+    const fetchMock = await openFiles(
+      undefined,
+      { "DELETE /api/favourites/boil": () => jsonResponse({ maps: [] }) },
+      { favourites: ["boil"] },
+    );
+    await userEvent.click(
+      within(row("Boil")).getByRole("button", { name: "Remove boil from favourites" }),
+    );
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/favourites/boil",
+        expect.objectContaining({ method: "DELETE" }),
+      ),
+    );
+    expect(
+      await within(row("Boil")).findByRole("button", { name: "Add boil to favourites" }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("puts the star back and shows the error when the panel cannot save it", async () => {
+    await openMaps(
+      undefined,
+      {
+        "PUT /api/favourites/boil": () =>
+          jsonResponse(
+            {
+              detail: { code: "invalid_map_name", message: "cannot save the favourite" },
+            },
+            500,
+          ),
+      },
+      withUserMaps,
+    );
+    await userEvent.click(
+      within(card("Boil")).getByRole("button", { name: "Add boil to favourites" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "cannot save the favourite",
+    );
+    expect(
+      within(card("Boil")).getByRole("button", { name: "Add boil to favourites" }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("lists only the starred maps with 'Favourites only', in both views", async () => {
+    await openMaps(
+      undefined,
+      {},
+      { ...withUserMaps, favourites: ["boil", "mymap", "gone"] },
+    );
+    expect(screen.getByText("Stormkeep", { selector: ".map-title" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Favourites only" }));
+    expect(screen.queryByText("Stormkeep", { selector: ".map-title" })).toBeNull();
+    expect(screen.getByText("Boil", { selector: ".map-title" })).toBeInTheDocument();
+    expect(screen.getByText("My Map", { selector: ".map-title" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    const table = await screen.findByRole("table", { name: "Installed map files" });
+    const titles = within(table)
+      .getAllByText(/./, { selector: ".map-title" })
+      .map((e) => e.textContent);
+    expect(titles).toEqual(["Boil", "My Map"]); // "gone" is not installed: not listed
+    expect(screen.getByRole("checkbox", { name: "Favourites only" })).toBeChecked();
+  });
+
+  it("combines with the gametype filter", async () => {
+    await openMaps(undefined, {}, { ...withUserMaps, favourites: ["boil", "mysecond"] });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Favourites only" }));
+    await userEvent.selectOptions(screen.getByLabelText("Show maps for"), "dm");
+    expect(screen.getByText("Boil", { selector: ".map-title" })).toBeInTheDocument();
+    expect(screen.queryByText("My Second", { selector: ".map-title" })).toBeNull();
+    expect(screen.queryByText("Stormkeep", { selector: ".map-title" })).toBeNull();
+  });
+
+  it("says there are no favourites yet when nothing is starred", async () => {
+    await openMaps(undefined, {}, withUserMaps);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Favourites only" }));
+    expect(screen.getByText(/No favourites yet/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    expect(screen.getByText(/No favourites yet/)).toBeInTheDocument();
+  });
+});
+
+describe("the Files view", () => {
+  it("switches between the views and keeps both buttons", async () => {
+    await openMaps(undefined, {}, withUserMaps);
+    const cards = screen.getByRole("button", { name: "Cards" });
+    const files = screen.getByRole("button", { name: "Files" });
+    expect(cards).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(files);
+    expect(screen.getByRole("button", { name: "Cards" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Files" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    const table = screen.getByRole("table", { name: "Installed map files" });
+    expect(table.querySelector("img")).toBeNull(); // no preview image
+    expect(table.parentElement).toHaveClass("table-scroll");
+    // one row per map, with its package and size
+    expect(within(row("My Map")).getByText("mymap_v2.pk3")).toBeInTheDocument();
+    expect(within(row("My Map")).getByText("2.4 MB")).toBeInTheDocument();
+    expect(within(row("Stormkeep")).getByText("40.0 MB")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cards" }));
+    expect(screen.queryByRole("table", { name: "Installed map files" })).toBeNull();
+    expect(screen.getByText("Boil", { selector: ".map-title" })).toBeInTheDocument();
+  });
+
+  it("remembers the view after a reload", async () => {
+    const first = await openMaps(undefined, {}, withUserMaps);
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    expect(first).toBeDefined();
+    // a new page load: a fresh render with the same browser storage
+    cleanup();
+    vi.unstubAllGlobals();
+    routeFetch({
+      "GET /api/maps": () => jsonResponse(withUserMaps),
+      "GET /api/favourites": () => jsonResponse({ maps: [] }),
+      "GET /api/gametypes": () => jsonResponse(gametypes()),
+      "GET /api/rotation": () => jsonResponse(rotation()),
+    });
+    renderSection(<Maps />);
+    await pushStatus(makeStatus({ state: "running", gametype: "dm" }));
+    expect(
+      await screen.findByRole("table", { name: "Installed map files" }),
+    ).toBeInTheDocument();
+  });
+
+  it("works when browser storage is unavailable", async () => {
+    const original = Object.getOwnPropertyDescriptor(window, "localStorage")!;
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("blocked");
+      },
+    });
+    try {
+      await openMaps(undefined, {}, withUserMaps);
+      await userEvent.click(screen.getByRole("button", { name: "Files" }));
+      expect(
+        screen.getByRole("table", { name: "Installed map files" }),
+      ).toBeInTheDocument();
+    } finally {
+      Object.defineProperty(window, "localStorage", original);
+    }
+  });
+
+  it("offers Go to this map under the same rules as the cards", async () => {
+    await openFiles();
+    expect(
+      within(row("Boil")).getByRole("button", { name: "Go to this map" }),
+    ).toBeEnabled();
+    // the current gametype is dm: a capture-the-flag map is off in both views
+    expect(
+      within(row("My Second")).getByRole("button", { name: "Go to this map" }),
+    ).toBeDisabled();
+    // a package the game has not loaded is off too
+    expect(
+      within(row("Late Map")).getByRole("button", { name: "Go to this map" }),
+    ).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Cards" }));
+    expect(
+      within(card("Boil")).getByRole("button", { name: "Go to this map" }),
+    ).toBeEnabled();
+    expect(
+      within(card("My Second")).getByRole("button", { name: "Go to this map" }),
+    ).toBeDisabled();
+    expect(
+      within(card("Late Map")).getByRole("button", { name: "Go to this map" }),
+    ).toBeDisabled();
+  });
+
+  it("disables Go to this map in the table while stopped or while an action is pending", async () => {
+    await openFiles(makeStatus({ state: "stopped" }));
+    expect(
+      within(row("Boil")).getByRole("button", { name: "Go to this map" }),
+    ).toBeDisabled();
+  });
+
+  it("disables Go to this map in the table while an action is pending", async () => {
+    await openFiles(
+      makeStatus({
+        state: "running",
+        gametype: "dm",
+        action: { id: 1, kind: "skip", map: null, state: "pending" },
+      }),
+    );
+    expect(
+      within(row("Boil")).getByRole("button", { name: "Go to this map" }),
+    ).toBeDisabled();
+  });
+
+  it("asks first when players are connected, then goes", async () => {
+    const fetchMock = await openFiles(
+      makeStatus({
+        state: "running",
+        gametype: "dm",
+        human_count: 2,
+        players: [
+          { id: 1, ent: 1, name: "a", plain_name: "a", bot: false },
+          { id: 2, ent: 2, name: "b", plain_name: "b", bot: false },
+        ],
+      }),
+      {
+        "POST /api/match/goto": () =>
+          jsonResponse({ id: 1, kind: "goto", map: "mymap", state: "pending" }, 202),
+      },
+    );
+    await userEvent.click(
+      within(row("My Map")).getByRole("button", { name: "Go to this map" }),
+    );
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("2 players are in the match");
+    expect(fetchMock.mock.calls.some(([url]) => url === "/api/match/goto")).toBe(false);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Go anyway" }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => url === "/api/match/goto")).toBe(true),
+    );
+  });
+
+  it("adds a map to the rotation being edited from a row", async () => {
+    await openFiles();
+    await userEvent.click(
+      within(row("Boil")).getByRole("button", { name: "Add to rotation" }),
+    );
+    expect(
+      within(row("Boil")).getByRole("button", { name: "In rotation" }),
+    ).toBeDisabled();
+    // the rotation panel above has it in its draft
+    expect(screen.getByRole("button", { name: "Save rotation" })).toBeEnabled();
+    expect(screen.getByText("boil", { selector: ".rotation-name" })).toBeInTheDocument();
+  });
+
+  it("offers download and delete for user packages only", async () => {
+    await openFiles();
+    for (const title of ["My Map", "My Second", "Late Map"]) {
+      expect(
+        within(row(title)).getByRole("link", { name: "Download" }),
+      ).toBeInTheDocument();
+      expect(
+        within(row(title)).getByRole("button", { name: "Delete" }),
+      ).toBeInTheDocument();
+    }
+    for (const title of ["Stormkeep", "Boil"]) {
+      expect(within(row(title)).queryByRole("link", { name: "Download" })).toBeNull();
+      expect(within(row(title)).queryByRole("button", { name: "Delete" })).toBeNull();
+      // still has the match actions
+      expect(
+        within(row(title)).getByRole("button", { name: "Go to this map" }),
+      ).toBeInTheDocument();
+    }
+  });
+
+  it("links Download to the package", async () => {
+    await openFiles();
+    const link = within(row("My Map")).getByRole("link", { name: "Download" });
+    expect(link).toHaveAttribute("href", "/api/packages/mymap_v2.pk3");
+    expect(link).toHaveAttribute("download", "mymap_v2.pk3");
+  });
+
+  it("notes that a package the game has not loaded needs a restart", async () => {
+    await openFiles();
+    expect(
+      within(row("Late Map")).getByText("restart the server to use this map"),
+    ).toBeInTheDocument();
+    expect(
+      within(row("My Map")).queryByText("restart the server to use this map"),
+    ).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Cards" }));
+    expect(
+      within(card("Late Map")).getByText("restart the server to use this map"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("after a restart", () => {
+  it("lists the maps of an uploaded package without the note", async () => {
+    let restarted = false;
+    const fetchMock = await openFiles(undefined, {
+      "GET /api/maps": () =>
+        jsonResponse({
+          maps: userMaps.map((m) => ({
+            ...m,
+            pending_restart: restarted ? false : m.pending_restart,
+          })),
+        }),
+    });
+    expect(
+      within(row("Late Map")).getByText("restart the server to use this map"),
+    ).toBeInTheDocument();
+    restarted = true;
+    // the server stops and starts again: the list is read again
+    await pushStatus(makeStatus({ state: "stopped" }));
+    await pushStatus(makeStatus({ state: "running", gametype: "dm" }));
+    await waitFor(() =>
+      expect(
+        within(row("Late Map")).queryByText("restart the server to use this map"),
+      ).toBeNull(),
+    );
+    expect(
+      within(row("Late Map")).getByRole("button", { name: "Go to this map" }),
+    ).toBeEnabled();
+    expect(
+      fetchMock.mock.calls.filter(([url]) => url === "/api/maps").length,
+    ).toBeGreaterThan(1);
+  });
+});
+
+describe("uploading a map package", () => {
+  function pk3(name = "mymap_v2.pk3") {
+    return new File(["PK"], name, { type: "application/octet-stream" });
+  }
+  const installed = (extra: object = {}) => ({
+    name: "mymap_v2.pk3",
+    size: 2_516_582,
+    maps: ["mymap", "mysecond"],
+    duplicates: [],
+    restart_required: false,
+    ...extra,
+  });
+
+  it("only offers .pk3 files", async () => {
+    await openFiles();
+    expect(screen.getByLabelText("Map package file")).toHaveAttribute("accept", ".pk3");
+  });
+
+  it("sends the file, names the maps found and reloads the list", async () => {
+    let listed = 0;
+    const fetchMock = await openFiles(undefined, {
+      "PUT /api/packages/mymap_v2.pk3": () => jsonResponse(installed()),
+      "GET /api/maps": () => {
+        listed += 1;
+        return jsonResponse(withUserMaps);
+      },
+    });
+    const before = listed;
+    const file = pk3();
+    await userEvent.upload(screen.getByLabelText("Map package file"), file);
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("Installed mymap_v2.pk3");
+    expect(status).toHaveTextContent("mymap, mysecond");
+    const call = fetchMock.mock.calls.find(
+      ([url]) => url === "/api/packages/mymap_v2.pk3",
+    );
+    expect(call![1]!.method).toBe("PUT");
+    expect(call![1]!.body).toBe(file);
+    await waitFor(() => expect(listed).toBeGreaterThan(before));
+  });
+
+  it("warns about a name another package already provides and about the restart", async () => {
+    await openFiles(undefined, {
+      "PUT /api/packages/my_boil.pk3": () =>
+        jsonResponse(
+          installed({
+            name: "my_boil.pk3",
+            maps: ["boil"],
+            duplicates: [
+              {
+                map: "boil",
+                package: "xonotic-data-maps.pk3",
+                source: "game",
+                used: true,
+              },
+            ],
+            restart_required: true,
+          }),
+        ),
+    });
+    await userEvent.upload(screen.getByLabelText("Map package file"), pk3("my_boil.pk3"));
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent(
+      "boil has the same name as a map in xonotic-data-maps.pk3 (part of the game); the uploaded one is used",
+    );
+    expect(status).toHaveTextContent("restart it to use the map");
+  });
+
+  it.each([
+    ["not_pk3", 422, "only .pk3 map packages are accepted"],
+    ["bad_filename", 422, "the file name is not allowed"],
+    ["too_large", 413, "the package is larger than the 256 MB limit"],
+    ["not_a_package", 422, "the file is not a valid map package"],
+    ["no_map", 422, "the package contains no map"],
+    ["already_exists", 409, "mymap_v2.pk3 is already installed; delete it first"],
+  ])("shows the panel's refusal (%s)", async (code, status, message) => {
+    await openFiles(undefined, {
+      "PUT /api/packages/mymap_v2.pk3": () =>
+        jsonResponse({ detail: { code, message } }, status),
+    });
+    await userEvent.upload(screen.getByLabelText("Map package file"), pk3());
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(screen.queryByText(/Installed mymap_v2.pk3/)).toBeNull();
+  });
+});
+
+describe("deleting a map package", () => {
+  const rotationWith = {
+    rotation: {
+      maps: [{ name: "mysecond", title: "My Second", installed: true, supported: false }],
+      shuffle: null,
+      gametype: "dm",
+    },
+  };
+
+  it("names the file and its maps and deletes only on confirmation", async () => {
+    let calls = 0;
+    const fetchMock = await openFiles(undefined, {
+      "DELETE /api/packages/mymap_v2.pk3": () => {
+        calls += 1;
+        return jsonResponse({ name: "mymap_v2.pk3", maps: ["mymap", "mysecond"] });
+      },
+    });
+    await userEvent.click(within(row("My Map")).getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Delete mymap_v2.pk3?");
+    expect(dialog).toHaveTextContent("My Map");
+    expect(dialog).toHaveTextContent("My Second");
+    expect(dialog).toHaveTextContent("2.4 MB");
+    expect(calls).toBe(0); // nothing is deleted by opening the popup
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete package" }));
+    await waitFor(() => expect(calls).toBe(1));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/packages/mymap_v2.pk3",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("does nothing on cancel", async () => {
+    const fetchMock = await openFiles();
+    await userEvent.click(within(row("My Map")).getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(
+      false,
+    );
+    expect(row("My Map")).toBeInTheDocument();
+  });
+
+  it("calls out a map that is in the rotation", async () => {
+    await openFiles(undefined, {}, rotationWith);
+    await userEvent.click(within(row("My Map")).getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("In the rotation: mysecond");
+  });
+
+  it("shows a failed delete and keeps the row", async () => {
+    await openFiles(undefined, {
+      "DELETE /api/packages/mymap_v2.pk3": () =>
+        jsonResponse(
+          { detail: { code: "package_not_found", message: "no such package" } },
+          404,
+        ),
+    });
+    await userEvent.click(within(row("My Map")).getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete package" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("no such package");
+    expect(row("My Map")).toBeInTheDocument();
+  });
+});
+
+describe("package changes while the panel is disconnected", () => {
+  it("offers no upload, download or delete", async () => {
+    await openFiles();
+    expect(screen.getByLabelText("Map package file")).toBeEnabled();
+    expect(
+      within(row("My Map")).getByRole("link", { name: "Download" }),
+    ).toBeInTheDocument();
+
+    act(() => FakeEventSource.byUrl(STATUS_URL)!.fail());
+    await waitFor(() => expect(screen.getByLabelText("Map package file")).toBeDisabled());
+    expect(within(row("My Map")).getByRole("button", { name: "Delete" })).toBeDisabled();
+    expect(within(row("My Map")).queryByRole("link", { name: "Download" })).toBeNull();
+    expect(
+      within(row("My Map")).getByRole("button", { name: "Download" }),
+    ).toBeDisabled();
+    expect(
+      within(row("My Map")).getByRole("button", { name: "Add mymap to favourites" }),
+    ).toBeDisabled();
   });
 });

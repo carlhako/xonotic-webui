@@ -233,6 +233,23 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "FavouritesModel": {
+        "properties": {
+          "maps": {
+            "description": "Starred map names, sorted. A map that is not installed may be listed.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Maps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "maps"
+        ],
+        "title": "FavouritesModel",
+        "type": "object"
+      },
       "GametypeModel": {
         "properties": {
           "id": {
@@ -431,6 +448,21 @@
             "title": "Name",
             "type": "string"
           },
+          "package": {
+            "description": "File name of the package the map comes from.",
+            "title": "Package",
+            "type": "string"
+          },
+          "package_size": {
+            "description": "Size of that package in bytes.",
+            "title": "Package Size",
+            "type": "integer"
+          },
+          "pending_restart": {
+            "description": "The package was added after the server started: the game has not loaded it, so the map cannot be gone to until the server is restarted.",
+            "title": "Pending Restart",
+            "type": "boolean"
+          },
           "preview": {
             "description": "A preview image is available at /api/maps/{name}/preview.",
             "title": "Preview",
@@ -457,7 +489,10 @@
           "gametypes",
           "has_mapinfo",
           "preview",
-          "source"
+          "source",
+          "package",
+          "package_size",
+          "pending_restart"
         ],
         "title": "MapModel",
         "type": "object"
@@ -617,6 +652,105 @@
           "overrides"
         ],
         "title": "OverridesModel",
+        "type": "object"
+      },
+      "PackageDuplicateModel": {
+        "properties": {
+          "map": {
+            "title": "Map",
+            "type": "string"
+          },
+          "package": {
+            "description": "File name of the other installed package.",
+            "title": "Package",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "game",
+              "user"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "used": {
+            "description": "The uploaded map is the one the game uses.",
+            "title": "Used",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "map",
+          "package",
+          "source",
+          "used"
+        ],
+        "title": "PackageDuplicateModel",
+        "type": "object"
+      },
+      "PackageInstalledModel": {
+        "properties": {
+          "duplicates": {
+            "description": "Maps in the upload whose name another installed package also provides.",
+            "items": {
+              "$ref": "#/components/schemas/PackageDuplicateModel"
+            },
+            "title": "Duplicates",
+            "type": "array"
+          },
+          "maps": {
+            "description": "The maps the package contains.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Maps",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "restart_required": {
+            "description": "The server is running and has not loaded this package: restart it to use the maps.",
+            "title": "Restart Required",
+            "type": "boolean"
+          },
+          "size": {
+            "description": "Bytes.",
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "size",
+          "maps",
+          "duplicates",
+          "restart_required"
+        ],
+        "title": "PackageInstalledModel",
+        "type": "object"
+      },
+      "PackageRemovedModel": {
+        "properties": {
+          "maps": {
+            "description": "The maps that were in the package.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Maps",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "maps"
+        ],
+        "title": "PackageRemovedModel",
         "type": "object"
       },
       "PanelUpgrade": {
@@ -1615,6 +1749,17 @@
             "title": "Server Cfg",
             "type": "boolean"
           },
+          "switch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SwitchModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An on/off switch for this setting, or null for an ordinary one."
+          },
           "unit": {
             "anyOf": [
               {
@@ -1676,6 +1821,7 @@
           "choices",
           "unit",
           "value_labels",
+          "switch",
           "server_cfg"
         ],
         "title": "SettingModel",
@@ -1893,6 +2039,39 @@
         "title": "StatusModel",
         "type": "object"
       },
+      "SwitchModel": {
+        "properties": {
+          "enables": {
+            "description": "Settings that are only editable while the switch is on.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Enables",
+            "type": "array"
+          },
+          "help": {
+            "title": "Help",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "off_value": {
+            "description": "The setting's value while the switch is off.",
+            "title": "Off Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "help",
+          "off_value",
+          "enables"
+        ],
+        "title": "SwitchModel",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -2099,6 +2278,109 @@
         "summary": "Search the game's cvars by name or description",
         "tags": [
           "settings"
+        ]
+      }
+    },
+    "/api/favourites": {
+      "get": {
+        "operationId": "get_favourites_api_favourites_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavouritesModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The favourite maps, shared by every browser",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/favourites/{map_name}": {
+      "delete": {
+        "operationId": "delete_favourite_api_favourites__map_name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "map_name",
+            "required": true,
+            "schema": {
+              "title": "Map Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavouritesModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request was rejected; nothing changed."
+          }
+        },
+        "summary": "Unstar a map (idempotent)",
+        "tags": [
+          "maps"
+        ]
+      },
+      "put": {
+        "operationId": "put_favourite_api_favourites__map_name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "map_name",
+            "required": true,
+            "schema": {
+              "title": "Map Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavouritesModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request was rejected; nothing changed."
+          }
+        },
+        "summary": "Star a map (idempotent); it need not be installed",
+        "tags": [
+          "maps"
         ]
       }
     },
@@ -2658,6 +2940,174 @@
           }
         },
         "summary": "End the match early; the game then votes or rotates as usual",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/packages/{filename}": {
+      "delete": {
+        "operationId": "delete_package_api_packages__filename__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "title": "Filename",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageRemovedModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "There is no such package in the user directory."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete a map package from the user directory",
+        "tags": [
+          "maps"
+        ]
+      },
+      "get": {
+        "operationId": "get_package_api_packages__filename__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "title": "Filename",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "The package."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "There is no such package in the user directory."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download a map package from the user directory, byte for byte",
+        "tags": [
+          "maps"
+        ]
+      },
+      "put": {
+        "operationId": "put_package_api_packages__filename__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "title": "Filename",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageInstalledModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "A package of that name exists."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The package is over the size limit."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request was rejected; nothing changed."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The saved settings file cannot be read."
+          }
+        },
+        "summary": "Install a map package; the request body is the raw .pk3 file",
         "tags": [
           "maps"
         ]

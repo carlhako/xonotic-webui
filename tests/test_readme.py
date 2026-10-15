@@ -22,6 +22,8 @@ def test_the_where_things_live_paths_match_the_defaults() -> None:
         str(s.state_file),
         str(s.game_settings_file),
         str(s.players_db),
+        str(s.favourites_file),
+        str(s.userdir / "data" / "*.pk3"),
         str(s.userdir / "data" / "server.cfg"),
         str(s.userdir / "data" / SETTINGS_CONFIG_NAME),
     }
@@ -96,3 +98,16 @@ def test_the_players_section_names_the_reserved_report_cvar_and_the_xonstat_trad
     assert "XonStat" in README
     assert "## Players" in README
     assert "players.db" in README
+
+
+def test_the_maps_section_states_the_upload_rules_the_code_enforces() -> None:
+    from xonotic_webui.maps.packages import MAX_PACKAGE_BYTES
+
+    assert MAX_PACKAGE_BYTES == 256 * 1024 * 1024
+    assert "256 MB" in README
+    assert "`.pk3`" in README
+    assert "## Maps and match actions" in README
+    assert "needs a server restart" in README
+    security = README.split("## Security", 1)[1].split("## Development", 1)[0]
+    assert "accepts file uploads" in security
+    assert "client_max_body_size" in security

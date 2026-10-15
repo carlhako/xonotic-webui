@@ -55,6 +55,13 @@ async def test_settings_while_stopped_show_defaults_and_no_live_values(live: Liv
             "label": "Map default",
         }
         assert all(s["server_cfg"] is False for s in settings.values())
+        assert settings["g_maplist_votable"]["switch"] == {
+            "label": "Voting enabled",
+            "help": settings["g_maplist_votable"]["switch"]["help"],
+            "off_value": 0,
+            "enables": ["g_maplist_votable_timeout"],
+        }
+        assert settings["hostname"]["switch"] is None
 
 
 async def test_patch_while_stopped_saves_and_reports_next_start(live: LiveFactory) -> None:

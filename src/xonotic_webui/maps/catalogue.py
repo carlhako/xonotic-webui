@@ -15,15 +15,21 @@ gametypes and is not offered for any gametype, until the game has run once: it t
 a generated map information file for it, which is read instead (see
 :data:`GENERATED_DIRS`). The catalogue is rebuilt only when a
 package's size or modification time changes.
+
+Each map also reports the package it comes from and that file's size. The game scans its
+packages once, when it starts, so a user package that appeared after that is reported with
+``pending_restart`` until the server has been restarted; the catalogue learns of a start
+from :meth:`MapCatalogue.on_state`.
 """
 
 from __future__ import annotations
 
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 
 from xonotic_webui.logging import get_logger
+from xonotic_webui.supervisor.state import RunState
 
 log = get_logger("maps")
 
@@ -47,6 +53,11 @@ class MapEntry:
     has_mapinfo: bool
     preview: bool
     source: str  # "game" or "user"
+    package: str = ""  # file name of the package the map comes from
+    package_size: int = 0  # bytes
+    # A user package the running game has not loaded, so it needs a server restart. It
+    # depends on the run state rather than on the files, so it is filled in on the way out.
+    pending_restart: bool = False
 
     def supports(self, gametype: str) -> bool:
         return gametype in self.gametypes
@@ -57,6 +68,12 @@ class _Source:
     path: Path
     origin: str  # "game" | "user"
     priority: int  # higher wins
+    size: int = 0
+    mtime_ns: int = 0
+
+    @property
+    def key(self) -> tuple[str, int, int]:
+        return (self.path.name, self.size, self.mtime_ns)
 
 
 @dataclass(frozen=True)
@@ -102,6 +119,12 @@ class MapCatalogue:
         self._user_data = userdir / "data"
         self._signature: tuple | None = None
         self._entries: dict[str, MapEntry] = {}
+        # map name -> (file name, size, mtime_ns) of the user package that provides it
+        self._user_keys: dict[str, tuple[str, int, int]] = {}
+        # The user packages the game had in front of it when it last started, in the same
+        # form; ``None`` until a start has been seen.
+        self._loaded: frozenset[tuple[str, int, int]] | None = None
+        self._run_state = RunState.STOPPED
         # name -> (package path, member name, media type)
         self._previews: dict[str, tuple[Path, str, str]] = {}
 
@@ -116,9 +139,30 @@ class MapCatalogue:
             except OSError:
                 packages = []
             for path in packages:
-                sources.append(_Source(path, origin, priority))
+                try:
+                    st = path.stat()
+                except OSError:
+                    continue
+                sources.append(_Source(path, origin, priority, st.st_size, st.st_mtime_ns))
                 priority += 1
         return sources
+
+    # -- packages the game has loaded ----------------------------------------------------
+    def on_state(self, _frm: RunState, to: RunState) -> None:
+        """Follow the server's lifecycle: the game scans its packages when it starts."""
+        self._run_state = to
+        if to is RunState.STARTING:
+            self._loaded = frozenset(s.key for s in self._sources() if s.origin == "user")
+
+    def _is_pending(self, name: str) -> bool:
+        key = self._user_keys.get(name)
+        if key is None or self._loaded is None or self._run_state is RunState.STOPPED:
+            return False  # not a user map, nothing known, or the next start loads it
+        return key not in self._loaded
+
+    def _out(self, entry: MapEntry) -> MapEntry:
+        pending = self._is_pending(entry.name)
+        return replace(entry, pending_restart=True) if pending else entry
 
     def _generated_files(self) -> dict[str, Path]:
         """Generated map information files by map name (the first directory wins)."""
@@ -133,13 +177,7 @@ class MapCatalogue:
         return found
 
     def _signature_of(self, sources: list[_Source]) -> tuple:
-        sig = []
-        for src in sources:
-            try:
-                st = src.path.stat()
-            except OSError:
-                continue
-            sig.append((str(src.path), st.st_size, st.st_mtime_ns))
+        sig = [(str(src.path), src.size, src.mtime_ns) for src in sources]
         for path in self._generated_files().values():
             try:
                 st = path.stat()
@@ -181,6 +219,7 @@ class MapCatalogue:
 
         generated = self._generated_files()
         entries: dict[str, MapEntry] = {}
+        user_keys: dict[str, tuple[str, int, int]] = {}
         previews: dict[str, tuple[Path, str, str]] = {}
         for name, owner in bsp.items():
             if name.startswith("_"):
@@ -206,8 +245,13 @@ class MapCatalogue:
                 has_mapinfo=info is not None,
                 preview=has_preview,
                 source=owner.origin,
+                package=owner.path.name,
+                package_size=owner.size,
             )
+            if owner.origin == "user":
+                user_keys[name] = owner.key
         self._entries = dict(sorted(entries.items()))
+        self._user_keys = user_keys
         self._previews = previews
 
     @staticmethod
@@ -234,11 +278,12 @@ class MapCatalogue:
     # -- queries -------------------------------------------------------------------------
     def maps(self) -> list[MapEntry]:
         self._refresh()
-        return list(self._entries.values())
+        return [self._out(e) for e in self._entries.values()]
 
     def get(self, name: str) -> MapEntry | None:
         self._refresh()
-        return self._entries.get(name)
+        entry = self._entries.get(name)
+        return self._out(entry) if entry is not None else None
 
     def gametype_map(self) -> dict[str, frozenset[str]]:
         """Map name -> the gametypes it supports (empty when unknown)."""

@@ -214,6 +214,11 @@ class Settings(BaseSettings):
         return self.state_dir / "settings.json"
 
     @property
+    def favourites_file(self) -> Path:
+        """The favourite maps, shared by every browser."""
+        return self.state_dir / "favourites.json"
+
+    @property
     def players_db(self) -> Path:
         """The persistent player history (SQLite)."""
         return self.state_dir / "players.db"

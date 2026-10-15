@@ -16,6 +16,9 @@ from xonotic_webui.serversettings.registry import (
     RESERVED_CVARS,
     SECRET_CVARS,
     ApplyClass,
+    CuratedSetting,
+    Switch,
+    check_switches,
     is_reserved,
 )
 from xonotic_webui.serversettings.serialize import validate_name
@@ -125,3 +128,48 @@ def test_the_wrapper_forces_exactly_the_reserved_cvars() -> None:
 
 def test_no_curated_setting_is_reserved() -> None:
     assert not any(is_reserved(s.key) for s in CURATED)
+
+
+def test_map_voting_has_an_enable_switch_over_the_vote_length() -> None:
+    (setting,) = [s for s in CURATED if s.key == "g_maplist_votable"]
+    assert setting.switch is not None
+    assert setting.switch.label == "Voting enabled"
+    assert setting.switch.off_value == 0
+    assert setting.switch.enables == ("g_maplist_votable_timeout",)
+    assert [s.key for s in CURATED if s.switch is not None] == ["g_maplist_votable"]
+
+
+def _int(key: str, group: str = "g", *, switch: Switch | None = None) -> CuratedSetting:
+    return CuratedSetting(
+        key=key,
+        group=group,
+        label=key,
+        help="",
+        kind="int",
+        default=5,
+        apply=ApplyClass.NOW,
+        min=0,
+        max=10,
+        switch=switch,
+    )
+
+
+def test_a_consistent_switch_passes_the_check() -> None:
+    check_switches((_int("a", switch=Switch("A", "", 0, ("b",))), _int("b")))
+
+
+@pytest.mark.parametrize(
+    ("switch", "others", "message"),
+    [
+        (Switch("A", "", 0, ("missing",)), (), "unknown setting"),
+        (Switch("A", "", 0, ("b",)), (_int("b", group="other"),), "another group"),
+        (Switch("A", "", 0, ("b",)), (_int("b", switch=Switch("B", "", 0)),), "itself a switch"),
+        (Switch("A", "", 11, ()), (), "not an int within the range"),
+        (Switch("A", "", -1, ()), (), "not an int within the range"),
+    ],
+)
+def test_an_inconsistent_switch_is_rejected(
+    switch: Switch, others: tuple[CuratedSetting, ...], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        check_switches((_int("a", switch=switch), *others))

@@ -23,3 +23,8 @@ if (typeof HTMLDialogElement !== "undefined") {
     this.dispatchEvent(new Event("close"));
   };
 }
+
+// A remembered choice (the Maps view) must not leak from one test into the next.
+beforeEach(() => {
+  window.localStorage.clear();
+});

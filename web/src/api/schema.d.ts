@@ -55,6 +55,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/favourites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The favourite maps, shared by every browser */
+        get: operations["get_favourites_api_favourites_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/favourites/{map_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Star a map (idempotent); it need not be installed */
+        put: operations["put_favourite_api_favourites__map_name__put"];
+        post?: never;
+        /** Unstar a map (idempotent) */
+        delete: operations["delete_favourite_api_favourites__map_name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/gametype": {
         parameters: {
             query?: never;
@@ -220,6 +255,25 @@ export interface paths {
         /** End the match early; the game then votes or rotates as usual */
         post: operations["skip_api_match_skip_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/packages/{filename}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a map package from the user directory, byte for byte */
+        get: operations["get_package_api_packages__filename__get"];
+        /** Install a map package; the request body is the raw .pk3 file */
+        put: operations["put_package_api_packages__filename__put"];
+        post?: never;
+        /** Delete a map package from the user directory */
+        delete: operations["delete_package_api_packages__filename__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -539,6 +593,14 @@ export interface components {
         ErrorResponse: {
             detail: components["schemas"]["ApiError"];
         };
+        /** FavouritesModel */
+        FavouritesModel: {
+            /**
+             * Maps
+             * @description Starred map names, sorted. A map that is not installed may be listed.
+             */
+            maps: string[];
+        };
         /** GametypeModel */
         GametypeModel: {
             /** Id */
@@ -629,6 +691,21 @@ export interface components {
             /** Name */
             name: string;
             /**
+             * Package
+             * @description File name of the package the map comes from.
+             */
+            package: string;
+            /**
+             * Package Size
+             * @description Size of that package in bytes.
+             */
+            package_size: number;
+            /**
+             * Pending Restart
+             * @description The package was added after the server started: the game has not loaded it, so the map cannot be gone to until the server is restarted.
+             */
+            pending_restart: boolean;
+            /**
              * Preview
              * @description A preview image is available at /api/maps/{name}/preview.
              */
@@ -702,6 +779,61 @@ export interface components {
             overrides: components["schemas"]["OverrideModel"][];
             /** Running */
             running: boolean;
+        };
+        /** PackageDuplicateModel */
+        PackageDuplicateModel: {
+            /** Map */
+            map: string;
+            /**
+             * Package
+             * @description File name of the other installed package.
+             */
+            package: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "game" | "user";
+            /**
+             * Used
+             * @description The uploaded map is the one the game uses.
+             */
+            used: boolean;
+        };
+        /** PackageInstalledModel */
+        PackageInstalledModel: {
+            /**
+             * Duplicates
+             * @description Maps in the upload whose name another installed package also provides.
+             */
+            duplicates: components["schemas"]["PackageDuplicateModel"][];
+            /**
+             * Maps
+             * @description The maps the package contains.
+             */
+            maps: string[];
+            /** Name */
+            name: string;
+            /**
+             * Restart Required
+             * @description The server is running and has not loaded this package: restart it to use the maps.
+             */
+            restart_required: boolean;
+            /**
+             * Size
+             * @description Bytes.
+             */
+            size: number;
+        };
+        /** PackageRemovedModel */
+        PackageRemovedModel: {
+            /**
+             * Maps
+             * @description The maps that were in the package.
+             */
+            maps: string[];
+            /** Name */
+            name: string;
         };
         /**
          * PanelUpgrade
@@ -1146,6 +1278,8 @@ export interface components {
              * @description server.cfg also sets this; the panel's value wins.
              */
             server_cfg: boolean;
+            /** @description An on/off switch for this setting, or null for an ordinary one. */
+            switch: components["schemas"]["SwitchModel"] | null;
             /** Unit */
             unit: ("minutes" | "score") | null;
             /**
@@ -1220,6 +1354,23 @@ export interface components {
              * @enum {string}
              */
             state: "stopped" | "starting" | "running" | "stopping";
+        };
+        /** SwitchModel */
+        SwitchModel: {
+            /**
+             * Enables
+             * @description Settings that are only editable while the switch is on.
+             */
+            enables: string[];
+            /** Help */
+            help: string;
+            /** Label */
+            label: string;
+            /**
+             * Off Value
+             * @description The setting's value while the switch is off.
+             */
+            off_value: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -1343,6 +1494,88 @@ export interface operations {
             };
             /** @description The saved settings file cannot be read. */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_favourites_api_favourites_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavouritesModel"];
+                };
+            };
+        };
+    };
+    put_favourite_api_favourites__map_name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                map_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavouritesModel"];
+                };
+            };
+            /** @description The request was rejected; nothing changed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_favourite_api_favourites__map_name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                map_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavouritesModel"];
+                };
+            };
+            /** @description The request was rejected; nothing changed. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1848,6 +2081,144 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_package_api_packages__filename__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The package. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description There is no such package in the user directory. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_package_api_packages__filename__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageInstalledModel"];
+                };
+            };
+            /** @description A package of that name exists. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The package is over the size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request was rejected; nothing changed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The saved settings file cannot be read. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_package_api_packages__filename__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRemovedModel"];
+                };
+            };
+            /** @description There is no such package in the user directory. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

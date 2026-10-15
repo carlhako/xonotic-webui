@@ -149,11 +149,13 @@ the version is still shown, with no update indication, and **Check now** still w
 | `/var/lib/xonotic-webui/state.json` | whether the server should be running |
 | `/var/lib/xonotic-webui/settings.json` | the server settings saved from the panel (see Server settings) |
 | `/var/lib/xonotic-webui/players.db` | the player history, a SQLite database (see Players) |
+| `/var/lib/xonotic-webui/favourites.json` | the starred maps, shared by every browser (see Maps) |
 | `/var/lib/xonotic-webui/release_check.json` | the last release check, kept so a restart while offline still knows |
 | `/var/lib/xonotic-webui/upgrade/request.json` | an upgrade request, present only while the helper has not yet taken it |
 | `/var/lib/xonotic-webui/upgrade_pending.json` | the upgrade in flight; `upgrade_last.json` beside it is the last outcome |
 | `/var/lib/xonotic-webui/userdir/data/server.cfg` | **your server configuration**, seeded once and never overwritten |
 | `/var/lib/xonotic-webui/userdir/data/xonotic-webui-settings.cfg` | generated from `settings.json` on every save and start; do not edit |
+| `/var/lib/xonotic-webui/userdir/data/*.pk3` | map packages: uploaded from the Maps section, or copied here by hand |
 | `/etc/xonotic-webui/xonotic-webui.env` | optional settings overrides, seeded with commented examples and never overwritten |
 | `/etc/xonotic-webui/xonotic-webui.toml` | optional settings file, not created by the installer |
 | `/var/cache/xonotic-webui` | the resumable game download, removed once it is verified and extracted |
@@ -247,6 +249,29 @@ A map without a `.mapinfo` file is listed with unknown gametypes and is not offe
 gametype. Changing the gametype takes effect at the next map; to switch immediately, pick a
 map for it and the panel goes to that map.
 
+### Map packages, the Files view and favourites
+
+The installed maps are shown either as **Cards** (with preview images) or as **Files**, a
+plain table with one row per map: the package file it comes from, that file's size, and the
+same *Go to this map* and *Add to rotation* buttons. The view is remembered in the browser.
+
+- **Upload** a map package from the Files view. Only `.pk3` files are accepted, up to
+  256 MB. The panel checks the file name, that it opens as a package and that it contains a
+  map before it installs it into `userdir/data`; a file that fails any check leaves nothing
+  behind. A name that is already installed is refused rather than replaced: delete the old
+  package first. If an uploaded map has the same name as one already installed, the result
+  says which one the game uses.
+- **A new map needs a server restart.** The game reads its packages once, when it starts,
+  so a package uploaded while the server is running is listed with a note and cannot be gone
+  to until the server has been restarted. Uploading while the server is stopped needs
+  nothing.
+- **Download** and **Delete** are offered for the packages in `userdir/data` only; the
+  game's own packages cannot be downloaded or deleted from the panel. Delete asks first and
+  names the file, every map in it and which of them are in the rotation.
+- **Favourites**: the ☆ on a map card or table row stars it, and *Favourites only* narrows
+  both views to the starred maps (it combines with the gametype filter). The list is kept by
+  the panel in `favourites.json`, so every browser and device sees the same one.
+
 ## Players
 
 The **Players** section keeps a history of everyone who plays on the server, in
@@ -323,6 +348,14 @@ The panel has **no authentication** and no TLS. Anyone who can reach its port ca
 and stop the server and send it console commands. Run it on a trusted LAN, do not forward
 its port from your router, and expose only the game's UDP port to the internet. The
 binding address is configurable if you want to restrict it further.
+
+The panel also **accepts file uploads**: anyone who can reach it can write map packages
+(`.pk3`, up to 256 MB each) into the game's user directory and delete the ones there. That is
+no more open than the console, which already runs any command on the game server, but it
+is one more reason not to expose the port. A map package may carry a `maps/<name>.cfg` that
+the game runs when the map loads, so only upload packages you trust. If you put a reverse
+proxy in front of the panel, raise its request body limit to at least 256 MB (nginx:
+`client_max_body_size`), or uploads will be refused by the proxy.
 
 ## Development
 

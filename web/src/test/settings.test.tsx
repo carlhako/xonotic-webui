@@ -76,6 +76,36 @@ const instagib = makeSetting({
   apply: "next_map",
 });
 
+const votable = makeSetting({
+  key: "g_maplist_votable",
+  group: "voting",
+  label: "Maps in the vote",
+  kind: "int",
+  default: 6,
+  min: 0,
+  max: 20,
+  max_length: null,
+  apply: "next_map",
+  value_labels: [{ value: 0, label: "Voting off" }],
+  switch: {
+    label: "Voting enabled",
+    help: "When off, the server plays the next map in the rotation.",
+    off_value: 0,
+    enables: ["g_maplist_votable_timeout"],
+  },
+});
+const votableTimeout = makeSetting({
+  key: "g_maplist_votable_timeout",
+  group: "voting",
+  label: "Vote length",
+  kind: "int",
+  default: 30,
+  min: 1,
+  max: 49,
+  max_length: null,
+  apply: "next_map",
+});
+
 function view(
   settings = [hostname, maxplayers, timelimit, scorelimit, instagib, skill],
   o = {},
@@ -284,6 +314,113 @@ describe("curated settings (6.1)", () => {
     await waitFor(() => expect(screen.getByLabelText("Server name")).toBeDisabled());
     await userEvent.click(screen.getByRole("tab", { name: "Match" }));
     expect(screen.getByRole("switch", { name: "Instagib" })).toBeDisabled();
+  });
+});
+
+describe("voting enabled switch", () => {
+  const votingGroups = [
+    { id: "identity", label: "Identity" },
+    { id: "voting", label: "Voting" },
+  ];
+
+  async function openVoting(value: number | null, extra: Record<string, () => Response> = {}) {
+    const fetchMock = await openSettings(
+      makeSettingsView(
+        [hostname, { ...votable, value }, votableTimeout],
+        { groups: votingGroups },
+      ),
+      {
+        "PATCH /api/settings": () => jsonResponse({ applied: { g_maplist_votable: "next_map" } }),
+        ...extra,
+      },
+    );
+    await userEvent.click(screen.getByRole("tab", { name: "Voting" }));
+    return fetchMock;
+  }
+
+  const patches = (fetchMock: ReturnType<typeof vi.fn>) =>
+    fetchMock.mock.calls
+      .filter(([, init]) => init?.method === "PATCH")
+      .map(([, init]) => JSON.parse(init!.body as string));
+
+  it("is on, with both fields editable, when the count is not zero", async () => {
+    await openVoting(10);
+    expect(screen.getByRole("switch", { name: "Voting enabled" })).toBeChecked();
+    expect(screen.getByLabelText("Maps in the vote")).toBeEnabled();
+    expect(screen.getByLabelText("Maps in the vote")).toHaveValue(10);
+    expect(screen.getByLabelText("Vote length")).toBeEnabled();
+  });
+
+  it("is off, with both fields greyed, when the count is 0", async () => {
+    await openVoting(0);
+    expect(screen.getByRole("switch", { name: "Voting enabled" })).not.toBeChecked();
+    expect(screen.getByLabelText("Maps in the vote")).toBeDisabled();
+    expect(screen.getByLabelText("Vote length")).toBeDisabled();
+    // the default is offered, not 0
+    expect(screen.getByLabelText("Maps in the vote")).toHaveValue(6);
+  });
+
+  it("makes the fields editable again when turned on", async () => {
+    await openVoting(0);
+    await userEvent.click(screen.getByRole("switch", { name: "Voting enabled" }));
+    expect(screen.getByRole("switch", { name: "Voting enabled" })).toBeChecked();
+    expect(screen.getByLabelText("Maps in the vote")).toBeEnabled();
+    expect(screen.getByLabelText("Vote length")).toBeEnabled();
+  });
+
+  it("shows the count greyed while off, restores it, and sends nothing until saved", async () => {
+    const fetchMock = await openVoting(10);
+    await userEvent.click(screen.getByRole("switch", { name: "Voting enabled" }));
+    const count = screen.getByLabelText("Maps in the vote");
+    expect(count).toBeDisabled();
+    expect(count).toHaveValue(10);
+    expect(patches(fetchMock)).toEqual([]);
+
+    await userEvent.click(screen.getByRole("switch", { name: "Voting enabled" }));
+    expect(count).toBeEnabled();
+    expect(count).toHaveValue(10);
+    // back to what is saved: nothing to save
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(patches(fetchMock)).toEqual([]);
+  });
+
+  it("keeps the remembered count across a tab switch", async () => {
+    await openVoting(10);
+    await userEvent.click(screen.getByRole("switch", { name: "Voting enabled" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Identity" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Voting" }));
+    // the unsaved edit is dropped with the tab: voting is on with the saved count
+    await userEvent.click(screen.getByRole("switch", { name: "Voting enabled" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Voting enabled" }));
+    expect(screen.getByLabelText("Maps in the vote")).toHaveValue(10);
+  });
+
+  it("offers the default of 6 when no count was remembered", async () => {
+    const fetchMock = await openVoting(0);
+    await userEvent.click(screen.getByRole("switch", { name: "Voting enabled" }));
+    expect(screen.getByLabelText("Maps in the vote")).toHaveValue(6);
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(patches(fetchMock)).toEqual([{ g_maplist_votable: null }]));
+  });
+
+  it("saves 0 when turned off and says it applies at the next map", async () => {
+    const fetchMock = await openVoting(10);
+    await userEvent.click(screen.getByRole("switch", { name: "Voting enabled" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(patches(fetchMock)).toEqual([{ g_maplist_votable: 0 }]));
+    expect(await screen.findByText("Applies at the next map")).toBeInTheDocument();
+  });
+
+  it("refuses 0 typed while on, pointing at the switch, and sends nothing", async () => {
+    const fetchMock = await openVoting(10);
+    const count = screen.getByLabelText("Maps in the vote");
+    expect(count).toHaveAttribute("min", "1");
+    await userEvent.clear(count);
+    await userEvent.type(count, "0");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Voting enabled/);
+    expect(screen.getByRole("switch", { name: "Voting enabled" })).toBeChecked();
+    expect(patches(fetchMock)).toEqual([]);
   });
 });
 

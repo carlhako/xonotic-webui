@@ -66,6 +66,16 @@ def _setting_model(state: SettingState) -> SettingModel:
         choices=[{"value": c.value, "label": c.label} for c in s.choices],  # type: ignore[misc]
         unit=s.unit,
         value_labels=[{"value": v, "label": label} for v, label in s.value_labels],  # type: ignore[misc]
+        switch=(
+            {  # type: ignore[arg-type]
+                "label": s.switch.label,
+                "help": s.switch.help,
+                "off_value": s.switch.off_value,
+                "enables": list(s.switch.enables),
+            }
+            if s.switch
+            else None
+        ),
         server_cfg=state.server_cfg,
     )
 

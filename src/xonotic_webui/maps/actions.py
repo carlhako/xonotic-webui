@@ -58,6 +58,10 @@ class ActionMapGametypeError(MapActionError):
     code = "map_unsupported_gametype"
 
 
+class MapNotLoadedError(MapActionError):
+    code = "map_needs_restart"
+
+
 @dataclass
 class MatchAction:
     id: int
@@ -126,6 +130,11 @@ class MatchActions:
         entry = self._catalogue.get(map_name)
         if entry is None:
             raise ActionMapNotInstalledError(f"the map {map_name!r} is not installed")
+        if entry.pending_restart:
+            raise MapNotLoadedError(
+                f"{map_name} is in a package added after the server started; "
+                "restart the server to use it"
+            )
         gametype = self._effective_gametype()
         if gametype is not None and not entry.supports(gametype):
             name = GAMETYPES_BY_ID[gametype].name if gametype in GAMETYPES_BY_ID else gametype

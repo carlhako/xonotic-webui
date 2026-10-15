@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter
-from starlette.responses import Response
+from fastapi import APIRouter, Request
+from starlette.requests import ClientDisconnect
+from starlette.responses import FileResponse, Response
 
 from xonotic_webui.api._shared import (
     LIFECYCLE_ERROR_RESPONSES,
@@ -14,6 +15,7 @@ from xonotic_webui.api._shared import (
 )
 from xonotic_webui.api.schemas import (
     ErrorResponse,
+    FavouritesModel,
     GametypeModel,
     GametypeRequest,
     GametypeResultModel,
@@ -22,6 +24,9 @@ from xonotic_webui.api.schemas import (
     MapModel,
     MapsModel,
     MatchActionModel,
+    PackageDuplicateModel,
+    PackageInstalledModel,
+    PackageRemovedModel,
     RotationItemModel,
     RotationModel,
     RotationRequest,
@@ -29,6 +34,13 @@ from xonotic_webui.api.schemas import (
 )
 from xonotic_webui.maps.actions import MapActionError, MatchAction
 from xonotic_webui.maps.control import RotationView
+from xonotic_webui.maps.favourites import InvalidFavouriteError
+from xonotic_webui.maps.packages import (
+    AlreadyExistsError,
+    PackageError,
+    PackageNotFoundError,
+    TooLargeError,
+)
 from xonotic_webui.serversettings.service import SettingsError
 from xonotic_webui.serversettings.store import SettingsStoreError
 from xonotic_webui.supervisor import SupervisorError
@@ -46,7 +58,21 @@ _ACTION_ERRORS = {
 }
 
 
+_PACKAGE_STATUS: dict[type[PackageError], int] = {
+    TooLargeError: 413,
+    AlreadyExistsError: 409,
+    PackageNotFoundError: 404,
+}
+_PACKAGE_ERRORS = {
+    404: {"model": ErrorResponse, "description": "There is no such package in the user directory."},
+}
+
+
 def _http_error(exc: Exception):
+    if isinstance(exc, InvalidFavouriteError):
+        return api_error(422, exc.code, str(exc), "map")
+    if isinstance(exc, PackageError):
+        return api_error(_PACKAGE_STATUS.get(type(exc), 422), exc.code, str(exc), "file")
     if isinstance(exc, SettingsStoreError):
         return api_error(500, exc.code, str(exc))
     if isinstance(exc, SettingsError):
@@ -134,6 +160,9 @@ def build_maps_router(runtime: Runtime) -> APIRouter:
                     has_mapinfo=m.has_mapinfo,
                     preview=m.preview,
                     source=m.source,  # type: ignore[arg-type]
+                    package=m.package,
+                    package_size=m.package_size,
+                    pending_restart=m.pending_restart,
                 )
                 for m in catalogue.maps()
             ]
@@ -219,6 +248,113 @@ def build_maps_router(runtime: Runtime) -> APIRouter:
         try:
             return _action_model(await actions.restart())
         except (MapActionError, SupervisorError) as exc:
+            raise _http_error(exc) from exc
+
+    # -- map packages ----------------------------------------------------------------------
+    packages = runtime.package_store
+
+    @router.put(
+        "/packages/{filename:path}",
+        response_model=PackageInstalledModel,
+        responses={
+            **_VALIDATION,
+            409: {"model": ErrorResponse, "description": "A package of that name exists."},
+            413: {"model": ErrorResponse, "description": "The package is over the size limit."},
+        },
+        summary="Install a map package; the request body is the raw .pk3 file",
+    )
+    async def put_package(filename: str, request: Request) -> PackageInstalledModel:
+        declared: int | None
+        try:
+            declared = int(request.headers["content-length"])
+        except (KeyError, ValueError):
+            declared = None
+        try:
+            result = await packages.install(filename, request.stream(), declared_size=declared)
+        except PackageError as exc:
+            raise _http_error(exc) from exc
+        except ClientDisconnect as exc:
+            # Nothing was installed and nobody is left to read the answer.
+            raise api_error(400, "upload_interrupted", "the upload was interrupted") from exc
+        first = catalogue.get(result.maps[0])
+        return PackageInstalledModel(
+            name=result.name,
+            size=result.size,
+            maps=list(result.maps),
+            duplicates=[
+                PackageDuplicateModel(
+                    map=d.map,
+                    package=d.package,
+                    source=d.source,  # type: ignore[arg-type]
+                    used=d.used,
+                )
+                for d in result.duplicates
+            ],
+            restart_required=bool(first is not None and first.pending_restart),
+        )
+
+    @router.get(
+        "/packages/{filename:path}",
+        response_class=FileResponse,
+        responses={
+            200: {"content": {"application/octet-stream": {}}, "description": "The package."},
+            **_PACKAGE_ERRORS,
+        },
+        summary="Download a map package from the user directory, byte for byte",
+    )
+    async def get_package(filename: str) -> FileResponse:
+        try:
+            path = packages.resolve(filename)
+        except PackageError as exc:
+            raise _http_error(exc) from exc
+        return FileResponse(path, media_type="application/octet-stream", filename=path.name)
+
+    @router.delete(
+        "/packages/{filename:path}",
+        response_model=PackageRemovedModel,
+        responses=_PACKAGE_ERRORS,
+        summary="Delete a map package from the user directory",
+    )
+    async def delete_package(filename: str) -> PackageRemovedModel:
+        try:
+            maps = packages.delete(filename)
+        except PackageError as exc:
+            raise _http_error(exc) from exc
+        return PackageRemovedModel(name=filename, maps=list(maps))
+
+    # -- favourites ------------------------------------------------------------------------
+    favourites = runtime.favourites
+
+    @router.get(
+        "/favourites",
+        response_model=FavouritesModel,
+        summary="The favourite maps, shared by every browser",
+    )
+    async def get_favourites() -> FavouritesModel:
+        return FavouritesModel(maps=favourites.maps())
+
+    @router.put(
+        "/favourites/{map_name}",
+        response_model=FavouritesModel,
+        responses={422: _VALIDATION[422]},
+        summary="Star a map (idempotent); it need not be installed",
+    )
+    async def put_favourite(map_name: str) -> FavouritesModel:
+        try:
+            return FavouritesModel(maps=await favourites.add(map_name))
+        except InvalidFavouriteError as exc:
+            raise _http_error(exc) from exc
+
+    @router.delete(
+        "/favourites/{map_name}",
+        response_model=FavouritesModel,
+        responses={422: _VALIDATION[422]},
+        summary="Unstar a map (idempotent)",
+    )
+    async def delete_favourite(map_name: str) -> FavouritesModel:
+        try:
+            return FavouritesModel(maps=await favourites.remove(map_name))
+        except InvalidFavouriteError as exc:
             raise _http_error(exc) from exc
 
     return router

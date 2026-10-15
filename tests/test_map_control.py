@@ -8,12 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers import fake_maps, make_settings
+from tests.helpers import fake_maps, make_settings, write_pk3
 from xonotic_webui.console.buffer import LineKind
 from xonotic_webui.maps.actions import (
     ActionInProgressError,
     ActionMapGametypeError,
     ActionMapNotInstalledError,
+    MapNotLoadedError,
 )
 from xonotic_webui.maps.control import (
     GametypeUnavailableError,
@@ -251,6 +252,25 @@ async def test_go_to_map_rejects_unknown_and_unsupported_maps(
     assert str(err.value) == "catharsis does not support Team Deathmatch"
     assert not any(c.startswith("gotomap") for c in commands(rt)[before:])
     assert rt.status.snapshot().action is None  # nothing was started
+
+
+async def test_go_to_map_refuses_a_package_the_game_has_not_loaded(
+    make_rt: Callable[..., Runtime],
+) -> None:
+    rt = make_rt()
+    await rt.supervisor.start()
+    await until(lambda: rt.status.snapshot().map is not None, what="map")
+    write_pk3(rt.settings.userdir / "data" / "late.pk3", {"latemap": {"gametypes": ["dm"]}})
+    before = len(commands(rt))
+    with pytest.raises(MapNotLoadedError, match="restart the server") as err:
+        await rt.match_actions.goto("latemap")
+    assert err.value.code == "map_needs_restart"
+    assert not any(c.startswith("gotomap") for c in commands(rt)[before:])
+    assert rt.status.snapshot().action is None  # the current match is untouched
+
+    # the check comes before the gametype one, and a loaded map still works
+    action = await rt.match_actions.goto("warfare")
+    await until(lambda: action.state == "done", what="goto done")
 
 
 async def test_go_to_map_goes_straight_there_without_a_vote(

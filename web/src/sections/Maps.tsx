@@ -2,11 +2,17 @@ import { useMemo, useState } from "react";
 import { ApiCallError, api } from "../api/client";
 import type { GametypesView, MapInfo, RotationView } from "../api/client";
 import { useStatus } from "../api/StatusContext";
+import { useFavourites } from "../api/useFavourites";
 import { useResource } from "../api/useResource";
 import { ActionStatus } from "../components/MatchActions";
 import { Confirm } from "../components/Confirm";
-import { playersPhrase } from "../lib/text";
+import { FavouriteStar } from "../components/FavouriteStar";
+import { DeletePackageDialog, PackageUpload } from "../components/MapPackages";
+import { MapTable } from "../components/MapTable";
 import { applyMessage } from "../lib/apply";
+import { formatSize } from "../lib/size";
+import { useStoredChoice } from "../lib/storage";
+import { playersPhrase } from "../lib/text";
 
 function errorText(e: unknown): string {
   return e instanceof ApiCallError ? e.message : String(e);
@@ -23,16 +29,20 @@ function MapCard({
   canGo,
   disabled,
   inRotation,
+  starred,
   onGo,
   onAdd,
+  onToggleFavourite,
 }: {
   map: MapInfo;
   names: Map<string, string>;
   canGo: boolean;
   disabled: boolean;
   inRotation: boolean;
+  starred: boolean;
   onGo: () => void;
   onAdd: () => void;
+  onToggleFavourite: () => void;
 }) {
   return (
     <li className="map-card">
@@ -47,8 +57,24 @@ function MapCard({
         <div className="map-preview map-preview-none" aria-hidden="true" />
       )}
       <div className="map-body">
-        <div className="map-title">{map.title}</div>
+        <div className="map-title-row">
+          <div className="map-title">{map.title}</div>
+          <FavouriteStar
+            name={map.name}
+            starred={starred}
+            disabled={disabled}
+            onToggle={onToggleFavourite}
+          />
+        </div>
         <div className="muted map-name">{map.name}</div>
+        <div className="muted map-package">
+          {map.package} · {formatSize(map.package_size)}
+        </div>
+        {map.pending_restart && (
+          <div className="badge badge-warn map-pending">
+            restart the server to use this map
+          </div>
+        )}
         <div className="map-badges">
           {map.gametypes.length === 0 ? (
             <span
@@ -391,10 +417,26 @@ function RotationPanel({
 
 export function Maps() {
   const { status, connected } = useStatus();
-  const maps = useResource(() => api.maps(), []);
+  // A restart changes which packages the game has loaded (`pending_restart`).
+  const maps = useResource(() => api.maps(), [status?.state]);
   const gametypes = useResource(() => api.gametypes(), [status?.gametype, status?.state]);
   const rotation = useResource(() => api.rotation(), [status?.state]);
 
+  const favourites = useFavourites();
+  const [view, setView] = useStoredChoice(
+    "xonotic-webui.maps.view",
+    ["cards", "files"] as const,
+    "cards",
+  );
+  const [favouritesOnly, setFavouritesOnly] = useStoredChoice(
+    "xonotic-webui.maps.favourites-only",
+    ["off", "on"] as const,
+    "off",
+  );
+  const [deleting, setDeleting] = useState<{
+    file: string;
+    trigger: HTMLElement | null;
+  } | null>(null);
   const [filter, setFilter] = useState("");
   const [pendingAdd, setPendingAdd] = useState<string[]>([]);
   const [going, setGoing] = useState<MapInfo | null>(null);
@@ -411,7 +453,12 @@ export function Maps() {
   const effective = gametypes.data?.effective ?? null;
 
   const all = maps.data?.maps ?? [];
-  const shown = filter ? all.filter((m) => m.gametypes.includes(filter)) : all;
+  const starredShown = favouritesOnly === "on";
+  const shown = all
+    .filter((m) => !filter || m.gametypes.includes(filter))
+    .filter((m) => !starredShown || favourites.has(m.name));
+  // a favourite of a map that is not installed is kept but never listed
+  const anyStarred = all.some((m) => favourites.has(m.name));
   const inRotation = new Set([
     ...(rotation.data?.maps.map((m) => m.name) ?? []),
     ...pendingAdd,
@@ -431,7 +478,20 @@ export function Maps() {
     }
   }
 
+  // The same rule for both views: only a running server, an idle action slot, a map
+  // the game has loaded, and a map the gametype supports.
+  const canGo = (m: MapInfo) =>
+    running &&
+    !busy &&
+    !m.pending_restart &&
+    (effective === null ? m.gametypes.length > 0 : m.gametypes.includes(effective));
+  const onGo = (m: MapInfo) => (humans > 0 ? setGoing(m) : void goWithErrors(m.name));
+  const onAdd = (m: MapInfo) => setPendingAdd((p) => [...p, m.name]);
+
   const loadError = maps.error ?? gametypes.error ?? rotation.error;
+  const deletingMaps = deleting
+    ? all.filter((m) => m.package === deleting.file && m.source === "user")
+    : [];
 
   return (
     <section className="section maps">
@@ -443,9 +503,9 @@ export function Maps() {
         </div>
       )}
       <ActionStatus action={status?.action} />
-      {error && (
+      {(error ?? favourites.error) && (
         <div className="controls-error" role="alert">
-          {error}
+          {error ?? favourites.error}
         </div>
       )}
       {going && (
@@ -491,44 +551,109 @@ export function Maps() {
       <div className="panel">
         <div className="map-filter">
           <h2>Installed maps</h2>
-          <select
-            aria-label="Show maps for"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option value="">All gametypes</option>
-            {(gametypes.data?.gametypes ?? [])
-              .filter((g) => g.offered)
-              .map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-          </select>
+          <div className="map-toolbar">
+            <div className="view-switch" role="group" aria-label="View">
+              <button
+                className="btn"
+                aria-pressed={view === "cards"}
+                onClick={() => setView("cards")}
+              >
+                Cards
+              </button>
+              <button
+                className="btn"
+                aria-pressed={view === "files"}
+                onClick={() => setView("files")}
+              >
+                Files
+              </button>
+            </div>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={starredShown}
+                onChange={(e) => setFavouritesOnly(e.target.checked ? "on" : "off")}
+              />
+              Favourites only
+            </label>
+            <select
+              aria-label="Show maps for"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            >
+              <option value="">All gametypes</option>
+              {(gametypes.data?.gametypes ?? [])
+                .filter((g) => g.offered)
+                .map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+            </select>
+          </div>
         </div>
+        {view === "files" && (
+          <PackageUpload disabled={disabled} onInstalled={maps.reload} />
+        )}
         {!maps.data && !maps.error && <p className="muted">Loading…</p>}
-        {maps.data && shown.length === 0 && <p className="muted">No maps match.</p>}
-        <ul className="map-grid">
-          {shown.map((m) => (
-            <MapCard
-              key={m.name}
-              map={m}
-              names={names}
-              canGo={
-                running &&
-                !busy &&
-                (effective === null
-                  ? m.gametypes.length > 0
-                  : m.gametypes.includes(effective))
-              }
-              disabled={disabled}
-              inRotation={inRotation.has(m.name)}
-              onGo={() => (humans > 0 ? setGoing(m) : void goWithErrors(m.name))}
-              onAdd={() => setPendingAdd((p) => [...p, m.name])}
+        {maps.data && shown.length === 0 && (
+          <p className="muted">
+            {starredShown && !anyStarred
+              ? "No favourites yet. Star a map with the ☆ button to add it here."
+              : "No maps match."}
+          </p>
+        )}
+        {view === "cards" ? (
+          <ul className="map-grid">
+            {shown.map((m) => (
+              <MapCard
+                key={m.name}
+                map={m}
+                names={names}
+                canGo={canGo(m)}
+                disabled={disabled}
+                inRotation={inRotation.has(m.name)}
+                starred={favourites.has(m.name)}
+                onGo={() => onGo(m)}
+                onAdd={() => onAdd(m)}
+                onToggleFavourite={() => void favourites.toggle(m.name)}
+              />
+            ))}
+          </ul>
+        ) : (
+          shown.length > 0 && (
+            <MapTable
+              maps={shown}
+              actions={{
+                canGo,
+                inRotation: (name) => inRotation.has(name),
+                isFavourite: favourites.has,
+                disabled,
+                onGo,
+                onAdd,
+                onToggleFavourite: (name) => void favourites.toggle(name),
+                onDelete: (m, trigger) => setDeleting({ file: m.package, trigger }),
+              }}
             />
-          ))}
-        </ul>
+          )
+        )}
       </div>
+
+      {deleting && (
+        <DeletePackageDialog
+          file={deleting.file}
+          maps={deletingMaps}
+          inRotation={(name) => inRotation.has(name)}
+          disabled={disabled}
+          returnFocusTo={deleting.trigger}
+          onClose={() => setDeleting(null)}
+          onDeleted={() => {
+            setDeleting(null);
+            maps.reload();
+            rotation.reload();
+          }}
+        />
+      )}
     </section>
   );
 }

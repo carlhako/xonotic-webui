@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ApiCallError, api } from "../api/client";
 import type { ApplyClass, Setting, SettingValue, SettingsView } from "../api/client";
 import { useStatus } from "../api/StatusContext";
@@ -31,17 +31,36 @@ function describe(s: Setting, v: SettingValue): string {
   return v === "" ? "(empty)" : String(v);
 }
 
-/** Convert an edit to the value to send, or an error message to show on the field. */
-function toWire(s: Setting, edit: string | boolean | null): SettingValue | null | Error {
+/** Convert an edit to the value to send, or an error message to show on the field.
+ *  `switchOn` is whether the setting's on/off switch (if it has one) is on: the switch's
+ *  off value is then refused, so the number field cannot turn the setting off. */
+function toWire(
+  s: Setting,
+  edit: string | boolean | null,
+  switchOn = false,
+): SettingValue | null | Error {
   if (edit === null) return null;
   if (s.kind === "bool") return Boolean(edit);
   if (s.kind === "int" || s.kind === "float") {
     const text = String(edit).trim();
     const n = Number(text);
     if (text === "" || Number.isNaN(n)) return new Error(`${s.label} must be a number`);
+    if (s.switch && switchOn && n === s.switch.off_value) {
+      return new Error(
+        `${s.label} must be more than ${n}; to turn it off, use the \u201c${s.switch.label}\u201d switch`,
+      );
+    }
     return n;
   }
   return String(edit);
+}
+
+/** The lowest count the number field takes while the switch is on. */
+function onMin(s: Setting): number | undefined {
+  const min = s.min ?? undefined;
+  const off = s.switch?.off_value;
+  if (off === undefined || (min !== undefined && min > off)) return min;
+  return off + 1;
 }
 
 function unitLabel(s: Setting, scoreUnit: string | null): string | null {
@@ -58,6 +77,9 @@ function Field({
   running,
   scoreUnit,
   disabled,
+  inactive = false,
+  shownOverride,
+  minOverride,
   onChange,
 }: {
   setting: Setting;
@@ -67,16 +89,23 @@ function Field({
   running: boolean;
   scoreUnit: string | null;
   disabled: boolean;
+  /** Greyed out because the switch that enables it is off. */
+  inactive?: boolean;
+  /** Shown instead of the edit or saved value (the count kept while a switch is off). */
+  shownOverride?: string;
+  minOverride?: number;
   onChange: (value: Edit) => void;
 }) {
   const id = `setting-${setting.key}`;
   const edited = edit !== undefined;
   const shown: string | boolean =
-    edit === null
-      ? toDisplay(setting, setting.default)
-      : edit === undefined
-        ? toDisplay(setting, baseValue(setting))
-        : edit;
+    shownOverride !== undefined
+      ? shownOverride
+      : edit === null
+        ? toDisplay(setting, setting.default)
+        : edit === undefined
+          ? toDisplay(setting, baseValue(setting))
+          : edit;
   const resetting = edit === null;
   const hasSaved = setting.value !== null;
   const unit = unitLabel(setting, scoreUnit);
@@ -115,7 +144,7 @@ function Field({
         id={id}
         type={numeric ? "number" : "text"}
         inputMode={numeric ? "numeric" : undefined}
-        min={numeric ? (setting.min ?? undefined) : undefined}
+        min={numeric ? (minOverride ?? setting.min ?? undefined) : undefined}
         max={numeric ? (setting.max ?? undefined) : undefined}
         maxLength={setting.max_length ?? undefined}
         value={String(shown)}
@@ -132,7 +161,9 @@ function Field({
     setting.value_labels.find((l) => String(l.value) === String(shown));
 
   return (
-    <div className={`field${error ? " has-error" : ""}`}>
+    <div
+      className={`field${error ? " has-error" : ""}${inactive ? " is-inactive" : ""}`}
+    >
       <div className="field-head">
         <label htmlFor={id}>{setting.label}</label>
         {setting.server_cfg && (
@@ -187,15 +218,57 @@ function Field({
   );
 }
 
+/** The on/off control of a setting that has a switch; the count it fronts follows it. */
+function SwitchRow({
+  setting,
+  on,
+  disabled,
+  onChange,
+}: {
+  setting: Setting;
+  on: boolean;
+  disabled: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  const sw = setting.switch!;
+  const id = `switch-${setting.key}`;
+  return (
+    <div className="field">
+      <div className="field-head">
+        <label htmlFor={id}>{sw.label}</label>
+      </div>
+      <div className="field-control">
+        <input
+          id={id}
+          type="checkbox"
+          role="switch"
+          checked={on}
+          disabled={disabled}
+          aria-describedby={`${id}-help`}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+      </div>
+      <p className="field-help muted" id={`${id}-help`}>
+        {sw.help}
+      </p>
+    </div>
+  );
+}
+
 function SettingsPanel({
   view,
   group,
   disabled,
+  remembered,
+  remember,
   reload,
 }: {
   view: SettingsView;
   group: string;
   disabled: boolean;
+  /** The last count seen for each switched setting, for turning its switch back on. */
+  remembered: Record<string, string>;
+  remember: (key: string, count: string) => void;
   reload: () => void;
 }) {
   const { status } = useStatus();
@@ -207,22 +280,75 @@ function SettingsPanel({
   const [saving, setSaving] = useState(false);
   const [restartFor, setRestartFor] = useState<string[]>([]);
   const [confirmingRestart, setConfirmingRestart] = useState(false);
+  // Switches turned off here: an edit of the off value is then the switch, not typing.
+  const [switchedOff, setSwitchedOff] = useState<Record<string, boolean>>({});
 
   const settings = view.settings.filter((s) => s.group === group);
   const dirty = settings.filter((s) => edits[s.key] !== undefined);
   const humans = status?.human_count ?? 0;
+  const masterOf: Record<string, Setting> = {};
+  for (const s of settings) {
+    for (const key of s.switch?.enables ?? []) masterOf[key] = s;
+  }
+
+  /** Whether a setting's switch is on, from what the form shows (design D3). */
+  function switchOn(s: Setting): boolean {
+    const off = s.switch!.off_value;
+    const edit = edits[s.key];
+    if (edit === undefined) return Number(baseValue(s)) !== off;
+    if (edit === null) return Number(s.default) !== off;
+    return !switchedOff[s.key];
+  }
+
+  /** The count to offer when the switch is turned on, or `null` for the default. */
+  function restoreTarget(s: Setting): string | null {
+    const kept = remembered[s.key];
+    if (kept !== undefined) return kept;
+    const off = s.switch!.off_value;
+    if (Number(s.default) !== off) return null;
+    return String(onMin(s) ?? off + 1);
+  }
 
   function change(key: string, value: Edit) {
     setEdits((e) => ({ ...e, [key]: value }));
+    setSwitchedOff((o) => omit(o, key));
     setFeedback((f) => omit(f, key));
     setErrors((e) => omit(e, key));
+  }
+
+  function toggleSwitch(s: Setting, on: boolean) {
+    const off = s.switch!.off_value;
+    let next: Edit | undefined;
+    if (!on) {
+      const edit = edits[s.key];
+      const now =
+        edit === undefined ? baseValue(s) : edit === null ? s.default : String(edit);
+      const text = String(now).trim();
+      if (text !== "" && !Number.isNaN(Number(text)) && Number(text) !== off) {
+        remember(s.key, text);
+      }
+      next = String(off);
+    } else {
+      const target = restoreTarget(s);
+      // Back to what is already saved: no edit at all, so nothing is sent.
+      const unchanged =
+        target === null ? s.value === null : s.value !== null && String(s.value) === target;
+      next = unchanged ? undefined : target;
+    }
+    setEdits((e) => {
+      if (next !== undefined) return { ...e, [s.key]: next };
+      return omit(e, s.key);
+    });
+    setSwitchedOff((o) => (on ? omit(o, s.key) : { ...o, [s.key]: true }));
+    setFeedback((f) => omit(f, s.key));
+    setErrors((e) => omit(e, s.key));
   }
 
   async function save() {
     const changes: Record<string, SettingValue | null> = {};
     const problems: Record<string, string> = {};
     for (const s of dirty) {
-      const wire = toWire(s, edits[s.key] as Edit);
+      const wire = toWire(s, edits[s.key] as Edit, s.switch ? switchOn(s) : false);
       if (wire instanceof Error) problems[s.key] = wire.message;
       else changes[s.key] = wire;
     }
@@ -235,6 +361,11 @@ function SettingsPanel({
       setFeedback((f) => ({ ...f, ...result.applied }));
       setEdits((e) => {
         const next = { ...e };
+        for (const key of Object.keys(changes)) delete next[key];
+        return next;
+      });
+      setSwitchedOff((o) => {
+        const next = { ...o };
         for (const key of Object.keys(changes)) delete next[key];
         return next;
       });
@@ -260,6 +391,7 @@ function SettingsPanel({
 
   function discard() {
     setEdits({});
+    setSwitchedOff({});
     setErrors({});
     setGeneral(null);
   }
@@ -283,19 +415,39 @@ function SettingsPanel({
 
   return (
     <div className="panel settings-panel">
-      {settings.map((s) => (
-        <Field
-          key={s.key}
-          setting={s}
-          edit={edits[s.key]}
-          error={errors[s.key]}
-          feedback={feedback[s.key]}
-          running={view.running}
-          scoreUnit={view.score_unit}
-          disabled={disabled}
-          onChange={(v) => change(s.key, v)}
-        />
-      ))}
+      {settings.map((s) => {
+        const master = masterOf[s.key];
+        const inactive = master !== undefined && !switchOn(master);
+        const on = s.switch ? switchOn(s) : true;
+        // While the switch is off the count shows what voting would go back to, not 0.
+        const shownOverride =
+          s.switch && !on ? (restoreTarget(s) ?? String(s.default)) : undefined;
+        return (
+          <Fragment key={s.key}>
+            {s.switch && (
+              <SwitchRow
+                setting={s}
+                on={on}
+                disabled={disabled}
+                onChange={(v) => toggleSwitch(s, v)}
+              />
+            )}
+            <Field
+              setting={s}
+              edit={edits[s.key]}
+              error={errors[s.key]}
+              feedback={feedback[s.key]}
+              running={view.running}
+              scoreUnit={view.score_unit}
+              disabled={disabled || inactive || (s.switch !== null && !on)}
+              inactive={inactive || (s.switch !== null && !on)}
+              shownOverride={shownOverride}
+              minOverride={s.switch && on ? onMin(s) : undefined}
+              onChange={(v) => change(s.key, v)}
+            />
+          </Fragment>
+        );
+      })}
 
       <div className="controls-row">
         <button
@@ -354,6 +506,8 @@ export function Settings() {
   const { status, connected } = useStatus();
   const resource = useResource(() => api.settings(), [status?.state]);
   const [tab, setTab] = useState<string>("identity");
+  // Kept above the per-tab panel so a count survives switching tabs (design D4).
+  const [remembered, setRemembered] = useState<Record<string, string>>({});
   const view = resource.data;
   const disabled = !connected;
 
@@ -409,6 +563,8 @@ export function Settings() {
               view={view}
               group={tab}
               disabled={disabled}
+              remembered={remembered}
+              remember={(key, count) => setRemembered((r) => ({ ...r, [key]: count }))}
               reload={resource.reload}
             />
           )}

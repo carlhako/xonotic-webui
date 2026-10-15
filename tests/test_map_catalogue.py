@@ -9,6 +9,7 @@ import pytest
 
 from tests.helpers import PREVIEW_BYTES, fake_maps, install_fake_maps, write_pk3
 from xonotic_webui.maps.catalogue import MapCatalogue, parse_mapinfo
+from xonotic_webui.supervisor.state import RunState
 
 
 @pytest.fixture
@@ -218,3 +219,100 @@ def test_a_generated_file_without_a_map_is_ignored(roots: tuple[Path, Path]) -> 
     generated.mkdir(parents=True)
     (generated / "ghost.mapinfo").write_text(_GENERATED)
     assert MapCatalogue(game, userdir).maps() == []
+
+
+# --- package and size (map-control / map-packages) ----------------------------------------
+
+
+def test_each_map_reports_its_package_and_that_packages_size(roots: tuple[Path, Path]) -> None:
+    game, userdir = roots
+    stock = write_pk3(game / "data" / "stock.pk3", {"boil": {"gametypes": ["dm"]}})
+    mine = write_pk3(
+        userdir / "data" / "pair.pk3", {"one": {"gametypes": ["dm"]}, "two": {"gametypes": ["dm"]}}
+    )
+    catalogue = MapCatalogue(game, userdir)
+    boil, one, two = (catalogue.get(n) for n in ("boil", "one", "two"))
+    assert boil is not None and one is not None and two is not None
+    assert (boil.package, boil.package_size, boil.source) == (
+        "stock.pk3",
+        stock.stat().st_size,
+        "game",
+    )
+    # a package holding two maps: both rows name the same file and size
+    assert (one.package, one.package_size) == ("pair.pk3", mine.stat().st_size)
+    assert (two.package, two.package_size) == (one.package, one.package_size)
+    assert one.source == two.source == "user"
+
+
+def test_a_user_map_shadowing_a_game_map_reports_the_user_package(
+    roots: tuple[Path, Path],
+) -> None:
+    game, userdir = roots
+    write_pk3(game / "data" / "a.pk3", {"boil": {"title": "Stock", "gametypes": ["dm"]}})
+    mine = write_pk3(userdir / "data" / "mine.pk3", {"boil": {"gametypes": ["ctf"]}})
+    entry = MapCatalogue(game, userdir).get("boil")
+    assert entry is not None
+    assert (entry.source, entry.package, entry.package_size) == (
+        "user",
+        "mine.pk3",
+        mine.stat().st_size,
+    )
+
+
+# --- packages the game has not loaded (design D5) -----------------------------------------
+
+
+def _pending(catalogue: MapCatalogue, name: str) -> bool:
+    entry = catalogue.get(name)
+    assert entry is not None
+    return entry.pending_restart
+
+
+def test_a_package_added_while_running_is_pending_until_a_restart(
+    roots: tuple[Path, Path],
+) -> None:
+    game, userdir = roots
+    write_pk3(game / "data" / "stock.pk3", {"boil": {"gametypes": ["dm"]}})
+    write_pk3(userdir / "data" / "old.pk3", {"old": {"gametypes": ["dm"]}})
+    catalogue = MapCatalogue(game, userdir)
+    catalogue.on_state(RunState.STOPPED, RunState.STARTING)
+    catalogue.on_state(RunState.STARTING, RunState.RUNNING)
+
+    write_pk3(userdir / "data" / "new.pk3", {"fresh": {"gametypes": ["dm"]}})
+    assert _pending(catalogue, "fresh")
+    assert not _pending(catalogue, "old")  # it was there when the game scanned
+    assert not _pending(catalogue, "boil")  # a game package is never pending
+
+    catalogue.on_state(RunState.RUNNING, RunState.STOPPING)
+    assert _pending(catalogue, "fresh")  # still the same process until it has stopped
+    catalogue.on_state(RunState.STOPPING, RunState.STOPPED)
+    assert not _pending(catalogue, "fresh")  # the next start loads whatever is there
+
+    catalogue.on_state(RunState.STOPPED, RunState.STARTING)
+    catalogue.on_state(RunState.STARTING, RunState.RUNNING)
+    assert not _pending(catalogue, "fresh")  # cleared by the restart
+
+
+def test_a_package_added_while_stopped_is_not_pending(roots: tuple[Path, Path]) -> None:
+    game, userdir = roots
+    catalogue = MapCatalogue(game, userdir)
+    write_pk3(userdir / "data" / "new.pk3", {"fresh": {"gametypes": ["dm"]}})
+    assert not _pending(catalogue, "fresh")
+    catalogue.on_state(RunState.STOPPED, RunState.STARTING)
+    catalogue.on_state(RunState.STARTING, RunState.RUNNING)
+    assert not _pending(catalogue, "fresh")
+
+
+def test_a_deleted_and_uploaded_again_package_is_pending(roots: tuple[Path, Path]) -> None:
+    game, userdir = roots
+    pk3 = write_pk3(userdir / "data" / "mine.pk3", {"mine": {"gametypes": ["dm"]}})
+    catalogue = MapCatalogue(game, userdir)
+    catalogue.on_state(RunState.STOPPED, RunState.STARTING)
+    catalogue.on_state(RunState.STARTING, RunState.RUNNING)
+    assert not _pending(catalogue, "mine")
+
+    pk3.unlink()
+    assert catalogue.get("mine") is None
+    # the same name again, with different content: the game never saw this file
+    write_pk3(pk3, {"mine": {"gametypes": ["dm", "ctf"], "title": "Changed"}})
+    assert _pending(catalogue, "mine")

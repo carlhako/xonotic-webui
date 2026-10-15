@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from tests.conftest import Live
-from tests.helpers import PREVIEW_BYTES, fake_maps
+from tests.helpers import PREVIEW_BYTES, fake_maps, write_pk3
 
 LiveFactory = Callable[..., "asyncio.Future[Live]"]
 
@@ -56,6 +56,42 @@ async def test_maps_are_listed_in_full_while_the_server_is_stopped(live: LiveFac
         assert by_name["stormkeep"]["title"] == "Stormkeep"
         assert by_name["stormkeep"]["preview"] is True
         assert by_name["stormkeep"]["source"] == "game"
+        assert by_name["stormkeep"]["package"] == "xonotic-data-maps.pk3"
+        assert (
+            by_name["stormkeep"]["package_size"]
+            == (app.settings.game_root / "data" / "xonotic-data-maps.pk3").stat().st_size
+        )
+        assert by_name["stormkeep"]["pending_restart"] is False
+
+
+async def test_a_package_added_while_running_is_pending_until_a_restart(
+    live: LiveFactory,
+) -> None:
+    app = await live()
+    pk3 = app.settings.userdir / "data" / "late.pk3"
+    async with httpx.AsyncClient(base_url=app.base_url, timeout=30) as client:
+        await client.post("/api/lifecycle/start")
+        await wait_status(client, "state", "running")
+        write_pk3(pk3, {"latemap": {"gametypes": ["dm"]}})
+        by_name = {m["name"]: m for m in (await client.get("/api/maps")).json()["maps"]}
+        late = by_name["latemap"]
+        assert (late["source"], late["package"], late["package_size"]) == (
+            "user",
+            "late.pk3",
+            pk3.stat().st_size,
+        )
+        assert late["pending_restart"] is True
+        assert by_name["stormkeep"]["pending_restart"] is False
+
+        r = await client.post("/api/match/goto", json={"map": "latemap"})
+        assert r.status_code == 422
+        assert r.json()["detail"]["code"] == "map_needs_restart"
+
+        await client.post("/api/lifecycle/restart")
+        await wait_status(client, "state", "running")
+        by_name = {m["name"]: m for m in (await client.get("/api/maps")).json()["maps"]}
+        assert by_name["latemap"]["pending_restart"] is False
+        await client.post("/api/lifecycle/stop")
 
 
 async def test_a_preview_image_is_streamed_and_a_missing_one_is_a_404(

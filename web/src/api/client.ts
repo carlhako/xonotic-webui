@@ -21,6 +21,9 @@ export type MapInfo = Schemas["MapModel"];
 export type MapsView = Schemas["MapsModel"];
 export type RotationView = Schemas["RotationModel"];
 export type RotationResult = Schemas["RotationResultModel"];
+export type FavouritesView = Schemas["FavouritesModel"];
+export type PackageInstalled = Schemas["PackageInstalledModel"];
+export type PackageRemoved = Schemas["PackageRemovedModel"];
 export type SettingValue = string | number | boolean;
 export type PanelVersion = Schemas["PanelVersion"];
 export type PanelUpgrade = NonNullable<PanelVersion["upgrade"]>;
@@ -187,6 +190,23 @@ export const api = {
   gotoMap: (map: string) => post<MatchAction>("/api/match/goto", { map }),
   skipMap: () => post<MatchAction>("/api/match/skip"),
   restartMatch: () => post<MatchAction>("/api/match/restart"),
+
+  // favourite maps, shared by every browser
+  favourites: () => request<FavouritesView>("/api/favourites"),
+  addFavourite: (map: string) =>
+    send<FavouritesView>("PUT", `/api/favourites/${encodeURIComponent(map)}`),
+  removeFavourite: (map: string) =>
+    send<FavouritesView>("DELETE", `/api/favourites/${encodeURIComponent(map)}`),
+
+  // map packages in the user data directory
+  uploadPackage: (file: File) =>
+    request<PackageInstalled>(`/api/packages/${encodeURIComponent(file.name)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: file,
+    }),
+  deletePackage: (name: string) =>
+    send<PackageRemoved>("DELETE", `/api/packages/${encodeURIComponent(name)}`),
 
   // recorded players
   players: (query: PlayersQuery, etag: string | null = null) =>
