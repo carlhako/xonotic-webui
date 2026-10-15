@@ -1,7 +1,8 @@
 /* xonotic-webui — control-panel visual design.
    A restrained slate ground with Xonotic orange as the single brand accent, green for
    "live" and amber for warnings. System UI for chrome, monospace for machine output.
-   Mobile-first: nothing here may force horizontal page scroll at a 375px viewport. */
+   Desktop-only: content is up to 1280px wide. A narrower desktop window must never scroll
+   the page sideways; tables scroll inside their own box. */
 
 :root {
   --bg: #f4f5f7;
@@ -161,7 +162,7 @@ p {
   text-align: center;
 }
 .app-main {
-  max-width: 960px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 1.25rem var(--gutter) 3rem;
 }
@@ -711,9 +712,16 @@ p {
 .badge-source {
   margin-left: 0.4rem;
 }
+/* Long titles and package names wrap instead of widening the table (web-ui-shell);
+   numbers and the row's actions stay on one line. */
+.map-table td.wrap-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .row-actions {
   display: inline-flex;
   gap: 0.4rem;
+  white-space: nowrap;
 }
 .row-actions .btn {
   min-height: 32px;
@@ -798,18 +806,6 @@ p {
 }
 .match-actions {
   margin-top: 0.5rem;
-}
-
-@media (max-width: 520px) {
-  :root {
-    --gutter: 12px;
-  }
-  .app-main {
-    padding-top: 1rem;
-  }
-  .btn {
-    flex: 1 1 auto;
-  }
 }
 
 /* -- panel page -- */

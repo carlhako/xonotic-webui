@@ -407,7 +407,7 @@ describe("the player dialog (7.3)", () => {
   });
 });
 
-describe("the phone layout (7.4)", () => {
+describe("the narrow-window layout (7.4)", () => {
   const css = readFileSync("src/styles.css", "utf8");
   const rule = (selector: string) => {
     const escaped = selector.replace(/[.[\]]/g, "\\$&");

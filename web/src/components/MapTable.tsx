@@ -56,7 +56,7 @@ export function MapTable({ maps, actions }: { maps: MapInfo[]; actions: MapRowAc
                     onToggle={() => actions.onToggleFavourite(m.name)}
                   />
                 </td>
-                <td>
+                <td className="wrap-cell">
                   <button
                     className="link-button map-title"
                     onClick={(e) => actions.onDetails(m, e.currentTarget)}
@@ -72,7 +72,7 @@ export function MapTable({ maps, actions }: { maps: MapInfo[]; actions: MapRowAc
                     </span>
                   )}
                 </td>
-                <td>
+                <td className="wrap-cell">
                   <span className="mono">{m.package}</span>
                   <span className="badge badge-source">{user ? "user" : "game"}</span>
                 </td>

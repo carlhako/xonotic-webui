@@ -531,6 +531,16 @@ describe("the Files view", () => {
     expect(screen.getByText("Boil", { selector: ".map-title" })).toBeInTheDocument();
   });
 
+  it("lets the map and package cells wrap, so long names do not widen the table", async () => {
+    await openMaps(undefined, {}, withUserMaps);
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    const cells = within(row("My Map")).getAllByRole("cell");
+    // favourite, map, package, size, played, frags, actions
+    expect(cells[1]).toHaveClass("wrap-cell");
+    expect(cells[2]).toHaveClass("wrap-cell");
+    for (const i of [0, 3, 4, 5, 6]) expect(cells[i]).not.toHaveClass("wrap-cell");
+  });
+
   it("remembers the view after a reload", async () => {
     const first = await openMaps(undefined, {}, withUserMaps);
     await userEvent.click(screen.getByRole("button", { name: "Files" }));

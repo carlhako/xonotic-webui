@@ -202,14 +202,23 @@ describe("version badge and upgrade banner (7.3)", () => {
     expect(screen.queryByText(/Upgrading xonotic-webui/)).toBeNull();
   });
 
-  it("is built to wrap at a 375px viewport rather than overflow sideways", () => {
-    // jsdom has no layout, so assert the rules that prevent sideways scrolling.
+  it("is laid out for a desktop browser and still wraps in a narrow window", () => {
+    // jsdom has no layout, so assert the rules that set the width and prevent sideways scrolling.
     const css = readFileSync("src/styles.css", "utf8");
     const rule = (selector: string) => {
       const m = css.match(new RegExp(`${selector.replace(".", "\\.")}\\s*\\{([^}]*)\\}`));
       expect(m, `${selector} rule`).not.toBeNull();
       return m![1];
     };
+    expect(rule(".app-main")).toMatch(/max-width:\s*1280px/);
+    // the small-screen breakpoint is gone
+    expect(css).not.toMatch(/max-width:\s*520px/);
+    // the map table's text cells wrap; its numbers and actions do not
+    expect(rule(".map-table td.wrap-cell")).toMatch(/white-space:\s*normal/);
+    expect(rule(".map-table td.wrap-cell")).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(rule(".row-actions")).toMatch(/white-space:\s*nowrap/);
+    expect(rule(".data-table td")).toMatch(/white-space:\s*nowrap/);
+    expect(css).not.toMatch(/\.num\s*\{[^}]*white-space:\s*normal/);
     expect(rule(".app-header")).toMatch(/flex-wrap:\s*wrap/);
     expect(rule(".brand-group")).toMatch(/flex-wrap:\s*wrap/);
     expect(rule(".brand-group")).toMatch(/min-width:\s*0/);
