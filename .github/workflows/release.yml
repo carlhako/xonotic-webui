@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The release notes are the changelog section for this version, and a release
       # without one is not published: this fails the job, naming the version. A tag
@@ -31,11 +31,11 @@ jobs:
           echo "release notes for ${version}"
           .github/scripts/release-notes.sh "${version}" | tee release-notes.md
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -61,7 +61,7 @@ jobs:
         run: scripts/assemble-release.sh release
 
       - name: Upload assets as workflow artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-assets
           path: |
@@ -71,7 +71,7 @@ jobs:
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body_path: release-notes.md
           files: |
