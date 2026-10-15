@@ -323,14 +323,17 @@ describe("voting enabled switch", () => {
     { id: "voting", label: "Voting" },
   ];
 
-  async function openVoting(value: number | null, extra: Record<string, () => Response> = {}) {
+  async function openVoting(
+    value: number | null,
+    extra: Record<string, () => Response> = {},
+  ) {
     const fetchMock = await openSettings(
-      makeSettingsView(
-        [hostname, { ...votable, value }, votableTimeout],
-        { groups: votingGroups },
-      ),
+      makeSettingsView([hostname, { ...votable, value }, votableTimeout], {
+        groups: votingGroups,
+      }),
       {
-        "PATCH /api/settings": () => jsonResponse({ applied: { g_maplist_votable: "next_map" } }),
+        "PATCH /api/settings": () =>
+          jsonResponse({ applied: { g_maplist_votable: "next_map" } }),
         ...extra,
       },
     );
@@ -400,7 +403,9 @@ describe("voting enabled switch", () => {
     await userEvent.click(screen.getByRole("switch", { name: "Voting enabled" }));
     expect(screen.getByLabelText("Maps in the vote")).toHaveValue(6);
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
-    await waitFor(() => expect(patches(fetchMock)).toEqual([{ g_maplist_votable: null }]));
+    await waitFor(() =>
+      expect(patches(fetchMock)).toEqual([{ g_maplist_votable: null }]),
+    );
   });
 
   it("saves 0 when turned off and says it applies at the next map", async () => {

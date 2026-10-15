@@ -161,9 +161,7 @@ function Field({
     setting.value_labels.find((l) => String(l.value) === String(shown));
 
   return (
-    <div
-      className={`field${error ? " has-error" : ""}${inactive ? " is-inactive" : ""}`}
-    >
+    <div className={`field${error ? " has-error" : ""}${inactive ? " is-inactive" : ""}`}>
       <div className="field-head">
         <label htmlFor={id}>{setting.label}</label>
         {setting.server_cfg && (
@@ -332,7 +330,9 @@ function SettingsPanel({
       const target = restoreTarget(s);
       // Back to what is already saved: no edit at all, so nothing is sent.
       const unchanged =
-        target === null ? s.value === null : s.value !== null && String(s.value) === target;
+        target === null
+          ? s.value === null
+          : s.value !== null && String(s.value) === target;
       next = unchanged ? undefined : target;
     }
     setEdits((e) => {
