@@ -5,6 +5,38 @@ publishes that section as the GitHub release notes, which the panel shows on its
 page before you upgrade. A tag without a section here is not published, so add the entry
 with the version bump.
 
+## 0.5.0 - 2026-10-15
+
+### What's new
+
+- **A live match clock on the dashboard.** It counts down the time left like the game's HUD
+  timer, shows "Starting in" before a match, warmup, overtime and match over, and counts up
+  when there is no time limit. It is marked **paused** while the server is paused, for
+  example auto-paused with nobody connected. The score limit is shown beside it with what it
+  counts (frags, captures, points).
+- **A live scoreboard.** One row per player with the score columns the game reports for the
+  gametype (kills, deaths, suicides, damage, and extras such as captures in Capture the
+  Flag), ping and time played, sorted the way the game sorts. Bots are marked, spectators
+  are listed apart, and team games show each team's total in the team's colour above its
+  players. It replaces the Players online list while it is available.
+- **It only runs while you are looking.** The panel reads the match from the game once a
+  second while a dashboard is open, and sends the game nothing otherwise. The queries and
+  their replies never appear in the Console section. If the game does not give the clock or
+  the scores, the dashboard says which one is missing and shows the other.
+- **Two new routes**, `GET /api/match` and `GET /api/match/stream`, for anything else that
+  wants the same state.
+
+### Changes you should know about
+
+- **The interface is now desktop-only.** The content area is 1280px wide on every page, the
+  Maps Files table fits at that width without sideways scrolling, and the phone layout is no
+  longer supported.
+- **`sv_logscores_bots` is raised for a moment each second a dashboard is open.** The game
+  leaves bots out of its score dump unless it is 1, so each poll sets it for the length of
+  the dump and puts back the value you had. Nothing is added to the game's config. If you
+  turned on `sv_eventlog_files` yourself, the dump also writes a line to the event-log file
+  each time.
+
 ## 0.4.0 - 2026-10-15
 
 ### What's new
