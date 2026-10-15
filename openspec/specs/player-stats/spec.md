@@ -278,16 +278,6 @@ Activating a player in the table SHALL open a dialog with that player's full det
 - **WHEN** a player has sessions but has never been in an end-of-match report
 - **THEN** the dialog shows their time on server and live counts, and states that no match statistics are recorded yet
 
-### Requirement: The Players section is usable on a phone
-
-The Players section and its detail dialog SHALL be usable at a phone viewport width without horizontal page scrolling. The table MAY scroll sideways within its own area.
-
-#### Scenario: Phone width
-
-- **WHEN** the Players section is viewed at a 375px-wide viewport
-- **THEN** the page does not scroll sideways
-- **AND** the player dialog fits within the viewport
-
 ### Requirement: Maps accumulate play totals from the match history
 
 The panel SHALL total, for every map, the matches played on it, the frags scored on it and when it was last played, from the recorded match history. A match SHALL count as played when it ran to its limit and had at least one recorded participant. Frags SHALL include every frag recorded on the map, whether or not the match finished and whoever scored it, bots included.
