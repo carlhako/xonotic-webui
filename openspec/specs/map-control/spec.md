@@ -8,7 +8,7 @@ Lets the operator control what is played: browse the installed maps, choose the 
 
 ### Requirement: Installed maps are listed with their details
 
-The panel SHALL list every playable map installed in the game and in the user data directory, with its title, the gametypes it supports and a preview image when one exists. The list SHALL be available while the server is stopped. Hidden and internal maps SHALL NOT be listed.
+The panel SHALL list every playable map installed in the game and in the user data directory, with its title, the gametypes it supports, the package file it comes from with that file's size, and a preview image when one exists. The list SHALL be available while the server is stopped. Hidden and internal maps SHALL NOT be listed.
 
 #### Scenario: Stock maps
 
@@ -36,6 +36,12 @@ The panel SHALL list every playable map installed in the game and in the user da
 
 - **WHEN** the map list is requested while the server is stopped
 - **THEN** the list is returned in full
+
+#### Scenario: Package and size
+
+- **WHEN** the operator opens the map list
+- **THEN** each map shows the package file it comes from and that file's size
+- **AND** a map from the user data directory is distinguished from one that is part of the game
 
 ### Requirement: The gametype is selectable and persists
 
@@ -211,3 +217,65 @@ The interface SHALL ask for confirmation before going to a map, skipping or rest
 
 - **WHEN** the operator chooses skip with no humans connected
 - **THEN** the skip proceeds without confirmation
+
+### Requirement: The maps are shown as cards or as a table
+
+The Maps section SHALL offer two views of the installed maps and two buttons at the top to switch between them: the cards with preview images, and a table with one row per map and no preview image showing its package file and size. Both buttons SHALL be shown in both views. The chosen view SHALL be kept when the page is reloaded in the same browser.
+
+#### Scenario: Switch to the table
+
+- **WHEN** the operator chooses the table view
+- **THEN** the maps are listed one per row with package file and size, and no preview image
+- **AND** both view buttons are still shown
+
+#### Scenario: Switch back to cards
+
+- **WHEN** the operator chooses the card view from the table view
+- **THEN** the maps are listed as cards with preview images
+
+#### Scenario: View remembered
+
+- **WHEN** the operator reloads the page after choosing the table view
+- **THEN** the table view is shown
+
+### Requirement: Go to map and add to rotation are available in both views
+
+Every map in the card view and in the table view SHALL offer **Go to map** and **Add to rotation**, with the same availability and confirmation rules in both: going to a map only for a running server, an idle action slot and a map that supports the gametype, and confirmed when human players are connected.
+
+#### Scenario: Go to map from the table
+
+- **WHEN** the operator chooses Go to map on a row of the table while two humans are connected
+- **THEN** a confirmation states that two players are in the match
+- **AND** the server goes to that map only on confirmation
+
+#### Scenario: Add to rotation from the table
+
+- **WHEN** the operator chooses Add to rotation on a row of the table
+- **THEN** the map is added to the rotation being edited, as it is from a card
+- **AND** the row then shows that the map is in the rotation
+
+#### Scenario: Not available
+
+- **WHEN** a map does not support the current gametype, or the server is stopped
+- **THEN** Go to map is disabled for it in both views
+
+### Requirement: The table offers package actions for the operator's packages
+
+Each row of the table SHALL offer download and delete for a map that comes from a user package, and neither for a map that is part of the game. The delete confirmation SHALL be the one described by `map-packages`.
+
+#### Scenario: User package row
+
+- **WHEN** a row's map comes from a package in the user data directory
+- **THEN** the row offers download and delete
+
+#### Scenario: Game map row
+
+- **WHEN** a row's map is part of the game
+- **THEN** the row offers neither download nor delete
+- **AND** it still offers Go to map and Add to rotation
+
+#### Scenario: Package with several maps
+
+- **WHEN** a user package contains three maps
+- **THEN** each of its three maps has its own row
+- **AND** download and delete on any of them act on the whole package
