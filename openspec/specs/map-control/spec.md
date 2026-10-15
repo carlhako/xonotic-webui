@@ -8,7 +8,7 @@ Lets the operator control what is played: browse the installed maps, choose the 
 
 ### Requirement: Installed maps are listed with their details
 
-The panel SHALL list every playable map installed in the game and in the user data directory, with its title, the gametypes it supports, the package file it comes from with that file's size, and a preview image when one exists. The list SHALL be available while the server is stopped. Hidden and internal maps SHALL NOT be listed.
+The panel SHALL list every playable map installed in the game and in the user data directory, with its title, the gametypes it supports, the package file it comes from with that file's size, how many matches have been played on it, how many frags have been scored on it, when it was last played, and a preview image when one exists. The list SHALL be available while the server is stopped. Hidden and internal maps SHALL NOT be listed.
 
 #### Scenario: Stock maps
 
@@ -42,6 +42,18 @@ The panel SHALL list every playable map installed in the game and in the user da
 - **WHEN** the operator opens the map list
 - **THEN** each map shows the package file it comes from and that file's size
 - **AND** a map from the user data directory is distinguished from one that is part of the game
+
+#### Scenario: Play totals
+
+- **WHEN** the operator opens the map list
+- **THEN** each map carries its played total, frag total and last-played time as recorded in the player history
+- **AND** a map that has never been played carries zero totals and no last-played time
+
+#### Scenario: History not recorded
+
+- **WHEN** player history is not being recorded
+- **THEN** the map list is still returned in full
+- **AND** the play totals are reported as not available, not as zero
 
 ### Requirement: The gametype is selectable and persists
 
@@ -220,23 +232,33 @@ The interface SHALL ask for confirmation before going to a map, skipping or rest
 
 ### Requirement: The maps are shown as cards or as a table
 
-The Maps section SHALL offer two views of the installed maps and two buttons at the top to switch between them: the cards with preview images, and a table with one row per map and no preview image showing its package file and size. Both buttons SHALL be shown in both views. The chosen view SHALL be kept when the page is reloaded in the same browser.
+The Maps section SHALL offer two views of the installed maps and two buttons at the top to switch between them: the cards with preview images, and a table with one row per map and no preview image showing its package file and size. Both views SHALL show each map's played and frag totals. Both buttons SHALL be shown in both views. The chosen view SHALL be kept when the page is reloaded in the same browser.
 
 #### Scenario: Switch to the table
 
 - **WHEN** the operator chooses the table view
-- **THEN** the maps are listed one per row with package file and size, and no preview image
+- **THEN** the maps are listed one per row with package file, size, played total and frag total, and no preview image
 - **AND** both view buttons are still shown
 
 #### Scenario: Switch back to cards
 
 - **WHEN** the operator chooses the card view from the table view
-- **THEN** the maps are listed as cards with preview images
+- **THEN** the maps are listed as cards with preview images and each card shows its played and frag totals
 
 #### Scenario: View remembered
 
 - **WHEN** the operator reloads the page after choosing the table view
 - **THEN** the table view is shown
+
+#### Scenario: Totals agree between views
+
+- **WHEN** a map has been played 42 times with 1,380 frags
+- **THEN** its card and its table row both show 42 played and 1,380 frags
+
+#### Scenario: Totals not available
+
+- **WHEN** the play totals are not available
+- **THEN** both views show a dash in place of each total, not zero
 
 ### Requirement: Go to map and add to rotation are available in both views
 
@@ -279,3 +301,82 @@ Each row of the table SHALL offer download and delete for a map that comes from 
 - **WHEN** a user package contains three maps
 - **THEN** each of its three maps has its own row
 - **AND** download and delete on any of them act on the whole package
+
+### Requirement: The maps can be sorted by how much they are played
+
+The Maps section SHALL offer one "Sort by" control, applying to both views, with the choices name, most played, most frags and recently played. The default SHALL be name. Maps that tie SHALL be ordered by name. The choice SHALL be kept when the page is reloaded in the same browser.
+
+#### Scenario: Most played first
+
+- **WHEN** the operator sorts by most played
+- **THEN** the maps are listed with the highest played total first in the card view and in the table view
+
+#### Scenario: Recently played
+
+- **WHEN** the operator sorts by recently played
+- **THEN** the maps are listed most recently played first
+- **AND** maps that have never been played are listed last, by name
+
+#### Scenario: Sort remembered
+
+- **WHEN** the operator reloads the page after choosing most frags
+- **THEN** the maps are still sorted by most frags
+
+#### Scenario: Totals not available
+
+- **WHEN** the play totals are not available
+- **THEN** the choices that depend on them are disabled
+- **AND** the maps are listed by name
+
+### Requirement: The maps can be filtered by whether they have been played
+
+The Maps section SHALL offer a filter with the choices all, played and never played, applying to both views and combining with the gametype and favourites filters, so that only maps satisfying every active filter are listed.
+
+#### Scenario: Never played
+
+- **WHEN** the operator chooses never played
+- **THEN** only maps with a played total of zero are listed
+
+#### Scenario: Combined with favourites
+
+- **WHEN** favourites only is on and the operator chooses played
+- **THEN** only starred maps that have been played are listed
+
+#### Scenario: Nothing matches
+
+- **WHEN** the active filters match no map
+- **THEN** the section says no maps match instead of showing an empty list
+
+#### Scenario: Totals not available
+
+- **WHEN** the play totals are not available
+- **THEN** the played filter is disabled
+
+### Requirement: A map's play details are shown in a dialog
+
+Activating a map's title in either view SHALL open a dialog with that map's matches played and cut short, total frags, first and last played, matches per gametype, and its top fraggers with bots marked. Activating a top fragger SHALL open that player's details. The dialog SHALL be dismissible, keyboard accessible and usable at a 375px-wide viewport.
+
+#### Scenario: Open from either view
+
+- **WHEN** the operator activates the title of a map in the card view or in the table view
+- **THEN** a dialog shows that map's play details
+
+#### Scenario: Open a top fragger
+
+- **WHEN** the operator activates a player in the dialog's top fraggers
+- **THEN** that player's details are shown
+
+#### Scenario: Close
+
+- **WHEN** the operator presses Escape or the close control
+- **THEN** the dialog closes and the Maps section is shown as it was, with its view, sort and filters unchanged
+
+#### Scenario: Map never played
+
+- **WHEN** the operator opens the dialog of a map that has never been played
+- **THEN** it states that the map has not been played yet instead of showing empty tables
+
+#### Scenario: History not recorded
+
+- **WHEN** player history is not being recorded and the operator opens a map's dialog
+- **THEN** the dialog states that player history is not being recorded
