@@ -264,6 +264,10 @@ While the server is running a match, the dashboard shows the **match clock** and
   show each team's total in the team's colour above its players. It replaces the Players
   online list while it is available.
 
+![The dashboard in a deathmatch: the match clock and the live scoreboard](docs/screenshots/dashboard-deathmatch.png)
+
+![The dashboard in team deathmatch: team totals in each team's colour above its players](docs/screenshots/dashboard-team-deathmatch.png)
+
 The panel reads this from the game once a second, **only while a dashboard is open**. Nothing
 is sent to the game when no browser has it open or the server is stopped, and the queries
 and their replies never appear in the Console section. If the game does not give the clock
