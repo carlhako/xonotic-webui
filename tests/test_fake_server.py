@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -14,6 +15,8 @@ import pytest
 
 from tests.helpers import FAKE_SERVER
 from xonotic_webui.events import GameStart, StatusReplyCollector, parse_event
+from xonotic_webui.match.board import build_scoreboard
+from xonotic_webui.match.reply import GLOBALS, MatchReply, MatchReplyCollector, poll_command
 
 
 def run_fake(tmp_path: Path, stdin: str, **env: str) -> list[str]:
@@ -548,3 +551,173 @@ def test_submission_failure_is_still_printed_for_the_default_target(
     s.send("endmatch")
     s.wait_for(":gamestart:", after=start)
     assert any("uri_multi_ready" in line for line in s.lines[start:])
+
+
+# --- live match state (add-live-match) ----------------------------------------------------
+
+
+def poll_reply(lines: list[str]) -> MatchReply:
+    collector = MatchReplyCollector()
+    left = [line for line in lines if not collector.feed(line)]
+    assert collector.done, "the poll's reply never ended"
+    assert left == []
+    return collector.reply
+
+
+def last_poll(lines: list[str]) -> list[str]:
+    """The lines of the last poll in ``lines``: from its first global to ``stats dumped.``."""
+    start = max(i for i, ln in enumerate(lines) if ln.startswith("^7time: "))
+    end = next(i for i in range(start, len(lines)) if lines[i].strip("^7") == "stats dumped.")
+    return lines[start : end + 1]
+
+
+def test_the_poll_reply_parses_with_the_real_collector(tmp_path: Path) -> None:
+    stdin = (
+        "fake_join 1 1 127.0.0.1 ^1Red^7Name\n"
+        "fake_join 2 2 bot [BOT]x\n"
+        "fake_score 1 score=7 kills=7 deaths=2\n"
+        f"{poll_command('0')}\n"
+        "quit\n"
+    )
+    reply = poll_reply(last_poll(run_fake(tmp_path, stdin)))
+    assert set(reply.globals) == set(GLOBALS)
+    assert reply.globals["game_starttime"] == 16
+    assert reply.timelimit is not None and reply.fraglimit == 30
+    assert reply.dump is not None and reply.dump.gametype == "dm"
+    board = build_scoreboard(reply.dump, reply.status_rows)
+    assert [(p["plain_name"], p["values"]["score"], p["bot"]) for p in board["players"]] == [
+        ("RedName", 7, False),
+        ("[BOT]x", 0, True),
+    ]
+    assert board["players"][0]["values"]["deaths"] == 2
+
+
+def test_bots_are_in_the_dump_only_while_logscores_bots_is_one(tmp_path: Path) -> None:
+    stdin = (
+        "fake_join 1 1 127.0.0.1 Human\nfake_join 2 2 bot [BOT]x\n"
+        "sv_cmd printstats\nsv_logscores_bots 1\nsv_cmd printstats\nquit\n"
+    )
+    lines = run_fake(tmp_path, stdin)
+    dumps = [i for i, ln in enumerate(lines) if ":status:" in ln]
+    assert len(dumps) == 2
+    first = [ln for ln in lines[dumps[0] : dumps[1]] if ":player:see-labels:" in ln]
+    second = [ln for ln in lines[dumps[1] :] if ":player:see-labels:" in ln]
+    assert len(first) == 1 and len(second) == 2
+
+
+def test_a_team_game_prints_team_slots_and_spectators(tmp_path: Path) -> None:
+    stdin = (
+        "gametype tdm\nfake_map tdm stormkeep\n"
+        "fake_join 1 1 127.0.0.1 Red\nfake_join 2 2 127.0.0.1 Watcher\n"
+        "fake_team 1 5\nfake_team 2 spectator\n"
+        "fake_teamscore 5 score=3\nfake_teamscore 14 score=1\n"
+        "sv_cmd printstats\nquit\n"
+    )
+    lines = run_fake(tmp_path, stdin)
+    start = max(i for i, ln in enumerate(lines) if ":status:" in ln)
+    collector = MatchReplyCollector()
+    for line in lines[start:]:
+        collector.feed(line)
+    assert collector.done
+    reply = collector.reply
+    assert reply.dump is not None
+    assert [(t.team, t.values[0]) for t in reply.dump.teams] == [(5, 3.0), (14, 1.0)]
+    board = build_scoreboard(reply.dump, [])
+    assert [p["team"] for p in board["players"]] == [5]
+    assert [s["plain_name"] for s in board["spectators"]] == ["Watcher"]
+
+
+def test_an_unknown_global_is_answered_like_the_game(tmp_path: Path) -> None:
+    lines = run_fake(
+        tmp_path,
+        "prvm_global server nosuchthing\nprvm_global server game_stopped\nquit\n",
+        FAKE_XONOTIC="unknown_globals=game_stopped",
+    )
+    assert "^7No global 'nosuchthing' in server!" in lines
+    assert "^7No global 'game_stopped' in server!" in lines
+
+
+def test_no_dump_still_ends_the_reply(tmp_path: Path) -> None:
+    lines = run_fake(tmp_path, f"{poll_command('0')}\nquit\n", FAKE_XONOTIC="no_dump")
+    reply = poll_reply(last_poll(lines))
+    assert reply.dump is None
+    assert "time" in reply.globals
+
+
+def test_warmup_overtime_and_intermission_are_reported(tmp_path: Path) -> None:
+    stdin = (
+        "g_warmup 1\ng_warmup_limit 60\nrestart\n"
+        "prvm_global server warmup_stage\nprvm_global server game_starttime\n"
+        "prvm_global server warmup_limit\n"
+        "fake_warmup 0\nfake_overtime 2\nfake_clock 100\n"
+        "prvm_global server warmup_stage\nprvm_global server checkrules_overtimesadded\n"
+        "endmatch\n"
+    )
+    lines = run_fake(
+        tmp_path,
+        stdin + "prvm_global server intermission_running\nquit\n",
+        FAKE_XONOTIC="endmatch_delay=30",
+    )
+    values = [ln.removeprefix("^7") for ln in lines if re.match(r"^\^7[a-z_]+: [\d.]+$", ln)]
+    assert values[:3] == ["warmup_stage: 1", "game_starttime: 0", "warmup_limit: 60"]
+    assert "warmup_stage: 0" in values
+    assert "checkrules_overtimesadded: 2" in values
+    assert values[-1] == "intermission_running: 1"
+
+
+def run_interactive(tmp_path: Path, script: list[tuple[float, str]], **env: str) -> list[str]:
+    """Write each command after sleeping ``delay`` seconds, then read all output."""
+    proc = subprocess.Popen(
+        [sys.executable, str(FAKE_SERVER), "-userdir", str(tmp_path / "ud"), "+port", "26000"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+        env={**os.environ, **env},
+    )
+    assert proc.stdin is not None and proc.stdout is not None
+    for delay, command in script:
+        time.sleep(delay)
+        proc.stdin.write(command + "\n")
+        proc.stdin.flush()
+    proc.stdin.write("quit\n")
+    proc.stdin.flush()
+    out, _ = proc.communicate(timeout=20)
+    return out.splitlines()
+
+
+def server_times(lines: list[str]) -> list[float]:
+    return [float(ln.split(": ")[1]) for ln in lines if ln.startswith("^7time: ")]
+
+
+def test_server_time_advances_and_stands_still_while_paused(tmp_path: Path) -> None:
+    lines = run_interactive(
+        tmp_path,
+        [
+            (1.0, "prvm_global server time"),
+            (0.4, "prvm_global server time"),
+            (0.0, "pause"),
+            (0.0, "prvm_global server time"),
+            (0.5, "prvm_global server time"),
+            (0.0, "pause"),
+            (0.4, "prvm_global server time"),
+        ],
+    )
+    a, b, c, d, e = server_times(lines)
+    assert b - a >= 0.3  # running
+    assert d - c == pytest.approx(0.0, abs=0.001)  # paused: no change in half a second
+    assert e - d >= 0.3  # resumed
+
+
+def test_an_empty_server_autopauses_and_its_time_stops(tmp_path: Path) -> None:
+    lines = run_interactive(
+        tmp_path,
+        [
+            (0.0, "prvm_global server time"),
+            (0.7, "prvm_global server time"),
+            (0.5, "prvm_global server time"),
+        ],
+        FAKE_XONOTIC="autopause_delay=0.2",
+    )
+    first, second, third = server_times(lines)
+    assert second > first
+    assert third == pytest.approx(second, abs=0.001)

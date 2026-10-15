@@ -56,3 +56,53 @@ the run used one). Local paths are replaced with `<game>` and `<userdir>`.
 | `generated_settings_cfg_unpaused.txt` | settings from a generated cfg at startup; `endmatch` and `gotomap` with `sv_autopause 0` |
 | `autopause_unpause_actions.txt` | auto-pause on: queued `endmatch`/`gotomap` completed by a console `pause` toggle; re-pause on the new map |
 | `value_escaping_maxplayers_mutators.txt` | `;`, `$`, `\"`, `//` in quoted values (cfg and stdin); `maxplayers` via `changelevel` vs `map`; mutator at next map |
+
+## Live match state (`match_*.txt`)
+
+Captured for the `add-live-match` change on the test LXC (0.8.6, the panel's real
+`sv_eventlog` setup) by sending the poll the panel sends (`openspec/changes/add-live-match/design.md`
+D1) through `POST /api/console/command` and reading `GET /api/console/stream`. Lines are as
+the server printed them, with the leading `^7`; the command itself is not in the files. A
+human played or spectated and `bot_number 2` gave two bots.
+
+| file | what it is |
+| --- | --- |
+| `match_dm_live.txt` | deathmatch mid-match: the globals, `timelimit`, `fraglimit`, `status 1` and `sv_cmd printstats` with a `:player:` line for the human and each bot |
+| `match_dm_spectator_live.txt` | the same with the human spectating: their `:player:` line has `spectator` in the team field and `status 1` shows `-666` frags |
+| `match_tdm_live.txt` | team deathmatch: team numbers 5 (red) and 14 (blue), `:labels:teamscores:` and a `:teamscores:` line for every team slot 1-15 |
+| `match_ctf_live.txt` | capture the flag, a spectator and two bots: the extra columns (`caps!`, `fckills`, `returns`, `drops<`, `pickups`, `captime<`) and `caps!!,score` team labels |
+| `match_intermission_live.txt` | the reply while the match-over scoreboard is showing (`intermission_running` 1) |
+| `match_clock_cases.txt` | annotated blocks (`# ===== case =====`) of the clock queries only, with `:player:` and empty `:teamscores:` lines removed: warmup, countdown, playing, a raised limit, intermission and an autopaused server |
+
+What the captures showed (the design's D1, D3 and D5 were amended to match):
+
+* **The dump leaves out bots by default.** `sv_logscores_bots` is 0, so only humans have a
+  `:player:` line. The poll sets it to 1 for the dump and back (`sv_logscores_bots 1; ...;
+  sv_cmd printstats; sv_logscores_bots 0`). The `_live` fixtures were captured that way.
+* **The live `:player:` line has no ent**: `:player:see-labels:<values>:<playtime>:<team>:<name>`.
+  The end-of-match dump the game prints itself (`:scores:`) has one more field, `<team>:<ent>:<name>`.
+  Players are joined to `status 1` rows by name.
+* **Teams and spectators.** `<team>` is `-1` (no team), `5` red, `14` blue, or the word
+  `spectator`. A spectator keeps the score values they had and `status 1` gives them `-666`
+  frags. `:teamscores:` is printed for every slot 1-15; a slot nobody is on has no values.
+* **The dump is printed regardless of `sv_eventlog` and `sv_eventlog_console`** (both set to 0
+  in turn): `:status:` ... `:end` and `stats dumped.` still arrive.
+* **Intermission** shows `intermission_running 1` and `game_stopped 1`, and the dump still
+  lists every client with the final scores.
+* **Warmup** (`g_warmup 1`, `g_warmup_limit 60`): `warmup_stage 1`, `game_starttime 0`,
+  `warmup_limit 60`; warmup ended when `time` reached the limit. After it the server printed
+  `Match is restarting...` and `:restart`, and `game_starttime` was set ahead of `time` (70
+  when `time` was about 60 at the restart), so a countdown follows warmup.
+* **Countdown** after a map load: `time` is about 2.5s ahead of wall time since the load
+  (the load itself), `game_starttime` is 16 with `g_start_delay 15`.
+* **Raised limit.** `sv_cmd extendmatchtime` added 5 minutes: `timelimit` read
+  `"15.000001"`, so the cvar is a float.
+* **Autopause** (`sv_autopause 1`, nobody connected, a map freshly loaded): `time` stayed at
+  `6.00009537` across three readings 9 seconds apart. A server that was already running
+  when the last human left keeps running: the pause only happens after a map start.
+* **`timeout_status`** read 0 in every capture and is not part of the poll (it is in
+  `match_clock_cases.txt` only).
+* **Unknown global**: `No global 'nosuchglobal' in server!`.
+* **Not captured**: overtime. Two attempts (`bot_nofire 1`, `timelimit 1`, a 0-0 tie) both
+  ended the match at the limit with `checkrules_overtimesadded` still 0, so the overtime
+  fields are unconfirmed on a real server.

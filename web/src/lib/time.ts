@@ -53,3 +53,13 @@ export function formatRelative(epochSeconds: number, nowMs: number = Date.now())
   }
   return elapsed < 10 ? "just now" : formatter.format(-Math.floor(elapsed), "second");
 }
+
+/** `m:ss`, or `h:mm:ss` from an hour up; whole seconds, never negative. */
+export function formatClock(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+}

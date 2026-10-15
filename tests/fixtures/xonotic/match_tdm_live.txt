@@ -1,0 +1,42 @@
+^7time: 57.9333801
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "50" ["0"]
+^7host:     Xonotic WebUI Server
+^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+^7protocol: 3504 (DP7)
+^7map:      stormkeep
+^7timing:   6.9% CPU, 0.00% lost, offset avg 0.4ms, max 0.6ms, sdev 0.1ms
+^7players:  3 active (16 max)
+^7
+^7^2IP                                             %pl ping  time   frags  no   name
+^7^310.0.2.1:50362                                   0    8  0:14:01    1  #1   ^7^x0F0die^xF05😁😁😁^7
+^7^7botclient                                        0    0  0:13:43    0  #2   ^7[BOT]Dominator
+^7^3botclient                                        0    0  0:13:43    0  #3   ^7[BOT]Pegasus
+^7^7:status:tdm_stormkeep:58
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,teamkills<,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:player:see-labels:1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,14.479660,0,0,-2,0,0,0,0,0,0,0,0,0:55:5:^x0F0die^xF05😁😁😁^7
+^7^7:player:see-labels:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,118.904457,0,0,-2,0,0,0,0,0,0,0,0,0:57:5:[BOT]Dominator
+^7^7:player:see-labels:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,133.384125,0,-2,0,0,0,0,0,0,0,0,0:57:14:[BOT]Pegasus
+^7^7:labels:teamscores:score!!,
+^7^7:teamscores:see-labels::1
+^7^7:teamscores:see-labels::2
+^7^7:teamscores:see-labels::3
+^7^7:teamscores:see-labels::4
+^7^7:teamscores:see-labels:1,0:5
+^7^7:teamscores:see-labels::6
+^7^7:teamscores:see-labels::7
+^7^7:teamscores:see-labels::8
+^7^7:teamscores:see-labels::9
+^7^7:teamscores:see-labels::10
+^7^7:teamscores:see-labels::11
+^7^7:teamscores:see-labels::12
+^7^7:teamscores:see-labels::13
+^7^7:teamscores:see-labels:0,0:14
+^7^7:teamscores:see-labels::15
+^7^7:end
+^7^7stats dumped.

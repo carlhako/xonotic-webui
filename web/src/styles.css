@@ -1046,3 +1046,55 @@ th[aria-sort="descending"] .sort-button {
 .compact td {
   padding: 0.25rem 0.5rem;
 }
+
+/* -- live match: clock card and scoreboard -- */
+.match-clock .card-value {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.match-clock-time {
+  font-variant-numeric: tabular-nums;
+}
+.match-clock .badge-warn {
+  margin-left: 0;
+}
+.match-limit {
+  margin-top: 0.15rem;
+}
+.match-clock.is-stale .card-value,
+.scoreboard.is-stale .table-scroll {
+  opacity: 0.55;
+}
+.scoreboard h2 {
+  margin-top: 0;
+}
+.scoreboard .data-table td:nth-child(2) {
+  white-space: normal;
+}
+.scoreboard-spectators {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+}
+.scoreboard .team-row th,
+.scoreboard .team-row td {
+  background: color-mix(in srgb, var(--team, var(--text-dim)) 20%, var(--surface));
+  border-left: 0;
+  font-weight: 600;
+}
+.scoreboard .team-row th {
+  border-left: 4px solid var(--team, var(--text-dim));
+}
+.team-red {
+  --team: #d9453b;
+}
+.team-blue {
+  --team: #3b82d9;
+}
+.team-yellow {
+  --team: #d6a912;
+}
+.team-pink {
+  --team: #d65fa5;
+}

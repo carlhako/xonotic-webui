@@ -13,6 +13,7 @@ from xonotic_webui.maps.catalogue import MapCatalogue
 from xonotic_webui.maps.control import MapControl
 from xonotic_webui.maps.favourites import FavouritesStore
 from xonotic_webui.maps.packages import PackageStore
+from xonotic_webui.match.watcher import MatchWatcher
 from xonotic_webui.players.recorder import PlayerRecorder
 from xonotic_webui.players.report import StatsReportFilter
 from xonotic_webui.players.store import PlayerStore
@@ -64,9 +65,14 @@ class Runtime:
             self.map_catalogue,
             self.map_control.effective_gametype,
         )
+        self.match = MatchWatcher(self.supervisor, self.console, known_match=self._known_match)
         self.release_check = ReleaseChecker(settings)
         self.upgrade = UpgradeService(settings, self.supervisor, self.release_check)
         self._restore_task: asyncio.Task[None] | None = None
+
+    def _known_match(self) -> tuple[str | None, str | None]:
+        snap = self.status.snapshot()
+        return snap.map, snap.gametype
 
     def effective_gametype(self) -> str | None:
         """The gametype the next map is played as: the operator's choice, else the running one."""
@@ -102,4 +108,5 @@ class Runtime:
         # After the server has stopped: everything pending is written, then the file closed.
         await self.recorder.aclose()
         await self.match_actions.aclose()
+        await self.match.aclose()
         await self.status.aclose()

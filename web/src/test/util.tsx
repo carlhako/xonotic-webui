@@ -302,3 +302,83 @@ export function makePlayerDetail(overrides: Partial<PlayerDetail> = {}): PlayerD
     ...overrides,
   };
 }
+
+// -- the live match stream -----------------------------------------------------------------
+
+import type { Match } from "../api/client";
+
+export const MATCH_URL = "/api/match/stream";
+
+const COLUMNS: Match["scoreboard"]["columns"] = [
+  {
+    key: "score",
+    label: "Score",
+    primary: true,
+    secondary: false,
+    lower_is_better: false,
+  },
+  {
+    key: "kills",
+    label: "Kills",
+    primary: false,
+    secondary: false,
+    lower_is_better: false,
+  },
+  {
+    key: "deaths",
+    label: "Deaths",
+    primary: false,
+    secondary: false,
+    lower_is_better: true,
+  },
+];
+
+export function makeMatch(overrides: Partial<Match> = {}): Match {
+  return {
+    live: true,
+    map: "atelier",
+    gametype: "dm",
+    clock: {
+      available: true,
+      phase: "playing",
+      paused: false,
+      time_limit_s: 600,
+      left_s: 400,
+      elapsed_s: 200,
+      overtimes: 0,
+    },
+    score_limit: { value: 30, unit: "frags" },
+    scoreboard: {
+      available: true,
+      columns: COLUMNS,
+      players: [],
+      spectators: [],
+      teams: [],
+    },
+    ...overrides,
+  };
+}
+
+export function makeBoardPlayer(
+  name: string,
+  values: Record<string, number>,
+  extra: Partial<Match["scoreboard"]["players"][number]> = {},
+): Match["scoreboard"]["players"][number] {
+  return {
+    ent: 1,
+    name,
+    plain_name: name.replace(/\^\d/g, ""),
+    bot: false,
+    ping: 20,
+    time_s: 125,
+    team: null,
+    values,
+    ...extra,
+  };
+}
+
+/** Wait for the match stream to be opened, then push a match state through it. */
+export async function pushMatch(match: Match) {
+  await waitFor(() => expect(FakeEventSource.byUrl(MATCH_URL)).toBeTruthy());
+  act(() => FakeEventSource.byUrl(MATCH_URL)!.emit(match));
+}

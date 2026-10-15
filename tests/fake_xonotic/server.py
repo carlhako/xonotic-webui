@@ -26,6 +26,22 @@ Behaviour is selected by ``FAKE_XONOTIC`` (comma separated ``key`` or ``key=valu
     endmatch_delay=S  seconds from ``:gameover`` to the map switch with nobody connected
     maps_file=PATH    JSON ``{map: [gametype, ...]}`` of the installed maps
                       (default: ``maps.json`` beside this file)
+    no_dump           ``sv_cmd printstats`` prints only ``stats dumped.`` (a build that
+                      does not print the score dump; the real 0.8.6 prints it even with
+                      ``sv_eventlog 0``, so ``eventlog_off`` does not do this)
+    unknown_globals=A+B  ``prvm_global server <name>`` answers these names like the
+                      game does for a global it does not have
+
+Match state (live-match): ``prvm_global server <name>`` answers ``time``,
+``game_starttime``, ``warmup_stage``, ``warmup_limit``, ``checkrules_overtimesadded``,
+``intermission_running``, ``game_stopped`` and ``timeout_status``; any other name gets
+``No global '<name>' in server!``. ``time`` is the seconds since the map loaded and stands
+still while the server is paused, as on the real one. ``game_starttime`` is
+``g_start_delay + 1`` (0 in warmup, which ``g_warmup 1`` starts at a map load) and
+``intermission_running``/``game_stopped`` read 1 from the match end until the next map.
+``sv_cmd printstats`` prints the ``:status:`` dump of the roster, with the real label
+lines of the gametype (``dm``, ``tdm``, ``ctf``; others use ``dm``'s), bots only while
+``sv_logscores_bots`` is 1, teams with ``:teamscores:`` slots 1-15, and ``stats dumped.``.
 
 Cvars are the ones in the captured ``cvarlist.txt`` with their real defaults. Console
 parsing follows what the spike observed: ``;`` outside quotes separates commands, ``//``
@@ -50,6 +66,15 @@ Test-only commands (written to stdin like any other, never parsed as console com
                                                does at match end
     fake_emit <raw line>                       print a line verbatim
     fake_crash                                 exit 139 immediately
+    fake_score <ent> <column>=<value>...       set a player's score columns (``score``,
+                                               ``kills``, ``deaths``, ``caps``, ...)
+    fake_team <ent> <number|spectator|none>    put a client on a team (5 red, 14 blue),
+                                               make it a spectator or take it off a team
+    fake_teamscore <team> <column>=<value>...  set a team's score columns
+    fake_clock <seconds>                       set the server ``time``
+    fake_warmup <stage> [limit]                warmup_stage (and warmup_limit); stage 0
+                                               starts the match 10 seconds ahead
+    fake_overtime <n>                          set checkrules_overtimesadded
 """
 
 from __future__ import annotations
@@ -138,6 +163,14 @@ class State:
     maps: ClassVar[dict[str, list[str]]] = {}
     paused = False
     queued: ClassVar[list] = []
+    # The server clock: seconds of unpaused time since the map loaded.
+    time_value = 0.0
+    time_stamp = 0.0
+    game_starttime = 16.0
+    warmup_stage = 0
+    warmup_limit = 0
+    overtimes = 0
+    team_scores: ClassVar[dict[int, dict[str, float]]] = {}
     ending = False
     match_no = 0
     applied_maxplayers = "16"
@@ -145,6 +178,40 @@ class State:
     userdir: Path | None = None
     info: ClassVar[dict] = {}
     lock = threading.RLock()
+
+
+# ------------------------------------------------------------------- server clock
+def server_time() -> float:
+    """The server's ``time``: it advances while the server runs and stands still paused."""
+    with State.lock:
+        now = time.monotonic()
+        if not State.paused:
+            State.time_value += now - State.time_stamp
+        State.time_stamp = now
+        return State.time_value
+
+
+def set_paused(value: bool) -> None:
+    server_time()  # bank the time up to the change first
+    State.paused = value
+
+
+def reset_clock() -> None:
+    with State.lock:
+        State.time_value = 0.0
+        State.time_stamp = time.monotonic()
+        State.overtimes = 0
+        State.team_scores = {}
+        for p in State.roster.values():
+            p.pop("scores", None)
+        if cv("g_warmup") not in ("", "0"):
+            State.warmup_stage = 1
+            State.game_starttime = 0.0
+            State.warmup_limit = cv_int("g_warmup_limit", 180)
+        else:
+            State.warmup_stage = 0
+            State.game_starttime = float(cv_int("g_start_delay", 15) + 1)
+            State.warmup_limit = 0
 
 
 # --------------------------------------------------------------------------- cvars
@@ -414,6 +481,7 @@ def load_map(name: str, *, apply_maxplayers: bool = False, announce: bool = True
         if apply_maxplayers:
             State.applied_maxplayers = cv("maxplayers", "16")
     apply_map_settings(gametype)
+    reset_clock()
     if not cv("g_maplist").strip():
         set_cvar("g_maplist", " ".join(candidates(gametype)))
     arm_autopause()
@@ -426,7 +494,7 @@ def arm_autopause() -> None:
         if State.autopause_timer is not None:
             State.autopause_timer.cancel()
             State.autopause_timer = None
-        State.paused = False
+        set_paused(False)
         State.queued = []
         if cv("sv_autopause") != "1" or humans() > 0:
             return
@@ -439,7 +507,7 @@ def arm_autopause() -> None:
 def _autopause_now() -> None:
     with State.lock:
         if cv("sv_autopause") == "1" and humans() == 0 and State.map != PRE_MAP:
-            State.paused = True  # silent, as the real server
+            set_paused(True)  # silent, as the real server
 
 
 def run_deferred(action) -> None:
@@ -453,7 +521,7 @@ def run_deferred(action) -> None:
 
 def unpause() -> list:
     with State.lock:
-        State.paused = False
+        set_paused(False)
         queued, State.queued = State.queued, []
     return queued
 
@@ -592,6 +660,96 @@ def status_reply() -> None:
         emit(f"^7^3{ip:<44}   0   20  0:00:10    0  #{ent}   ^7{p['name']}")
 
 
+GLOBALS_BY_NAME = (
+    "time",
+    "game_starttime",
+    "warmup_stage",
+    "warmup_limit",
+    "checkrules_overtimesadded",
+    "intermission_running",
+    "game_stopped",
+    "timeout_status",
+)
+
+
+def prvm_global(name: str) -> None:
+    hidden = set(FLAGS.get("unknown_globals", "").split("+"))
+    if name not in GLOBALS_BY_NAME or name in hidden:
+        emit(f"^7No global '{name}' in server!")
+        return
+    with State.lock:
+        ending = 1 if State.ending else 0
+        value = {
+            "time": server_time(),
+            "game_starttime": State.game_starttime,
+            "warmup_stage": State.warmup_stage,
+            "warmup_limit": State.warmup_limit,
+            "checkrules_overtimesadded": State.overtimes,
+            "intermission_running": ending,
+            "game_stopped": ending,
+            "timeout_status": 0,
+        }[name]
+    emit(f"^7{name}: {format(float(value), '.9g')}")
+
+
+_MARKS = re.compile(r"[!<]+$")
+
+
+def dump_labels(gametype: str) -> tuple[str, str | None]:
+    """The ``:labels:player:`` list (and the team one) of a gametype, as captured."""
+    name = {"tdm": "match_tdm_live.txt", "ctf": "match_ctf_live.txt"}.get(
+        gametype, "match_dm_live.txt"
+    )
+    player = team = None
+    for line in (FIXTURES / name).read_text().splitlines():
+        text = line.replace("^7", "")
+        if text.startswith(":labels:player:"):
+            player = text[len(":labels:player:") :]
+        elif text.startswith(":labels:teamscores:"):
+            team = text[len(":labels:teamscores:") :]
+    assert player is not None
+    return player, team
+
+
+def label_values(labels: str, scores: dict[str, float]) -> str:
+    out = []
+    for label in labels.split(","):
+        key = _MARKS.sub("", label)
+        if key == "elo":
+            out.append("-2")
+        else:
+            out.append(format(scores.get(key, 0), "g") if key else "0")
+    return ",".join(out)
+
+
+def print_stats() -> None:
+    """``sv_cmd printstats``: the live score dump, then the line the command prints."""
+    if "no_dump" not in FLAGS:
+        with State.lock:
+            gametype, map_name = State.gametype, State.map
+            roster = sorted(State.roster.items())
+            team_scores = {t: dict(v) for t, v in State.team_scores.items()}
+        player_labels, team_labels = dump_labels(gametype)
+        emit(f"^7^7:status:{gametype}_{map_name}:{round(server_time())}")
+        emit(f"^7^7:labels:player:{player_labels}")
+        if team_labels is not None:
+            emit(f"^7^7:labels:teamscores:{team_labels}")
+        with_bots = cv("sv_logscores_bots") == "1"
+        for _ent, p in roster:
+            if p["bot"] and not with_bots:
+                continue
+            team = "spectator" if p.get("spectator") else str(p.get("team", -1))
+            values = label_values(player_labels, p.get("scores", {}))
+            emit(f"^7^7:player:see-labels:{values}:{round(server_time())}:{team}:{p['name']}")
+        if team_labels is not None:
+            for slot in range(1, 16):
+                scores = team_scores.get(slot)
+                values = label_values(team_labels, scores) if scores is not None else ""
+                emit(f"^7^7:teamscores:see-labels:{values}:{slot}")
+        emit("^7^7:end")
+    emit("^7^7stats dumped.")
+
+
 def cmd_gametype(args: list[str]) -> None:
     if not args:
         emit("^7^7Incorrect parameters for ^2gametype^7")
@@ -635,7 +793,7 @@ def cmd_pause() -> None:
             action()
     else:
         with State.lock:
-            State.paused = True
+            set_paused(True)
         emit(f"^7{pause_name()} paused the game")
 
 
@@ -686,6 +844,10 @@ def run(args: list[str], startup: bool) -> None:
         who_reply(who_args[0] if who_args else None)
     elif verb == "echo":
         emit("^7" + " ".join(rest))
+    elif verb == "prvm_global" and len(rest) == 2 and rest[0] == "server":
+        prvm_global(rest[1])
+    elif verb == "sv_cmd" and rest[:1] == ["printstats"]:
+        print_stats()
     elif verb in ("set", "seta"):
         if len(rest) >= 2:
             set_cvar(rest[0], rest[1], create=True)
@@ -732,6 +894,10 @@ def execute(line: str, *, startup: bool = False) -> None:
         run(tokenize(expand(command)), startup)
 
 
+def _pairs(items: list[str]) -> dict[str, float]:
+    return {k: float(v) for k, _, v in (item.partition("=") for item in items)}
+
+
 def fake_command(verb: str, rest: str) -> None:
     if verb == "fake_crash":
         os._exit(139)
@@ -750,6 +916,37 @@ def fake_command(verb: str, rest: str) -> None:
         if killer != victim:
             line += ":victimitems=2-1"
         emit(line)
+    elif verb == "fake_score":
+        ent, *pairs = rest.split()
+        with State.lock:
+            State.roster[int(ent)].setdefault("scores", {}).update(_pairs(pairs))
+    elif verb == "fake_team":
+        ent, value = rest.split()
+        with State.lock:
+            player = State.roster[int(ent)]
+            player["spectator"] = value == "spectator"
+            player["team"] = int(value) if value.lstrip("-").isdigit() else -1
+    elif verb == "fake_teamscore":
+        team, *pairs = rest.split()
+        with State.lock:
+            State.team_scores.setdefault(int(team), {}).update(_pairs(pairs))
+    elif verb == "fake_clock":
+        with State.lock:
+            server_time()
+            State.time_value = float(rest)
+    elif verb == "fake_warmup":
+        stage, _, limit = rest.partition(" ")
+        with State.lock:
+            State.warmup_stage = int(stage)
+            if limit:
+                State.warmup_limit = int(limit)
+            if State.warmup_stage == 0:
+                State.game_starttime = server_time() + 10
+            else:
+                State.game_starttime = 0.0
+    elif verb == "fake_overtime":
+        with State.lock:
+            State.overtimes = int(rest)
     elif verb == "fake_report":
         for line in report_block(rest.strip()):
             emit(line)

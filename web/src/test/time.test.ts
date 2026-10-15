@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { formatTimestamp } from "../lib/time";
+import { formatClock, formatTimestamp } from "../lib/time";
 
 const ISO = "2026-03-01T23:30:00+00:00";
 const original = process.env.TZ;
@@ -33,5 +33,24 @@ describe("timestamps (8.8)", () => {
 
   it("returns an unparseable value unchanged", () => {
     expect(formatTimestamp("not a date")).toBe("not a date");
+  });
+});
+
+describe("formatClock", () => {
+  it("shows minutes and zero-padded seconds", () => {
+    expect(formatClock(400)).toBe("6:40");
+    expect(formatClock(65)).toBe("1:05");
+    expect(formatClock(9)).toBe("0:09");
+    expect(formatClock(0)).toBe("0:00");
+  });
+
+  it("adds hours from an hour up", () => {
+    expect(formatClock(3600)).toBe("1:00:00");
+    expect(formatClock(3725)).toBe("1:02:05");
+  });
+
+  it("never goes negative or fractional", () => {
+    expect(formatClock(-5)).toBe("0:00");
+    expect(formatClock(59.6)).toBe("1:00");
   });
 });

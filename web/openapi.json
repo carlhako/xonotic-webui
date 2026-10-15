@@ -724,6 +724,400 @@
         "title": "MatchActionModel",
         "type": "object"
       },
+      "MatchClockModel": {
+        "properties": {
+          "available": {
+            "description": "False when the server did not give the clock values.",
+            "title": "Available",
+            "type": "boolean"
+          },
+          "elapsed_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whole seconds since the match started.",
+            "title": "Elapsed S"
+          },
+          "left_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whole seconds left, or until the match starts.",
+            "title": "Left S"
+          },
+          "overtimes": {
+            "description": "How many overtimes the game has added.",
+            "title": "Overtimes",
+            "type": "integer"
+          },
+          "paused": {
+            "description": "The server clock is standing still (autopause or pause).",
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "enum": [
+                  "countdown",
+                  "warmup",
+                  "playing",
+                  "overtime",
+                  "ended"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "time_limit_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The live time limit in seconds, if any.",
+            "title": "Time Limit S"
+          }
+        },
+        "required": [
+          "available",
+          "phase",
+          "paused",
+          "time_limit_s",
+          "left_s",
+          "elapsed_s",
+          "overtimes"
+        ],
+        "title": "MatchClockModel",
+        "type": "object"
+      },
+      "MatchColumnModel": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "lower_is_better": {
+            "title": "Lower Is Better",
+            "type": "boolean"
+          },
+          "primary": {
+            "description": "The game's first sort column.",
+            "title": "Primary",
+            "type": "boolean"
+          },
+          "secondary": {
+            "description": "The game's second sort column.",
+            "title": "Secondary",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "primary",
+          "secondary",
+          "lower_is_better"
+        ],
+        "title": "MatchColumnModel",
+        "type": "object"
+      },
+      "MatchModel": {
+        "properties": {
+          "clock": {
+            "$ref": "#/components/schemas/MatchClockModel"
+          },
+          "gametype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gametype"
+          },
+          "live": {
+            "description": "False when the server is not running or no map is loaded.",
+            "title": "Live",
+            "type": "boolean"
+          },
+          "map": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map"
+          },
+          "score_limit": {
+            "$ref": "#/components/schemas/MatchScoreLimitModel"
+          },
+          "scoreboard": {
+            "$ref": "#/components/schemas/MatchScoreboardModel"
+          }
+        },
+        "required": [
+          "live",
+          "map",
+          "gametype",
+          "clock",
+          "score_limit",
+          "scoreboard"
+        ],
+        "title": "MatchModel",
+        "type": "object"
+      },
+      "MatchPlayerModel": {
+        "properties": {
+          "bot": {
+            "title": "Bot",
+            "type": "boolean"
+          },
+          "ent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The slot, when the status reply listed the client.",
+            "title": "Ent"
+          },
+          "name": {
+            "description": "Display name with Xonotic colour codes intact.",
+            "title": "Name",
+            "type": "string"
+          },
+          "ping": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ping"
+          },
+          "plain_name": {
+            "title": "Plain Name",
+            "type": "string"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The game's team number (5 red, 14 blue), if any.",
+            "title": "Team"
+          },
+          "time_s": {
+            "description": "Seconds the client has been in the game.",
+            "title": "Time S",
+            "type": "integer"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Score column values by column key.",
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "ent",
+          "name",
+          "plain_name",
+          "bot",
+          "ping",
+          "time_s",
+          "team",
+          "values"
+        ],
+        "title": "MatchPlayerModel",
+        "type": "object"
+      },
+      "MatchScoreLimitModel": {
+        "properties": {
+          "unit": {
+            "description": "What it counts: frags, captures, points...",
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The score limit, or null when there is none.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "value",
+          "unit"
+        ],
+        "title": "MatchScoreLimitModel",
+        "type": "object"
+      },
+      "MatchScoreboardModel": {
+        "properties": {
+          "available": {
+            "description": "False when the server printed no score dump.",
+            "title": "Available",
+            "type": "boolean"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/MatchColumnModel"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "players": {
+            "description": "In the game's sort order.",
+            "items": {
+              "$ref": "#/components/schemas/MatchPlayerModel"
+            },
+            "title": "Players",
+            "type": "array"
+          },
+          "spectators": {
+            "items": {
+              "$ref": "#/components/schemas/MatchSpectatorModel"
+            },
+            "title": "Spectators",
+            "type": "array"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/MatchTeamModel"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "available",
+          "columns",
+          "players",
+          "spectators",
+          "teams"
+        ],
+        "title": "MatchScoreboardModel",
+        "type": "object"
+      },
+      "MatchSpectatorModel": {
+        "properties": {
+          "bot": {
+            "title": "Bot",
+            "type": "boolean"
+          },
+          "ent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ent"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plain_name": {
+            "title": "Plain Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ent",
+          "name",
+          "plain_name",
+          "bot"
+        ],
+        "title": "MatchSpectatorModel",
+        "type": "object"
+      },
+      "MatchTeamModel": {
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "enum": [
+                  "red",
+                  "blue",
+                  "yellow",
+                  "pink"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "team": {
+            "title": "Team",
+            "type": "integer"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "team",
+          "color",
+          "values"
+        ],
+        "title": "MatchTeamModel",
+        "type": "object"
+      },
       "OverrideModel": {
         "properties": {
           "live_value": {
@@ -2947,6 +3341,27 @@
         ]
       }
     },
+    "/api/match": {
+      "get": {
+        "operationId": "match_api_match_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The latest live match state (does not start polling the game)",
+        "tags": [
+          "match"
+        ]
+      }
+    },
     "/api/match/goto": {
       "post": {
         "operationId": "goto_api_match_goto_post",
@@ -3167,6 +3582,28 @@
         "summary": "End the match early; the game then votes or rotates as usual",
         "tags": [
           "maps"
+        ]
+      }
+    },
+    "/api/match/stream": {
+      "get": {
+        "operationId": "match_stream_api_match_stream_get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchModel",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "An event stream; the first event is the current state. Reading it makes the panel poll the game about once a second until the last reader leaves."
+          }
+        },
+        "summary": "Stream the live match state (server-sent events; each event is a Match)",
+        "tags": [
+          "match"
         ]
       }
     },

@@ -1,0 +1,192 @@
+# Clock cases for the add-live-match change (Xonotic 0.8.6, test LXC). Each block is the reply to
+# prvm_global server <time game_starttime warmup_stage warmup_limit checkrules_overtimesadded
+# intermission_running game_stopped timeout_status>; timelimit; fraglimit; sv_cmd printstats.
+# :player: and empty :teamscores: lines are removed; see README.md.
+# ===== warmup: 4s after map load (g_warmup 1, g_warmup_limit 60) =====
+^7time: 6.50009489
+^7game_starttime: 0
+^7warmup_stage: 1
+^7warmup_limit: 60
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:7
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+# ===== warmup: 30s after map load =====
+^7time: 35.5334015
+^7game_starttime: 0
+^7warmup_stage: 1
+^7warmup_limit: 60
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:36
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+# ===== warmup: 52s after map load =====
+^7time: 59.5667114
+^7game_starttime: 0
+^7warmup_stage: 1
+^7warmup_limit: 60
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:60
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+^7^3Match is restarting...
+^7:restart
+# ===== warmup limit passed (66s after load) =====
+^7time: 77.600029
+^7game_starttime: 70.0000458
+^7warmup_stage: 0
+^7warmup_limit: 60
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:78
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+# ===== countdown: about 2s after map load (g_warmup 0, g_start_delay 15) =====
+^7time: 4.5334301
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:5
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+# ===== countdown: about 9s after map load =====
+^7time: 14.5667543
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:15
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+^7:startdelay_ended
+# ===== playing: about 26s after map load =====
+^7time: 34.6000671
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:35
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+# ===== extendmatchtime probe =====
+^7:kill:frag:2:1:type=2:items=2-1:victimitems=2-1
+^7^7[BOT]Sensible^1 drew first blood! 
+^7^7[BOT]Death^1 was gunned down by ^7[BOT]Sensible^1's Shotgun
+# ===== after sv_cmd extendmatchtime =====
+^7time: 42.7000618
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "15.000001" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:43
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+# ===== intermission: the match ended on its time limit (timelimit 1) =====
+^7time: 89.6333466
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 1
+^7game_stopped: 1
+^7timeout_status: 0
+^7"timelimit" is "1" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:90
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+# ===== autopause (sv_autopause 1, nobody connected): time stands still =====
+# ===== autopaused: empty server, map loaded 12s ago, reading 1 =====
+^7time: 6.00009537
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:6
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+# ===== autopaused: reading 2, about 9s of wall time later =====
+^7time: 6.00009537
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:6
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.
+# ===== autopaused: reading 3, about 18s of wall time after the first =====
+^7time: 6.00009537
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 0
+^7game_stopped: 0
+^7timeout_status: 0
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7^7:status:dm_trident:6
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:end
+^7^7stats dumped.

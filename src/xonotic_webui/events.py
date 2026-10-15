@@ -21,7 +21,7 @@ and colour codes) unambiguous.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from xonotic_webui.colors import strip_colors, strip_leading_codes
 
@@ -120,6 +120,9 @@ class StatusRow:
     ent: int
     bot: bool
     name: str  # raw, colour codes intact (a leading ``^7`` reset removed)
+    # Not part of a row's identity: the roster logic compares who is connected, not how
+    # their connection is doing.
+    ping: int | None = field(default=None, compare=False)
 
 
 def is_map_line(plain: str) -> str | None:
@@ -186,6 +189,7 @@ class StatusReplyCollector:
                 ent=int(m.group("ent")),
                 bot=m.group("ip") == _BOT_ADDRESS,
                 name=_raw_name(raw_line),
+                ping=int(m.group("ping")),
             )
         )
         if len(self.rows) >= (self._expected or 0):

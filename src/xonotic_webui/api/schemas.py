@@ -466,3 +466,67 @@ class PlayerDetail(PlayerRow):
     has_match_stats: bool = Field(
         description="False when the player has never been in an end-of-match report."
     )
+
+
+class MatchClockModel(BaseModel):
+    available: bool = Field(description="False when the server did not give the clock values.")
+    phase: Literal["countdown", "warmup", "playing", "overtime", "ended"] | None
+    paused: bool = Field(description="The server clock is standing still (autopause or pause).")
+    time_limit_s: int | None = Field(description="The live time limit in seconds, if any.")
+    left_s: int | None = Field(description="Whole seconds left, or until the match starts.")
+    elapsed_s: int | None = Field(description="Whole seconds since the match started.")
+    overtimes: int = Field(description="How many overtimes the game has added.")
+
+
+class MatchScoreLimitModel(BaseModel):
+    value: int | None = Field(description="The score limit, or null when there is none.")
+    unit: str = Field(description="What it counts: frags, captures, points...")
+
+
+class MatchColumnModel(BaseModel):
+    key: str
+    label: str
+    primary: bool = Field(description="The game's first sort column.")
+    secondary: bool = Field(description="The game's second sort column.")
+    lower_is_better: bool
+
+
+class MatchPlayerModel(BaseModel):
+    ent: int | None = Field(description="The slot, when the status reply listed the client.")
+    name: str = Field(description="Display name with Xonotic colour codes intact.")
+    plain_name: str
+    bot: bool
+    ping: int | None
+    time_s: int = Field(description="Seconds the client has been in the game.")
+    team: int | None = Field(description="The game's team number (5 red, 14 blue), if any.")
+    values: dict[str, float] = Field(description="Score column values by column key.")
+
+
+class MatchSpectatorModel(BaseModel):
+    ent: int | None
+    name: str
+    plain_name: str
+    bot: bool
+
+
+class MatchTeamModel(BaseModel):
+    team: int
+    color: Literal["red", "blue", "yellow", "pink"] | None
+    values: dict[str, float]
+
+
+class MatchScoreboardModel(BaseModel):
+    available: bool = Field(description="False when the server printed no score dump.")
+    columns: list[MatchColumnModel]
+    players: list[MatchPlayerModel] = Field(description="In the game's sort order.")
+    spectators: list[MatchSpectatorModel]
+    teams: list[MatchTeamModel]
+
+
+class MatchModel(BaseModel):
+    live: bool = Field(description="False when the server is not running or no map is loaded.")
+    map: str | None
+    gametype: str | None
+    clock: MatchClockModel
+    score_limit: MatchScoreLimitModel
+    scoreboard: MatchScoreboardModel

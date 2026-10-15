@@ -249,6 +249,36 @@ A map without a `.mapinfo` file is listed with unknown gametypes and is not offe
 gametype. Changing the gametype takes effect at the next map; to switch immediately, pick a
 map for it and the panel goes to that map.
 
+### Live match
+
+While the server is running a match, the dashboard shows the **match clock** and the
+**scoreboard**, as you would see them in the game:
+
+- **Clock.** Time left (or counting up when there is no time limit), "Starting in" before
+  the match begins, warmup, overtime and match over. It is marked **paused** while the server
+  is paused, for example auto-paused with nobody connected, and shows the score limit with
+  what it counts (frags, captures, points).
+- **Scoreboard.** One row per player, sorted the way the game sorts, with the score columns
+  the game reports for the gametype (a capture-the-flag game adds captures, returns and so
+  on), ping and time played. Bots are marked, spectators are listed apart, and team games
+  show each team's total in the team's colour above its players. It replaces the Players
+  online list while it is available.
+
+The panel reads this from the game once a second, **only while a dashboard is open**. Nothing
+is sent to the game when no browser has it open or the server is stopped, and the queries
+and their replies never appear in the Console section. If the game does not give the clock
+or the scores, the dashboard says which one is missing and shows the other.
+
+| route | |
+| --- | --- |
+| `GET /api/match` | the latest state; does not start the polling |
+| `GET /api/match/stream` | server-sent events: the current state, then one per change; reading it starts the polling |
+
+The game leaves bots out of its score dump unless `sv_logscores_bots` is 1, so each poll
+raises it for the length of the dump and puts back the value you had. The dump command also
+writes to the game's event-log files if you turned on `sv_eventlog_files` yourself (the panel
+does not); with that on, the game gets one line a second while a dashboard is open.
+
 ### Map packages, the Files view and favourites
 
 The installed maps are shown either as **Cards** (with preview images) or as **Files**, a

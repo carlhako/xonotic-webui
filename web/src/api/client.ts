@@ -31,6 +31,11 @@ export type PanelUpgrade = NonNullable<PanelVersion["upgrade"]>;
 export type PlayerList = Schemas["PlayerList"];
 export type PlayerRow = Schemas["PlayerRow"];
 export type PlayerDetail = Schemas["PlayerDetail"];
+export type Match = Schemas["MatchModel"];
+export type MatchClock = Schemas["MatchClockModel"];
+export type MatchColumn = Schemas["MatchColumnModel"];
+export type MatchPlayer = Schemas["MatchPlayerModel"];
+export type MatchTeam = Schemas["MatchTeamModel"];
 export type PlayerWeapon = Schemas["PlayerWeapon"];
 
 /** The columns the players table can be sorted by (the API's fixed list). */

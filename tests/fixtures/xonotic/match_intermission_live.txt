@@ -1,0 +1,27 @@
+^7time: 29.5000725
+^7game_starttime: 16
+^7warmup_stage: 0
+^7warmup_limit: 0
+^7checkrules_overtimesadded: 0
+^7intermission_running: 1
+^7game_stopped: 1
+^7"timelimit" is "10" ["0"]
+^7"fraglimit" is "30" ["0"]
+^7host:     Xonotic WebUI Server
+^7version:  Xonotic build 03:14:05 Jun 20 2023 - release (gamename Xonotic)
+^7protocol: 3504 (DP7)
+^7map:      trident
+^7timing:   5.4% CPU, 0.00% lost, offset avg 0.3ms, max 0.5ms, sdev 0.1ms
+^7players:  3 active (16 max)
+^7
+^7^2IP                                             %pl ping  time   frags  no   name
+^7^310.0.2.1:50362                                   0   20  0:25:34 -666  #1   ^7^x0F0die^xF05😁😁😁^7
+^7^7botclient                                        0    0  0:25:16    0  #2   ^7[BOT]Lion
+^7^3botclient                                        0    0  0:25:16    0  #3   ^7[BOT]Delirium
+^7^7:status:dm_trident:30
+^7^7:labels:player:score!!,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kills,deaths<,,suicides<,dmg,dmgtaken<,rounds_pl,elo,,,,,,,,,
+^7^7:player:see-labels:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,0,0,0,0,0,0,0:26:spectator:^x0F0die^xF05😁😁😁^7
+^7^7:player:see-labels:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,0,0,0,0,0,0,0:28:-1:[BOT]Lion
+^7^7:player:see-labels:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,0,0,0,0,0,0,0:28:-1:[BOT]Delirium
+^7^7:end
+^7^7stats dumped.

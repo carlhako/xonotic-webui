@@ -226,6 +226,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The latest live match state (does not start polling the game) */
+        get: operations["match_api_match_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/match/goto": {
         parameters: {
             query?: never;
@@ -271,6 +288,23 @@ export interface paths {
         put?: never;
         /** End the match early; the game then votes or rotates as usual */
         post: operations["skip_api_match_skip_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/match/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream the live match state (server-sent events; each event is a Match) */
+        get: operations["match_stream_api_match_stream_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -845,6 +879,165 @@ export interface components {
              * @enum {string}
              */
             state: "pending" | "done" | "timed_out";
+        };
+        /** MatchClockModel */
+        MatchClockModel: {
+            /**
+             * Available
+             * @description False when the server did not give the clock values.
+             */
+            available: boolean;
+            /**
+             * Elapsed S
+             * @description Whole seconds since the match started.
+             */
+            elapsed_s: number | null;
+            /**
+             * Left S
+             * @description Whole seconds left, or until the match starts.
+             */
+            left_s: number | null;
+            /**
+             * Overtimes
+             * @description How many overtimes the game has added.
+             */
+            overtimes: number;
+            /**
+             * Paused
+             * @description The server clock is standing still (autopause or pause).
+             */
+            paused: boolean;
+            /** Phase */
+            phase: ("countdown" | "warmup" | "playing" | "overtime" | "ended") | null;
+            /**
+             * Time Limit S
+             * @description The live time limit in seconds, if any.
+             */
+            time_limit_s: number | null;
+        };
+        /** MatchColumnModel */
+        MatchColumnModel: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Lower Is Better */
+            lower_is_better: boolean;
+            /**
+             * Primary
+             * @description The game's first sort column.
+             */
+            primary: boolean;
+            /**
+             * Secondary
+             * @description The game's second sort column.
+             */
+            secondary: boolean;
+        };
+        /** MatchModel */
+        MatchModel: {
+            clock: components["schemas"]["MatchClockModel"];
+            /** Gametype */
+            gametype: string | null;
+            /**
+             * Live
+             * @description False when the server is not running or no map is loaded.
+             */
+            live: boolean;
+            /** Map */
+            map: string | null;
+            score_limit: components["schemas"]["MatchScoreLimitModel"];
+            scoreboard: components["schemas"]["MatchScoreboardModel"];
+        };
+        /** MatchPlayerModel */
+        MatchPlayerModel: {
+            /** Bot */
+            bot: boolean;
+            /**
+             * Ent
+             * @description The slot, when the status reply listed the client.
+             */
+            ent: number | null;
+            /**
+             * Name
+             * @description Display name with Xonotic colour codes intact.
+             */
+            name: string;
+            /** Ping */
+            ping: number | null;
+            /** Plain Name */
+            plain_name: string;
+            /**
+             * Team
+             * @description The game's team number (5 red, 14 blue), if any.
+             */
+            team: number | null;
+            /**
+             * Time S
+             * @description Seconds the client has been in the game.
+             */
+            time_s: number;
+            /**
+             * Values
+             * @description Score column values by column key.
+             */
+            values: {
+                [key: string]: number;
+            };
+        };
+        /** MatchScoreLimitModel */
+        MatchScoreLimitModel: {
+            /**
+             * Unit
+             * @description What it counts: frags, captures, points...
+             */
+            unit: string;
+            /**
+             * Value
+             * @description The score limit, or null when there is none.
+             */
+            value: number | null;
+        };
+        /** MatchScoreboardModel */
+        MatchScoreboardModel: {
+            /**
+             * Available
+             * @description False when the server printed no score dump.
+             */
+            available: boolean;
+            /** Columns */
+            columns: components["schemas"]["MatchColumnModel"][];
+            /**
+             * Players
+             * @description In the game's sort order.
+             */
+            players: components["schemas"]["MatchPlayerModel"][];
+            /** Spectators */
+            spectators: components["schemas"]["MatchSpectatorModel"][];
+            /** Teams */
+            teams: components["schemas"]["MatchTeamModel"][];
+        };
+        /** MatchSpectatorModel */
+        MatchSpectatorModel: {
+            /** Bot */
+            bot: boolean;
+            /** Ent */
+            ent: number | null;
+            /** Name */
+            name: string;
+            /** Plain Name */
+            plain_name: string;
+        };
+        /** MatchTeamModel */
+        MatchTeamModel: {
+            /** Color */
+            color: ("red" | "blue" | "yellow" | "pink") | null;
+            /** Team */
+            team: number;
+            /** Values */
+            values: {
+                [key: string]: number;
+            };
         };
         /** OverrideModel */
         OverrideModel: {
@@ -2034,6 +2227,26 @@ export interface operations {
             };
         };
     };
+    match_api_match_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchModel"];
+                };
+            };
+        };
+    };
     goto_api_match_goto_post: {
         parameters: {
             query?: never;
@@ -2229,6 +2442,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    match_stream_api_match_stream_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description An event stream; the first event is the current state. Reading it makes the panel poll the game about once a second until the last reader leaves. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["MatchModel"];
                 };
             };
         };

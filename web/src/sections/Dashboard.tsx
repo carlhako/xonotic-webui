@@ -1,6 +1,9 @@
 import { useStatus } from "../api/StatusContext";
+import { useMatch } from "../api/useMatch";
 import { ColoredText } from "../components/ColoredText";
 import { MatchActions } from "../components/MatchActions";
+import { MatchClockCard } from "../components/MatchClock";
+import { Scoreboard } from "../components/Scoreboard";
 import { ServerControls } from "../components/ServerControls";
 import { formatTimestamp } from "../lib/time";
 import type { RunState } from "../api/client";
@@ -23,6 +26,10 @@ function Unknown() {
 export function Dashboard() {
   const { status, stale } = useStatus();
   const state = status?.state;
+  // Opening the dashboard is what turns the panel's polling of the game on.
+  const { match, stale: matchStale } = useMatch();
+  const live = match !== null && match.live;
+  const scoreboard = live && match.scoreboard.available ? match.scoreboard : null;
 
   return (
     <section className={`section dashboard${stale ? " is-stale" : ""}`}>
@@ -43,6 +50,7 @@ export function Dashboard() {
           <div className="card-label">Gametype</div>
           <div className="card-value">{status?.gametype ?? <Unknown />}</div>
         </div>
+        {live && <MatchClockCard match={match} stale={matchStale} />}
         <div className="card">
           <div className="card-label">Players</div>
           <div className="card-value">
@@ -75,23 +83,32 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="panel">
-        <h2>Players online</h2>
-        {status && status.players.length > 0 ? (
-          <ul className="player-list">
-            {status.players.map((p) => (
-              <li key={p.ent}>
-                <span className="xon-text" title={p.plain_name}>
-                  <ColoredText text={p.name} />
-                </span>
-                {p.bot && <span className="badge">bot</span>}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="muted">No one is connected.</p>
-        )}
-      </div>
+      {scoreboard ? (
+        <Scoreboard board={scoreboard} stale={matchStale} />
+      ) : (
+        <div className="panel">
+          <h2>Players online</h2>
+          {live && (
+            <p className="muted" role="status">
+              Scoreboard unavailable: the server did not report scores.
+            </p>
+          )}
+          {status && status.players.length > 0 ? (
+            <ul className="player-list">
+              {status.players.map((p) => (
+                <li key={p.ent}>
+                  <span className="xon-text" title={p.plain_name}>
+                    <ColoredText text={p.name} />
+                  </span>
+                  {p.bot && <span className="badge">bot</span>}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No one is connected.</p>
+          )}
+        </div>
+      )}
 
       {status?.last_start_failure && (
         <div className="panel is-warn">
