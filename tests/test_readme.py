@@ -1,4 +1,4 @@
-"""The README names files the code actually uses."""
+"""The README and the guide name files the code actually uses."""
 
 from __future__ import annotations
 
@@ -8,11 +8,13 @@ from pathlib import Path
 from xonotic_webui.settings import APP_NAME, DEFAULT_GAME_ROOT, DEFAULT_STATE_DIR, Settings
 from xonotic_webui.supervisor import SETTINGS_CONFIG_NAME
 
-README = (Path(__file__).resolve().parent.parent / "README.md").read_text()
+ROOT = Path(__file__).resolve().parent.parent
+README = (ROOT / "README.md").read_text()
+GUIDE = (ROOT / "docs" / "guide.md").read_text()
 
 
 def _documented_paths() -> set[str]:
-    return set(re.findall(r"^\| `(/[^`]+)` \|", README, flags=re.MULTILINE))
+    return set(re.findall(r"^\| `(/[^`]+)` \|", GUIDE, flags=re.MULTILINE))
 
 
 def test_the_where_things_live_paths_match_the_defaults() -> None:
@@ -33,7 +35,7 @@ def test_the_where_things_live_paths_match_the_defaults() -> None:
 def test_the_documented_settings_file_names() -> None:
     assert SETTINGS_CONFIG_NAME == "xonotic-webui-settings.cfg"
     assert Settings().game_settings_file.name == "settings.json"
-    assert "`xonotic-webui-settings.cfg`" in README
+    assert "`xonotic-webui-settings.cfg`" in GUIDE
 
 
 def test_the_upgrade_helper_and_state_files_are_documented_where_the_code_has_them() -> None:
@@ -52,7 +54,7 @@ def test_the_upgrade_helper_and_state_files_are_documented_where_the_code_has_th
 
 
 def test_every_documented_setting_is_a_real_setting_with_its_default() -> None:
-    names = set(re.findall(r"^\| `(XONOTIC_WEBUI_[A-Z_]+)` \|", README, flags=re.MULTILINE))
+    names = set(re.findall(r"^\| `(XONOTIC_WEBUI_[A-Z_]+)` \|", GUIDE, flags=re.MULTILINE))
     fields = {n.upper() for n in Settings.model_fields}
     unknown = {n for n in names if n.removeprefix("XONOTIC_WEBUI_") not in fields | {"CONFIG_FILE"}}
     assert not unknown, unknown
@@ -72,7 +74,7 @@ def test_every_documented_setting_is_a_real_setting_with_its_default() -> None:
 
 def test_the_documented_defaults_match_the_settings() -> None:
     s = Settings()
-    row = dict(re.findall(r"^\| `(XONOTIC_WEBUI_[A-Z_]+)` \| `([^`]+)` \|", README, re.MULTILINE))
+    row = dict(re.findall(r"^\| `(XONOTIC_WEBUI_[A-Z_]+)` \| `([^`]+)` \|", GUIDE, re.MULTILINE))
     assert row["XONOTIC_WEBUI_RELEASE_REPO"] == s.release_repo
     assert row["XONOTIC_WEBUI_RELEASE_API_URL"] == s.release_api_url
     assert row["XONOTIC_WEBUI_RELEASE_CHECK_ENABLED"] == str(s.release_check_enabled).lower()
@@ -88,26 +90,27 @@ def test_the_manual_upgrade_command_is_the_one_the_panel_shows() -> None:
     from xonotic_webui.selfupdate.upgrade import manual_command
 
     assert manual_command(Settings()) in README
+    assert manual_command(Settings()) in GUIDE
 
 
 def test_the_players_section_names_the_reserved_report_cvar_and_the_xonstat_trade_off() -> None:
     from xonotic_webui.serversettings.registry import FORCED_CVARS
 
     value = dict(FORCED_CVARS)["g_playerstats_gamereport_uri"]
-    assert f"`g_playerstats_gamereport_uri` to `{value}`" in README
-    assert "XonStat" in README
-    assert "## Players" in README
-    assert "players.db" in README
+    assert f"`g_playerstats_gamereport_uri` to `{value}`" in GUIDE
+    assert "XonStat" in GUIDE
+    assert "## Players" in GUIDE
+    assert "players.db" in GUIDE
 
 
 def test_the_maps_section_states_the_upload_rules_the_code_enforces() -> None:
     from xonotic_webui.maps.packages import MAX_PACKAGE_BYTES
 
     assert MAX_PACKAGE_BYTES == 256 * 1024 * 1024
-    assert "256 MB" in README
-    assert "`.pk3`" in README
-    assert "## Maps and match actions" in README
-    assert "needs a server restart" in README
-    security = README.split("## Security", 1)[1].split("## Development", 1)[0]
+    assert "256 MB" in GUIDE
+    assert "`.pk3`" in GUIDE
+    assert "## Maps and match actions" in GUIDE
+    assert "needs a server restart" in GUIDE
+    security = GUIDE.split("## Security", 1)[1].split("## Development", 1)[0]
     assert "accepts file uploads" in security
     assert "client_max_body_size" in security
