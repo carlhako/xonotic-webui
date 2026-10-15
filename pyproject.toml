@@ -1,6 +1,6 @@
 [project]
 name = "xonotic-webui"
-version = "0.3.0"
+version = "0.4.0"
 description = "Supervised web control panel for a Xonotic dedicated server"
 readme = "README.md"
 requires-python = ">=3.11"

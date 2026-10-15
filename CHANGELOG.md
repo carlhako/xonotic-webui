@@ -5,6 +5,39 @@ publishes that section as the GitHub release notes, which the panel shows on its
 page before you upgrade. A tag without a section here is not published, so add the entry
 with the version bump.
 
+## 0.4.0 - 2026-10-15
+
+### What's new
+
+- **See how much each map is played.** Every map shows how many matches have been played on
+  it and how many frags were scored, as `Played 42× · 1,380 frags` on a card and as two
+  columns in the Files table. A map that was never played shows 0. "Played" counts matches
+  that ran to their limit; matches cut short still add their frags.
+- **Sort and filter by it.** A **Sort by** control (Name, Most played, Most frags, Recently
+  played) and a **Played / Never played** filter work in both views, combine with the
+  gametype and favourites filters, and are remembered in the browser. Never played is the
+  quick way to find maps that were installed and never run.
+- **Map details.** Click a map's title for its matches played and cut short, frags, first
+  and last played, matches per gametype and its top ten fraggers; a fragger opens that
+  player's details.
+- **Upload, download and delete map packages** from the Maps section. Only `.pk3` files are
+  accepted and each is checked before it is installed. Delete asks first and names every
+  map in the file. A package added while the server runs is listed but needs a server
+  restart before the game can use it.
+- **A Files view** beside the Cards: a table with one row per map showing the package it
+  comes from and its size, with the same *Go to this map* and *Add to rotation* buttons.
+- **Favourites.** Star a map and narrow either view to *Favourites only*. They are kept by
+  the panel, so every browser sees the same ones.
+- **A Voting enabled switch** in the Settings Voting tab, so map voting is turned off with a
+  switch instead of setting "Maps in the vote" to 0.
+
+### Changes you should know about
+
+- **The player database is migrated on first start** (an index is added; no data is
+  rewritten). A panel older than 0.4.0 will refuse to open the migrated file, so keep a
+  copy of `players.db` if you may want to go back.
+- **The map list is sorted by name** by default; it used to follow the game's order.
+
 ## 0.3.0 - 2026-10-14
 
 ### What's new
