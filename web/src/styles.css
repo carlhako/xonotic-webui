@@ -608,6 +608,19 @@ p {
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+/* the title opens the play details */
+.link-button.map-title:hover {
+  text-decoration: underline;
+}
+.map-totals {
+  font-size: 0.8rem;
+}
+.map-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-dim);
+}
 .map-name {
   font-size: 0.8rem;
   font-family: var(--mono);

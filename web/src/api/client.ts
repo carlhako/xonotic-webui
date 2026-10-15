@@ -19,6 +19,7 @@ export type GametypesView = Schemas["GametypesModel"];
 export type GametypeResult = Schemas["GametypeResultModel"];
 export type MapInfo = Schemas["MapModel"];
 export type MapsView = Schemas["MapsModel"];
+export type MapStats = Schemas["MapStatsModel"];
 export type RotationView = Schemas["RotationModel"];
 export type RotationResult = Schemas["RotationResultModel"];
 export type FavouritesView = Schemas["FavouritesModel"];
@@ -207,6 +208,10 @@ export const api = {
     }),
   deletePackage: (name: string) =>
     send<PackageRemoved>("DELETE", `/api/packages/${encodeURIComponent(name)}`),
+
+  // how a map has been played
+  mapStats: (name: string) =>
+    request<MapStats>(`/api/maps/${encodeURIComponent(name)}/stats`),
 
   // recorded players
   players: (query: PlayersQuery, etag: string | null = null) =>

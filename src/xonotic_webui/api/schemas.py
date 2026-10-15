@@ -286,6 +286,49 @@ class MapModel(BaseModel):
             "so the map cannot be gone to until the server is restarted."
         )
     )
+    played: int | None = Field(
+        description=(
+            "Finished matches with at least one participant, from the player history. "
+            "Null when player history is not available."
+        )
+    )
+    frags: int | None = Field(
+        description=(
+            "Every frag recorded on the map, finished or not, bots included. "
+            "Null when player history is not available."
+        )
+    )
+    last_played: int | None = Field(
+        description=(
+            "UTC epoch seconds of the latest recorded match on the map. "
+            "Null when it was never played or player history is not available."
+        )
+    )
+
+
+class MapGametypeModel(BaseModel):
+    gametype: str = Field(description='The gametype id, or "unknown" when it was not recorded.')
+    played: int = Field(description="Finished matches of this gametype.")
+
+
+class MapFraggerModel(BaseModel):
+    player_id: int
+    name: str = Field(description="The most recently used name, colour codes intact.")
+    frags: int = Field(description="Frags on this map, summed over every match.")
+    is_bot: bool
+
+
+class MapStatsModel(BaseModel):
+    name: str
+    played: int = Field(description="Finished matches with at least one participant.")
+    cut_short: int = Field(description="Matches ended early that had a participant.")
+    frags: int
+    first_played: int | None = Field(description="UTC epoch seconds, null if never played.")
+    last_played: int | None = Field(description="UTC epoch seconds, null if never played.")
+    gametypes: list[MapGametypeModel] = Field(description="Finished matches per gametype.")
+    top_fraggers: list[MapFraggerModel] = Field(
+        description="At most ten, most frags first, ties by name."
+    )
 
 
 class MapsModel(BaseModel):

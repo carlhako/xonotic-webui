@@ -7,6 +7,8 @@ import {
   STATUS_URL,
   jsonResponse,
   makeMap,
+  makeMapStats,
+  makePlayerDetail,
   makeStatus,
   pushStatus,
   renderSection,
@@ -901,5 +903,345 @@ describe("package changes while the panel is disconnected", () => {
     expect(
       within(row("My Map")).getByRole("button", { name: "Add mymap to favourites" }),
     ).toBeDisabled();
+  });
+});
+
+// --- play totals, sorting, the played filter and the details dialog -----------------------
+
+const played = [
+  makeMap({
+    name: "boil",
+    title: "Boil",
+    gametypes: ["dm"],
+    played: 5,
+    frags: 100,
+    last_played: 1_000,
+  }),
+  makeMap({
+    name: "atelier",
+    title: "Atelier",
+    gametypes: ["dm"],
+    played: 9,
+    frags: 50,
+    last_played: 3_000,
+  }),
+  makeMap({
+    name: "zeta",
+    title: "Zeta",
+    gametypes: ["ctf"],
+    played: 0,
+    frags: 0,
+    last_played: null,
+  }),
+  makeMap({
+    name: "cinder",
+    title: "Cinder",
+    gametypes: ["dm"],
+    played: 5,
+    frags: 100,
+    last_played: 2_000,
+  }),
+];
+const withPlayed = { maps: played };
+const unavailable = {
+  maps: played.map((m) => ({ ...m, played: null, frags: null, last_played: null })),
+};
+
+/** The map titles in the order they are listed, in either view. */
+const listed = () =>
+  Array.from(document.querySelectorAll(".map-title")).map((e) => e.textContent);
+
+describe("play totals (map-control)", () => {
+  it("shows identical figures on the card and the table row", async () => {
+    await openMaps(
+      undefined,
+      {},
+      {
+        maps: [
+          makeMap({ name: "boil", title: "Boil", played: 42, frags: 1380 }),
+          makeMap({ name: "zeta", title: "Zeta", played: 0, frags: 0 }),
+        ],
+      },
+    );
+    expect(
+      within(card("Boil")).getByText("Played 42× · 1,380 frags"),
+    ).toBeInTheDocument();
+    expect(within(card("Zeta")).getByText("Played 0× · 0 frags")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    const cells = (title: string) =>
+      within(row(title))
+        .getAllByRole("cell")
+        .map((c) => c.textContent);
+    expect(cells("Boil")).toEqual(expect.arrayContaining(["42", "1,380"]));
+    expect(cells("Zeta")).toEqual(expect.arrayContaining(["0", "0"]));
+    const headers = within(
+      screen.getByRole("table", { name: "Installed map files" }),
+    ).getAllByRole("columnheader");
+    expect(headers.map((h) => h.textContent)).toEqual(
+      expect.arrayContaining(["Played", "Frags"]),
+    );
+  });
+
+  it("shows dashes, not zero, when the totals are not available", async () => {
+    await openMaps(undefined, {}, unavailable);
+    expect(within(card("Boil")).getByText("Played – · – frags")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    const cells = within(row("Boil"))
+      .getAllByRole("cell")
+      .map((c) => c.textContent);
+    expect(cells.filter((c) => c === "–")).toHaveLength(2);
+  });
+});
+
+describe("sorting the maps", () => {
+  it("is by name to begin with", async () => {
+    await openMaps(undefined, {}, withPlayed);
+    expect(listed()).toEqual(["Atelier", "Boil", "Cinder", "Zeta"]);
+    expect(screen.getByLabelText("Sort by")).toHaveValue("name");
+  });
+
+  it.each([
+    ["played", ["Atelier", "Boil", "Cinder", "Zeta"]],
+    ["frags", ["Boil", "Cinder", "Atelier", "Zeta"]],
+    ["recent", ["Atelier", "Cinder", "Boil", "Zeta"]],
+  ])("orders by %s in both views, ties by name", async (choice, expected) => {
+    await openMaps(undefined, {}, withPlayed);
+    await userEvent.selectOptions(screen.getByLabelText("Sort by"), choice);
+    expect(listed()).toEqual(expected);
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    await screen.findByRole("table", { name: "Installed map files" });
+    expect(listed()).toEqual(expected);
+  });
+
+  it("lists maps never played last, by name, under recently played", async () => {
+    const more = [
+      ...played,
+      makeMap({ name: "alpha", title: "Alpha", played: 0, frags: 0 }),
+    ];
+    await openMaps(undefined, {}, { maps: more });
+    await userEvent.selectOptions(screen.getByLabelText("Sort by"), "recent");
+    expect(listed().slice(-2)).toEqual(["Alpha", "Zeta"]);
+  });
+
+  it("remembers the choice after a reload", async () => {
+    await openMaps(undefined, {}, withPlayed);
+    await userEvent.selectOptions(screen.getByLabelText("Sort by"), "frags");
+    cleanup();
+    vi.unstubAllGlobals();
+    routeFetch({
+      "GET /api/maps": () => jsonResponse(withPlayed),
+      "GET /api/favourites": () => jsonResponse({ maps: [] }),
+      "GET /api/gametypes": () => jsonResponse(gametypes()),
+      "GET /api/rotation": () => jsonResponse(rotation()),
+    });
+    renderSection(<Maps />);
+    await pushStatus(makeStatus({ state: "running", gametype: "dm" }));
+    await screen.findByText("Boil", { selector: ".map-title" });
+    expect(screen.getByLabelText("Sort by")).toHaveValue("frags");
+    expect(listed()).toEqual(["Boil", "Cinder", "Atelier", "Zeta"]);
+  });
+
+  it("disables the stat choices and lists by name when totals are not available", async () => {
+    window.localStorage.setItem("xonotic-webui.maps.sort", "played");
+    window.localStorage.setItem("xonotic-webui.maps.played", "never");
+    await openMaps(undefined, {}, unavailable);
+    expect(listed()).toEqual(["Atelier", "Boil", "Cinder", "Zeta"]);
+    const sort = screen.getByLabelText("Sort by");
+    expect(sort).toHaveValue("name");
+    const disabled = within(sort)
+      .getAllByRole("option")
+      .filter((o) => (o as HTMLOptionElement).disabled)
+      .map((o) => o.textContent);
+    expect(disabled).toEqual(["Most played", "Most frags", "Recently played"]);
+    expect(screen.getByLabelText("Played filter")).toBeDisabled();
+    expect(screen.getByLabelText("Played filter")).toHaveValue("all");
+    // the stored choices were not overwritten
+    expect(window.localStorage.getItem("xonotic-webui.maps.sort")).toBe("played");
+    expect(window.localStorage.getItem("xonotic-webui.maps.played")).toBe("never");
+  });
+
+  it("restores the stored choice once the totals come back", async () => {
+    window.localStorage.setItem("xonotic-webui.maps.sort", "played");
+    let body: object = unavailable;
+    await openMaps(undefined, { "GET /api/maps": () => jsonResponse(body) }, {});
+    expect(listed()).toEqual(["Atelier", "Boil", "Cinder", "Zeta"]);
+    body = withPlayed;
+    // a restart of the server reloads the list
+    await pushStatus(makeStatus({ state: "stopped" }));
+    await waitFor(() => expect(screen.getByLabelText("Sort by")).toHaveValue("played"));
+    expect(listed()).toEqual(["Atelier", "Boil", "Cinder", "Zeta"]);
+    expect(screen.getByLabelText("Played filter")).toBeEnabled();
+  });
+});
+
+describe("the played filter", () => {
+  it("lists only played or only never-played maps", async () => {
+    await openMaps(undefined, {}, withPlayed);
+    await userEvent.selectOptions(screen.getByLabelText("Played filter"), "played");
+    expect(listed()).toEqual(["Atelier", "Boil", "Cinder"]);
+    await userEvent.selectOptions(screen.getByLabelText("Played filter"), "never");
+    expect(listed()).toEqual(["Zeta"]);
+    await userEvent.selectOptions(screen.getByLabelText("Played filter"), "all");
+    expect(listed()).toHaveLength(4);
+  });
+
+  it("combines with favourites only and with a gametype", async () => {
+    await openMaps(undefined, {}, { ...withPlayed, favourites: ["boil", "zeta"] });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Favourites only" }));
+    await userEvent.selectOptions(screen.getByLabelText("Played filter"), "played");
+    expect(listed()).toEqual(["Boil"]);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Favourites only" }));
+    await userEvent.selectOptions(screen.getByLabelText("Show maps for"), "ctf");
+    await userEvent.selectOptions(screen.getByLabelText("Played filter"), "never");
+    expect(listed()).toEqual(["Zeta"]);
+  });
+
+  it("says no maps match when nothing is left, in both views", async () => {
+    await openMaps(undefined, {}, withPlayed);
+    await userEvent.selectOptions(screen.getByLabelText("Show maps for"), "ctf");
+    await userEvent.selectOptions(screen.getByLabelText("Played filter"), "played");
+    expect(screen.getByText("No maps match.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    expect(screen.getByText("No maps match.")).toBeInTheDocument();
+  });
+});
+
+describe("the map details dialog", () => {
+  const stats = (overrides = {}) => jsonResponse(makeMapStats(overrides));
+
+  it("opens from the card title with the play details", async () => {
+    await openMaps(undefined, { "GET /api/maps/boil/stats": () => stats() }, withPlayed);
+    await userEvent.click(within(card("Boil")).getByRole("button", { name: "Boil" }));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("Matches played");
+    const field = (label: string) =>
+      within(dialog).getByText(label, { selector: "dt" }).nextElementSibling;
+    expect(field("Matches played")).toHaveTextContent("12");
+    expect(field("Cut short")).toHaveTextContent("3");
+    expect(field("Frags")).toHaveTextContent("1,380");
+    const gametypes = within(
+      within(dialog).getByRole("table", { name: "Matches per gametype" }),
+    );
+    expect(gametypes.getByText("unknown")).toBeInTheDocument();
+    const fraggers = within(within(dialog).getByRole("table", { name: "Top fraggers" }));
+    expect(fraggers.getByText("[BOT]Rex")).toBeInTheDocument();
+    expect(fraggers.getByText("bot")).toBeInTheDocument();
+  });
+
+  it("opens from the table row title too", async () => {
+    await openMaps(undefined, { "GET /api/maps/boil/stats": () => stats() }, withPlayed);
+    await userEvent.click(screen.getByRole("button", { name: "Files" }));
+    await userEvent.click(within(row("Boil")).getByRole("button", { name: "Boil" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    await screen.findByText("Matches played");
+  });
+
+  it("says a never-played map has not been played yet", async () => {
+    await openMaps(
+      undefined,
+      {
+        "GET /api/maps/zeta/stats": () =>
+          stats({
+            name: "zeta",
+            played: 0,
+            cut_short: 0,
+            frags: 0,
+            first_played: null,
+            last_played: null,
+            gametypes: [],
+            top_fraggers: [],
+          }),
+      },
+      withPlayed,
+    );
+    await userEvent.click(within(card("Zeta")).getByRole("button", { name: "Zeta" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(/has not been played yet/),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByRole("table")).toBeNull();
+  });
+
+  it("shows a failed load", async () => {
+    await openMaps(
+      undefined,
+      {
+        "GET /api/maps/boil/stats": () =>
+          jsonResponse({ detail: { code: "boom", message: "it broke" } }, 500),
+      },
+      withPlayed,
+    );
+    await userEvent.click(within(card("Boil")).getByRole("button", { name: "Boil" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("says player history is not being recorded", async () => {
+    await openMaps(
+      undefined,
+      {
+        "GET /api/maps/boil/stats": () =>
+          jsonResponse(
+            {
+              detail: {
+                code: "players_unavailable",
+                message: "player history is not being recorded",
+              },
+            },
+            503,
+          ),
+      },
+      withPlayed,
+    );
+    await userEvent.click(within(card("Boil")).getByRole("button", { name: "Boil" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(/history is not being recorded/),
+    ).toBeInTheDocument();
+  });
+
+  it("closes with Escape or the button and leaves the view, sort and filters alone", async () => {
+    await openMaps(undefined, { "GET /api/maps/boil/stats": () => stats() }, withPlayed);
+    await userEvent.selectOptions(screen.getByLabelText("Sort by"), "frags");
+    await userEvent.selectOptions(screen.getByLabelText("Played filter"), "played");
+    const title = within(card("Boil")).getByRole("button", { name: "Boil" });
+    await userEvent.click(title);
+    await screen.findByRole("dialog");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(title).toHaveFocus();
+    await userEvent.click(title);
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Close" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByLabelText("Sort by")).toHaveValue("frags");
+    expect(screen.getByLabelText("Played filter")).toHaveValue("played");
+    expect(screen.getByRole("button", { name: "Cards" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(listed()).toEqual(["Boil", "Cinder", "Atelier"]);
+  });
+
+  it("opens a top fragger's player dialog and closes the map dialog", async () => {
+    await openMaps(
+      undefined,
+      {
+        "GET /api/maps/boil/stats": () => stats(),
+        "GET /api/players/7": () =>
+          jsonResponse(makePlayerDetail({ id: 7, name: "^1Ann", plain_name: "Ann" })),
+      },
+      withPlayed,
+    );
+    await userEvent.click(within(card("Boil")).getByRole("button", { name: "Boil" }));
+    const dialog = await screen.findByRole("dialog");
+    const fraggers = within(
+      await within(dialog).findByRole("table", { name: "Top fraggers" }),
+    );
+    await userEvent.click(fraggers.getByRole("button", { name: "Ann" }));
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(1));
+    const player = screen.getByRole("dialog");
+    expect(await within(player).findByText("dRXbACYQ…")).toBeInTheDocument();
+    expect(within(player).queryByText("Matches played")).toBeNull();
   });
 });

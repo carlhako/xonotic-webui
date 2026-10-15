@@ -8,8 +8,19 @@ import { ActionStatus } from "../components/MatchActions";
 import { Confirm } from "../components/Confirm";
 import { FavouriteStar } from "../components/FavouriteStar";
 import { DeletePackageDialog, PackageUpload } from "../components/MapPackages";
+import { MapDialog } from "../components/MapDialog";
 import { MapTable } from "../components/MapTable";
+import { PlayerDialog } from "../components/PlayerDialog";
 import { applyMessage } from "../lib/apply";
+import {
+  MAP_SORTS,
+  MAP_SORT_LABELS,
+  PLAYED_FILTERS,
+  filterPlayed,
+  hasTotals,
+  sortMaps,
+  totalsLine,
+} from "../lib/mapTotals";
 import { formatSize } from "../lib/size";
 import { useStoredChoice } from "../lib/storage";
 import { playersPhrase } from "../lib/text";
@@ -33,6 +44,7 @@ function MapCard({
   onGo,
   onAdd,
   onToggleFavourite,
+  onDetails,
 }: {
   map: MapInfo;
   names: Map<string, string>;
@@ -43,6 +55,7 @@ function MapCard({
   onGo: () => void;
   onAdd: () => void;
   onToggleFavourite: () => void;
+  onDetails: (trigger: HTMLElement) => void;
 }) {
   return (
     <li className="map-card">
@@ -58,7 +71,12 @@ function MapCard({
       )}
       <div className="map-body">
         <div className="map-title-row">
-          <div className="map-title">{map.title}</div>
+          <button
+            className="link-button map-title"
+            onClick={(e) => onDetails(e.currentTarget)}
+          >
+            {map.title}
+          </button>
           <FavouriteStar
             name={map.name}
             starred={starred}
@@ -70,6 +88,7 @@ function MapCard({
         <div className="muted map-package">
           {map.package} · {formatSize(map.package_size)}
         </div>
+        <div className="muted map-totals">{totalsLine(map)}</div>
         {map.pending_restart && (
           <div className="badge badge-warn map-pending">
             restart the server to use this map
@@ -433,6 +452,22 @@ export function Maps() {
     ["off", "on"] as const,
     "off",
   );
+  const [sort, setSort] = useStoredChoice("xonotic-webui.maps.sort", MAP_SORTS, "name");
+  const [playedFilter, setPlayedFilter] = useStoredChoice(
+    "xonotic-webui.maps.played",
+    PLAYED_FILTERS,
+    "all",
+  );
+  // the map whose play details are open, then the player opened from it (never both)
+  const [details, setDetails] = useState<{
+    map: MapInfo;
+    trigger: HTMLElement | null;
+  } | null>(null);
+  const [player, setPlayer] = useState<{
+    id: number;
+    name: string;
+    trigger: HTMLElement | null;
+  } | null>(null);
   const [deleting, setDeleting] = useState<{
     file: string;
     trigger: HTMLElement | null;
@@ -454,9 +489,20 @@ export function Maps() {
 
   const all = maps.data?.maps ?? [];
   const starredShown = favouritesOnly === "on";
-  const shown = all
-    .filter((m) => !filter || m.gametypes.includes(filter))
-    .filter((m) => !starredShown || favourites.has(m.name));
+  // Without totals the stat-dependent choices are off and the list is by name; the
+  // stored choices are kept so they come back with the totals.
+  const totals = hasTotals(all);
+  const sortShown = totals ? sort : "name";
+  const playedShown = totals ? playedFilter : "all";
+  const shown = sortMaps(
+    filterPlayed(
+      all
+        .filter((m) => !filter || m.gametypes.includes(filter))
+        .filter((m) => !starredShown || favourites.has(m.name)),
+      playedShown,
+    ),
+    sortShown,
+  );
   // a favourite of a map that is not installed is kept but never listed
   const anyStarred = all.some((m) => favourites.has(m.name));
   const inRotation = new Set([
@@ -487,6 +533,7 @@ export function Maps() {
     (effective === null ? m.gametypes.length > 0 : m.gametypes.includes(effective));
   const onGo = (m: MapInfo) => (humans > 0 ? setGoing(m) : void goWithErrors(m.name));
   const onAdd = (m: MapInfo) => setPendingAdd((p) => [...p, m.name]);
+  const onDetails = (m: MapInfo, trigger: HTMLElement) => setDetails({ map: m, trigger });
 
   const loadError = maps.error ?? gametypes.error ?? rotation.error;
   const deletingMaps = deleting
@@ -590,6 +637,33 @@ export function Maps() {
                   </option>
                 ))}
             </select>
+            <select
+              aria-label="Played filter"
+              value={playedShown}
+              disabled={!totals}
+              onChange={(e) =>
+                setPlayedFilter(PLAYED_FILTERS.find((f) => f === e.target.value) ?? "all")
+              }
+            >
+              <option value="all">All maps</option>
+              <option value="played">Played</option>
+              <option value="never">Never played</option>
+            </select>
+            <label className="map-sort">
+              Sort by
+              <select
+                value={sortShown}
+                onChange={(e) =>
+                  setSort(MAP_SORTS.find((s) => s === e.target.value) ?? "name")
+                }
+              >
+                {MAP_SORTS.map((s) => (
+                  <option key={s} value={s} disabled={s !== "name" && !totals}>
+                    {MAP_SORT_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         </div>
         {view === "files" && (
@@ -617,6 +691,7 @@ export function Maps() {
                 onGo={() => onGo(m)}
                 onAdd={() => onAdd(m)}
                 onToggleFavourite={() => void favourites.toggle(m.name)}
+                onDetails={(trigger) => onDetails(m, trigger)}
               />
             ))}
           </ul>
@@ -632,12 +707,33 @@ export function Maps() {
                 onGo,
                 onAdd,
                 onToggleFavourite: (name) => void favourites.toggle(name),
+                onDetails,
                 onDelete: (m, trigger) => setDeleting({ file: m.package, trigger }),
               }}
             />
           )
         )}
       </div>
+
+      {details && (
+        <MapDialog
+          map={details.map}
+          returnFocusTo={details.trigger}
+          onClose={() => setDetails(null)}
+          onOpenPlayer={(id, name) => {
+            setPlayer({ id, name, trigger: details.trigger });
+            setDetails(null);
+          }}
+        />
+      )}
+      {player && (
+        <PlayerDialog
+          id={player.id}
+          name={player.name}
+          returnFocusTo={player.trigger}
+          onClose={() => setPlayer(null)}
+        />
+      )}
 
       {deleting && (
         <DeletePackageDialog

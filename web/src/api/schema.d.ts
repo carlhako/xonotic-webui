@@ -209,6 +209,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/maps/{name}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How a map has been played: totals, gametypes and top fraggers */
+        get: operations["get_map_stats_api_maps__name__stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/match/goto": {
         parameters: {
             query?: never;
@@ -675,6 +692,36 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** MapFraggerModel */
+        MapFraggerModel: {
+            /**
+             * Frags
+             * @description Frags on this map, summed over every match.
+             */
+            frags: number;
+            /** Is Bot */
+            is_bot: boolean;
+            /**
+             * Name
+             * @description The most recently used name, colour codes intact.
+             */
+            name: string;
+            /** Player Id */
+            player_id: number;
+        };
+        /** MapGametypeModel */
+        MapGametypeModel: {
+            /**
+             * Gametype
+             * @description The gametype id, or "unknown" when it was not recorded.
+             */
+            gametype: string;
+            /**
+             * Played
+             * @description Finished matches of this gametype.
+             */
+            played: number;
+        };
         /** MapModel */
         MapModel: {
             /** Author */
@@ -682,12 +729,22 @@ export interface components {
             /** Description */
             description: string;
             /**
+             * Frags
+             * @description Every frag recorded on the map, finished or not, bots included. Null when player history is not available.
+             */
+            frags: number | null;
+            /**
              * Gametypes
              * @description Empty when the map has no map information.
              */
             gametypes: string[];
             /** Has Mapinfo */
             has_mapinfo: boolean;
+            /**
+             * Last Played
+             * @description UTC epoch seconds of the latest recorded match on the map. Null when it was never played or player history is not available.
+             */
+            last_played: number | null;
             /** Name */
             name: string;
             /**
@@ -706,6 +763,11 @@ export interface components {
              */
             pending_restart: boolean;
             /**
+             * Played
+             * @description Finished matches with at least one participant, from the player history. Null when player history is not available.
+             */
+            played: number | null;
+            /**
              * Preview
              * @description A preview image is available at /api/maps/{name}/preview.
              */
@@ -717,6 +779,43 @@ export interface components {
             source: "game" | "user";
             /** Title */
             title: string;
+        };
+        /** MapStatsModel */
+        MapStatsModel: {
+            /**
+             * Cut Short
+             * @description Matches ended early that had a participant.
+             */
+            cut_short: number;
+            /**
+             * First Played
+             * @description UTC epoch seconds, null if never played.
+             */
+            first_played: number | null;
+            /** Frags */
+            frags: number;
+            /**
+             * Gametypes
+             * @description Finished matches per gametype.
+             */
+            gametypes: components["schemas"]["MapGametypeModel"][];
+            /**
+             * Last Played
+             * @description UTC epoch seconds, null if never played.
+             */
+            last_played: number | null;
+            /** Name */
+            name: string;
+            /**
+             * Played
+             * @description Finished matches with at least one participant.
+             */
+            played: number;
+            /**
+             * Top Fraggers
+             * @description At most ten, most frags first, ties by name.
+             */
+            top_fraggers: components["schemas"]["MapFraggerModel"][];
         };
         /** MapsModel */
         MapsModel: {
@@ -1882,6 +1981,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_map_stats_api_maps__name__stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapStatsModel"];
+                };
+            };
+            /** @description The map is not installed. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Player history is not being recorded. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

@@ -50,8 +50,50 @@ async def test_a_fresh_database_is_created_at_the_current_version(tmp_path: Path
     await s.close()
     assert path.is_file()
     with closing(sqlite3.connect(path)) as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 1
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 2
         assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+
+
+async def test_a_fresh_database_has_the_map_index(tmp_path: Path) -> None:
+    path = tmp_path / "players.db"
+    s = PlayerStore(path)
+    await s.open()
+    await s.close()
+    with closing(sqlite3.connect(path)) as conn:
+        names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+    assert "matches_map" in names
+
+
+async def test_a_v1_database_is_migrated_in_place_with_every_row_intact(tmp_path: Path) -> None:
+    path = tmp_path / "players.db"
+    first = PlayerStore(path)
+    await first.open()
+    pid = await add_player(first, "fp:abc", "^1Ace")
+
+    def work(ops: Ops) -> None:
+        m = ops.upsert_match("m1", "boil", "dm", NOW)
+        ops.add_counters(m, pid, frags=7, deaths=2)
+        ops.apply_report(
+            m, finished=True, duration=60, players=[(pid, ReportedPlayer(scoreboard_valid=True))]
+        )
+
+    await first.transact(work)
+    await first.close()
+    with closing(sqlite3.connect(path)) as conn:  # take it back to what v1 wrote
+        conn.execute("DROP INDEX matches_map")
+        conn.execute("PRAGMA user_version = 1")
+
+    second = PlayerStore(path)
+    await second.open()
+    total, rows = await second.list_players(now=NOW)
+    totals = await second.map_totals()
+    await second.close()
+    assert total == 1 and rows[0]["frags"] == 7 and rows[0]["matches"] == 1
+    assert totals == {"boil": (1, 7, NOW)}
+    with closing(sqlite3.connect(path)) as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+    assert "matches_map" in names
 
 
 async def test_reopening_keeps_the_data(tmp_path: Path) -> None:
@@ -485,3 +527,154 @@ async def test_a_large_database_lists_a_page_quickly(store: PlayerStore) -> None
         elapsed = time.perf_counter() - started
         assert total == 20_000 and len(rows) == 50
         assert elapsed < 0.1, f"{sort}: {elapsed:.3f}s"
+
+
+# --- per-map totals and details (design D1) -----------------------------------------------
+
+
+def _play(
+    ops: Ops,
+    match_id: str,
+    map_name: str,
+    gametype: str,
+    started_at: int,
+    frags: dict[int, int],
+    *,
+    finished: bool | None,
+) -> int:
+    """A match with the live frags of each player; ``finished=None`` means no report yet."""
+    match = ops.upsert_match(match_id, map_name, gametype, started_at)
+    for pid, n in frags.items():
+        ops.add_counters(match, pid, frags=n)
+    if finished is not None:
+        ops.apply_report(match, finished=finished, duration=60, players=[])
+    return match
+
+
+async def test_a_finished_match_counts_as_played_with_its_frags(store: PlayerStore) -> None:
+    a = await add_player(store, "fp:a", "A")
+    b = await add_player(store, "fp:b", "B")
+    await store.transact(
+        lambda ops: _play(ops, "m1", "boil", "dm", NOW, {a: 5, b: 3}, finished=True)
+    )
+    assert await store.map_totals() == {"boil": (1, 8, NOW)}
+
+
+async def test_a_cut_short_match_adds_frags_and_last_played_but_not_played(
+    store: PlayerStore,
+) -> None:
+    a = await add_player(store, "fp:a", "A")
+
+    def work(ops: Ops) -> None:
+        _play(ops, "m1", "boil", "dm", NOW, {a: 5}, finished=True)
+        _play(ops, "m2", "boil", "dm", NOW + 100, {a: 4}, finished=False)
+
+    await store.transact(work)
+    assert await store.map_totals() == {"boil": (1, 9, NOW + 100)}
+
+
+async def test_a_bots_frags_are_in_the_map_total(store: PlayerStore) -> None:
+    bot = await add_player(store, "bot:1", "Bot", is_bot=True)
+    await store.transact(lambda ops: _play(ops, "m1", "boil", "dm", NOW, {bot: 6}, finished=True))
+    assert await store.map_totals() == {"boil": (1, 6, NOW)}
+
+
+async def test_a_finished_match_with_no_participant_is_not_played(store: PlayerStore) -> None:
+    await store.transact(lambda ops: _play(ops, "m1", "boil", "dm", NOW, {}, finished=True))
+    assert await store.map_totals() == {}
+    detail = await store.map_detail("boil")
+    assert detail["played"] == 0 and detail["last_played"] is None
+
+
+async def test_a_map_with_only_unreported_matches_has_frags_but_no_played(
+    store: PlayerStore,
+) -> None:
+    a = await add_player(store, "fp:a", "A")
+    await store.transact(lambda ops: _play(ops, "m1", "boil", "dm", NOW, {a: 2}, finished=None))
+    assert await store.map_totals() == {"boil": (0, 2, NOW)}
+    detail = await store.map_detail("boil")
+    assert detail["played"] == 0 and detail["cut_short"] == 0 and detail["frags"] == 2
+
+
+async def test_maps_do_not_mix(store: PlayerStore) -> None:
+    a = await add_player(store, "fp:a", "A")
+
+    def work(ops: Ops) -> None:
+        _play(ops, "m1", "boil", "dm", NOW, {a: 5}, finished=True)
+        _play(ops, "m2", "boil", "dm", NOW + 10, {a: 1}, finished=True)
+        _play(ops, "m3", "atelier", "dm", NOW + 20, {a: 7}, finished=True)
+
+    await store.transact(work)
+    assert await store.map_totals() == {"boil": (2, 6, NOW + 10), "atelier": (1, 7, NOW + 20)}
+
+
+async def test_map_detail_counts_times_and_gametypes(store: PlayerStore) -> None:
+    a = await add_player(store, "fp:a", "A")
+
+    def work(ops: Ops) -> None:
+        _play(ops, "m1", "boil", "dm", NOW, {a: 5}, finished=True)
+        _play(ops, "m2", "boil", "ctf", NOW + 50, {a: 2}, finished=True)
+        _play(ops, "m3", "boil", "dm", NOW + 80, {a: 1}, finished=True)
+        _play(ops, "m4", "boil", "", NOW + 90, {a: 1}, finished=True)
+        _play(ops, "m5", "boil", "dm", NOW + 100, {a: 4}, finished=False)
+        _play(ops, "m6", "atelier", "dm", NOW + 200, {a: 9}, finished=True)
+
+    await store.transact(work)
+    detail = await store.map_detail("boil")
+    assert detail["played"] == 4 and detail["cut_short"] == 1 and detail["frags"] == 13
+    assert detail["first_played"] == NOW and detail["last_played"] == NOW + 100
+    # cut-short matches are not in the per-gametype list; unrecorded gametype is "unknown"
+    assert detail["gametypes"] == [
+        {"gametype": "dm", "played": 2},
+        {"gametype": "ctf", "played": 1},
+        {"gametype": "unknown", "played": 1},
+    ]
+
+
+async def test_top_fraggers_sum_across_matches_and_order_by_frags_then_name(
+    store: PlayerStore,
+) -> None:
+    zed = await add_player(store, "fp:z", "Zed")
+    amy = await add_player(store, "fp:a", "^1Amy")
+    bot = await add_player(store, "bot:1", "Bot", is_bot=True)
+    cat = await add_player(store, "fp:c", "Cat")
+
+    def work(ops: Ops) -> None:
+        _play(ops, "m1", "boil", "dm", NOW, {zed: 4, amy: 4, bot: 20, cat: 1}, finished=True)
+        _play(ops, "m2", "boil", "dm", NOW + 1, {zed: 6, cat: 5}, finished=True)
+
+    await store.transact(work)
+    top = (await store.map_detail("boil"))["top_fraggers"]
+    assert [(t["name"], t["frags"], t["is_bot"]) for t in top] == [
+        ("Bot", 20, True),
+        ("Zed", 10, False),
+        ("Cat", 6, False),
+        ("^1Amy", 4, False),
+    ]
+    assert top[0]["player_id"] == bot
+
+
+async def test_top_fraggers_are_cut_to_ten(store: PlayerStore) -> None:
+    def work(ops: Ops) -> None:
+        pids = {
+            ops.get_or_create_player(f"fp:{i:02d}", f"P{i:02d}", is_bot=False, now=NOW): i
+            for i in range(12)
+        }
+        _play(ops, "m1", "boil", "dm", NOW, pids, finished=True)
+
+    await store.transact(work)
+    top = (await store.map_detail("boil"))["top_fraggers"]
+    assert len(top) == 10
+    assert [t["frags"] for t in top] == list(range(11, 1, -1))
+
+
+async def test_an_unplayed_map_has_zero_details(store: PlayerStore) -> None:
+    assert await store.map_detail("never") == {
+        "played": 0,
+        "cut_short": 0,
+        "frags": 0,
+        "first_played": None,
+        "last_played": None,
+        "gametypes": [],
+        "top_fraggers": [],
+    }

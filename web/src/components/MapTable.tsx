@@ -1,4 +1,5 @@
 import type { MapInfo } from "../api/client";
+import { formatTotal } from "../lib/mapTotals";
 import { formatSize } from "../lib/size";
 import { FavouriteStar } from "./FavouriteStar";
 
@@ -11,6 +12,8 @@ export interface MapRowActions {
   onGo: (map: MapInfo) => void;
   onAdd: (map: MapInfo) => void;
   onToggleFavourite: (name: string) => void;
+  /** Open the play details; `trigger` gets the focus back when the dialog closes. */
+  onDetails: (map: MapInfo, trigger: HTMLElement) => void;
   onDelete: (map: MapInfo, trigger: HTMLElement) => void;
 }
 
@@ -30,6 +33,12 @@ export function MapTable({ maps, actions }: { maps: MapInfo[]; actions: MapRowAc
             <th scope="col" className="num">
               Size
             </th>
+            <th scope="col" className="num">
+              Played
+            </th>
+            <th scope="col" className="num">
+              Frags
+            </th>
             <th scope="col">Actions</th>
           </tr>
         </thead>
@@ -48,7 +57,12 @@ export function MapTable({ maps, actions }: { maps: MapInfo[]; actions: MapRowAc
                   />
                 </td>
                 <td>
-                  <span className="map-title">{m.title}</span>
+                  <button
+                    className="link-button map-title"
+                    onClick={(e) => actions.onDetails(m, e.currentTarget)}
+                  >
+                    {m.title}
+                  </button>
                   {m.title !== m.name && (
                     <span className="muted map-name"> {m.name}</span>
                   )}
@@ -63,6 +77,8 @@ export function MapTable({ maps, actions }: { maps: MapInfo[]; actions: MapRowAc
                   <span className="badge badge-source">{user ? "user" : "game"}</span>
                 </td>
                 <td className="num">{formatSize(m.package_size)}</td>
+                <td className="num">{formatTotal(m.played)}</td>
+                <td className="num">{formatTotal(m.frags)}</td>
                 <td>
                   <span className="row-actions">
                     <button

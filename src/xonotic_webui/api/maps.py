@@ -21,8 +21,11 @@ from xonotic_webui.api.schemas import (
     GametypeResultModel,
     GametypesModel,
     GotoRequest,
+    MapFraggerModel,
+    MapGametypeModel,
     MapModel,
     MapsModel,
+    MapStatsModel,
     MatchActionModel,
     PackageDuplicateModel,
     PackageInstalledModel,
@@ -32,6 +35,7 @@ from xonotic_webui.api.schemas import (
     RotationRequest,
     RotationResultModel,
 )
+from xonotic_webui.logging import get_logger
 from xonotic_webui.maps.actions import MapActionError, MatchAction
 from xonotic_webui.maps.control import RotationView
 from xonotic_webui.maps.favourites import InvalidFavouriteError
@@ -41,12 +45,15 @@ from xonotic_webui.maps.packages import (
     PackageNotFoundError,
     TooLargeError,
 )
+from xonotic_webui.players.store import PlayerStoreError
 from xonotic_webui.serversettings.service import SettingsError
 from xonotic_webui.serversettings.store import SettingsStoreError
 from xonotic_webui.supervisor import SupervisorError
 
 if TYPE_CHECKING:
     from xonotic_webui.runtime import Runtime
+
+log = get_logger("api.maps")
 
 _VALIDATION = {
     422: {"model": ErrorResponse, "description": "The request was rejected; nothing changed."},
@@ -106,6 +113,23 @@ def build_maps_router(runtime: Runtime) -> APIRouter:
     catalogue = runtime.map_catalogue
     control = runtime.map_control
     actions = runtime.match_actions
+    players = runtime.players_store
+    totals_failing = False  # so an outage is logged once, not on every list request
+
+    async def totals() -> dict[str, tuple[int, int, int | None]] | None:
+        """The per-map play totals, or None when history is off or cannot be read."""
+        nonlocal totals_failing
+        if not runtime.recorder.enabled:
+            return None
+        try:
+            found = await players.map_totals()
+        except PlayerStoreError as exc:
+            if not totals_failing:
+                log.warning("map play totals are not available: %s", exc)
+            totals_failing = True
+            return None
+        totals_failing = False
+        return found
 
     @router.get(
         "/gametypes",
@@ -149,8 +173,11 @@ def build_maps_router(runtime: Runtime) -> APIRouter:
 
     @router.get("/maps", response_model=MapsModel, summary="The installed maps")
     async def get_maps() -> MapsModel:
-        return MapsModel(
-            maps=[
+        played = await totals()
+        models = []
+        for m in catalogue.maps():
+            n, frags, last = (0, 0, None) if played is None else played.get(m.name, (0, 0, None))
+            models.append(
                 MapModel(
                     name=m.name,
                     title=m.title,
@@ -163,9 +190,40 @@ def build_maps_router(runtime: Runtime) -> APIRouter:
                     package=m.package,
                     package_size=m.package_size,
                     pending_restart=m.pending_restart,
+                    played=None if played is None else n,
+                    frags=None if played is None else frags,
+                    last_played=None if played is None else last,
                 )
-                for m in catalogue.maps()
-            ]
+            )
+        return MapsModel(maps=models)
+
+    @router.get(
+        "/maps/{name}/stats",
+        response_model=MapStatsModel,
+        responses={
+            404: {"model": ErrorResponse, "description": "The map is not installed."},
+            503: {"model": ErrorResponse, "description": "Player history is not being recorded."},
+        },
+        summary="How a map has been played: totals, gametypes and top fraggers",
+    )
+    async def get_map_stats(name: str) -> MapStatsModel:
+        if catalogue.get(name) is None:
+            raise api_error(404, "map_not_found", f"the map {name!r} is not installed")
+        if not runtime.recorder.enabled:
+            raise api_error(503, "players_unavailable", "player history is not being recorded")
+        try:
+            data = await players.map_detail(name)
+        except PlayerStoreError as exc:
+            raise api_error(503, "players_unavailable", str(exc)) from exc
+        return MapStatsModel(
+            name=name,
+            played=data["played"],
+            cut_short=data["cut_short"],
+            frags=data["frags"],
+            first_played=data["first_played"],
+            last_played=data["last_played"],
+            gametypes=[MapGametypeModel(**g) for g in data["gametypes"]],
+            top_fraggers=[MapFraggerModel(**f) for f in data["top_fraggers"]],
         )
 
     @router.get(

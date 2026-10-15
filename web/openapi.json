@@ -422,6 +422,56 @@
         "title": "HealthModel",
         "type": "object"
       },
+      "MapFraggerModel": {
+        "properties": {
+          "frags": {
+            "description": "Frags on this map, summed over every match.",
+            "title": "Frags",
+            "type": "integer"
+          },
+          "is_bot": {
+            "title": "Is Bot",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The most recently used name, colour codes intact.",
+            "title": "Name",
+            "type": "string"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "player_id",
+          "name",
+          "frags",
+          "is_bot"
+        ],
+        "title": "MapFraggerModel",
+        "type": "object"
+      },
+      "MapGametypeModel": {
+        "properties": {
+          "gametype": {
+            "description": "The gametype id, or \"unknown\" when it was not recorded.",
+            "title": "Gametype",
+            "type": "string"
+          },
+          "played": {
+            "description": "Finished matches of this gametype.",
+            "title": "Played",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "gametype",
+          "played"
+        ],
+        "title": "MapGametypeModel",
+        "type": "object"
+      },
       "MapModel": {
         "properties": {
           "author": {
@@ -431,6 +481,18 @@
           "description": {
             "title": "Description",
             "type": "string"
+          },
+          "frags": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Every frag recorded on the map, finished or not, bots included. Null when player history is not available.",
+            "title": "Frags"
           },
           "gametypes": {
             "description": "Empty when the map has no map information.",
@@ -443,6 +505,18 @@
           "has_mapinfo": {
             "title": "Has Mapinfo",
             "type": "boolean"
+          },
+          "last_played": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "UTC epoch seconds of the latest recorded match on the map. Null when it was never played or player history is not available.",
+            "title": "Last Played"
           },
           "name": {
             "title": "Name",
@@ -462,6 +536,18 @@
             "description": "The package was added after the server started: the game has not loaded it, so the map cannot be gone to until the server is restarted.",
             "title": "Pending Restart",
             "type": "boolean"
+          },
+          "played": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Finished matches with at least one participant, from the player history. Null when player history is not available.",
+            "title": "Played"
           },
           "preview": {
             "description": "A preview image is available at /api/maps/{name}/preview.",
@@ -492,9 +578,86 @@
           "source",
           "package",
           "package_size",
-          "pending_restart"
+          "pending_restart",
+          "played",
+          "frags",
+          "last_played"
         ],
         "title": "MapModel",
+        "type": "object"
+      },
+      "MapStatsModel": {
+        "properties": {
+          "cut_short": {
+            "description": "Matches ended early that had a participant.",
+            "title": "Cut Short",
+            "type": "integer"
+          },
+          "first_played": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "UTC epoch seconds, null if never played.",
+            "title": "First Played"
+          },
+          "frags": {
+            "title": "Frags",
+            "type": "integer"
+          },
+          "gametypes": {
+            "description": "Finished matches per gametype.",
+            "items": {
+              "$ref": "#/components/schemas/MapGametypeModel"
+            },
+            "title": "Gametypes",
+            "type": "array"
+          },
+          "last_played": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "UTC epoch seconds, null if never played.",
+            "title": "Last Played"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "played": {
+            "description": "Finished matches with at least one participant.",
+            "title": "Played",
+            "type": "integer"
+          },
+          "top_fraggers": {
+            "description": "At most ten, most frags first, ties by name.",
+            "items": {
+              "$ref": "#/components/schemas/MapFraggerModel"
+            },
+            "title": "Top Fraggers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "played",
+          "cut_short",
+          "frags",
+          "first_played",
+          "last_played",
+          "gametypes",
+          "top_fraggers"
+        ],
+        "title": "MapStatsModel",
         "type": "object"
       },
       "MapsModel": {
@@ -2717,6 +2880,68 @@
           }
         },
         "summary": "A map's preview image",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/maps/{name}/stats": {
+      "get": {
+        "operationId": "get_map_stats_api_maps__name__stats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapStatsModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The map is not installed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Player history is not being recorded."
+          }
+        },
+        "summary": "How a map has been played: totals, gametypes and top fraggers",
         "tags": [
           "maps"
         ]

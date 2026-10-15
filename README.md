@@ -272,6 +272,28 @@ same *Go to this map* and *Add to rotation* buttons. The view is remembered in t
   both views to the starred maps (it combines with the gametype filter). The list is kept by
   the panel in `favourites.json`, so every browser and device sees the same one.
 
+### How much a map is played
+
+Both views show each map's **Played** and **Frags** figures (`Played 42× · 1,380 frags` on a
+card; two columns in the Files table), taken from the player history (see Players).
+
+- **What "played" counts.** A match counts as played when it ran to its limit and someone
+  took part in it. A match ended early by a skip, vote or map change does not count, so a
+  map that is usually skipped can show 0 played. **Frags** are every frag recorded on the
+  map, cut-short matches and bots included. A map that was never played shows 0.
+- **Not recorded.** When player history is off or cannot be read, the list still loads and
+  both figures show a dash, not 0.
+- **Sort by** (Name, Most played, Most frags, Recently played) and the **played filter**
+  (Played / Never played, which combines with the gametype and favourites filters) apply to
+  both views and are remembered in the browser. Never-played maps come last under
+  *Recently played*; with no history the stat-based choices are disabled and the list is by
+  name.
+- **Details.** Click a map's title for a dialog with its matches played and cut short,
+  frags, first and last played, matches per gametype and its ten top fraggers (bots are
+  marked). A fragger opens that player's details. The figures are read when the Maps
+  section loads and do not update while it is open; reload to see a match that just ended.
+  The same details are served at `GET /api/maps/{name}/stats`.
+
 ## Players
 
 The **Players** section keeps a history of everyone who plays on the server, in

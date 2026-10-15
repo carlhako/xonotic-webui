@@ -5,12 +5,15 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable
+from pathlib import Path
 
 import httpx
 import pytest
 
 from tests.conftest import Live
 from tests.helpers import PREVIEW_BYTES, fake_maps, write_pk3
+from tests.test_player_recorder_e2e import FP, current_match_id, until, write_report
+from xonotic_webui.players.store import Ops, PlayerStoreError
 
 LiveFactory = Callable[..., "asyncio.Future[Live]"]
 
@@ -280,4 +283,180 @@ async def test_change_now_goes_to_a_map_that_supports_the_new_gametype(
         await action_state(client, "done")
         status = (await client.get("/api/status")).json()
         assert (status["map"], status["gametype"]) == ("catharsis", "ctf")
+        await client.post("/api/lifecycle/stop")
+
+
+# --- play totals and details (map-control, player-stats) -------------------------------------
+
+NOW = 1_800_000_000
+
+
+async def seed_history(app: Live) -> None:
+    """Two finished matches and one cut-short one on stormkeep, nothing anywhere else."""
+
+    def work(ops: Ops) -> None:
+        ann = ops.get_or_create_player("fp:ann", "^1Ann", is_bot=False, now=NOW)
+        rex = ops.get_or_create_player("bot:rex", "[BOT]Rex", is_bot=True, now=NOW)
+        for match_id, started, finished, ann_frags, rex_frags in (
+            ("m1", NOW, True, 10, 4),
+            ("m2", NOW + 100, True, 5, 6),
+            ("m3", NOW + 200, False, 3, 0),
+        ):
+            m = ops.upsert_match(match_id, "stormkeep", "dm", started)
+            ops.add_counters(m, ann, frags=ann_frags)
+            ops.add_counters(m, rex, frags=rex_frags)
+            ops.apply_report(m, finished=finished, duration=60, players=[])
+
+    await app.runtime.players_store.transact(work)
+
+
+async def test_maps_carry_their_play_totals(live: LiveFactory) -> None:
+    app = await live()
+    await seed_history(app)
+    async with httpx.AsyncClient(base_url=app.base_url) as client:
+        by_name = {m["name"]: m for m in (await client.get("/api/maps")).json()["maps"]}
+    played = by_name["stormkeep"]
+    assert (played["played"], played["frags"], played["last_played"]) == (2, 28, NOW + 200)
+    others = [m for n, m in by_name.items() if n != "stormkeep"]
+    assert others and all(
+        (m["played"], m["frags"], m["last_played"]) == (0, 0, None) for m in others
+    )
+
+
+async def test_history_off_still_lists_every_map_with_null_totals(live: LiveFactory) -> None:
+    app = await live()
+    await seed_history(app)
+    app.runtime.recorder.enabled = False
+    async with httpx.AsyncClient(base_url=app.base_url) as client:
+        r = await client.get("/api/maps")
+    assert r.status_code == 200
+    maps = r.json()["maps"]
+    assert {m["name"] for m in maps} == set(fake_maps())
+    assert all(
+        m["played"] is None and m["frags"] is None and m["last_played"] is None for m in maps
+    )
+
+
+async def test_a_store_error_still_lists_every_map_with_null_totals(
+    live: LiveFactory, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    app = await live()
+
+    async def broken() -> dict:
+        raise PlayerStoreError("disk on fire")
+
+    monkeypatch.setattr(app.runtime.players_store, "map_totals", broken)
+    async with httpx.AsyncClient(base_url=app.base_url) as client:
+        first = await client.get("/api/maps")
+        second = await client.get("/api/maps")
+    for r in (first, second):
+        assert r.status_code == 200
+        maps = r.json()["maps"]
+        assert {m["name"] for m in maps} == set(fake_maps())
+        assert all(m["played"] is None for m in maps)
+    assert caplog.text.count("map play totals are not available") == 1  # once per outage
+
+
+async def test_map_stats_of_a_played_map(live: LiveFactory) -> None:
+    app = await live()
+    await seed_history(app)
+    async with httpx.AsyncClient(base_url=app.base_url) as client:
+        r = await client.get("/api/maps/stormkeep/stats")
+    assert r.status_code == 200
+    body = r.json()
+    assert (body["name"], body["played"], body["cut_short"], body["frags"]) == (
+        "stormkeep",
+        2,
+        1,
+        28,
+    )
+    assert (body["first_played"], body["last_played"]) == (NOW, NOW + 200)
+    assert body["gametypes"] == [{"gametype": "dm", "played": 2}]
+    assert [(f["name"], f["frags"], f["is_bot"]) for f in body["top_fraggers"]] == [
+        ("^1Ann", 18, False),
+        ("[BOT]Rex", 10, True),
+    ]
+
+
+async def test_map_stats_of_a_never_played_map_are_zeros(live: LiveFactory) -> None:
+    app = await live()
+    async with httpx.AsyncClient(base_url=app.base_url) as client:
+        r = await client.get("/api/maps/stormkeep/stats")
+    assert r.status_code == 200
+    assert r.json() == {
+        "name": "stormkeep",
+        "played": 0,
+        "cut_short": 0,
+        "frags": 0,
+        "first_played": None,
+        "last_played": None,
+        "gametypes": [],
+        "top_fraggers": [],
+    }
+
+
+async def test_map_stats_of_an_unknown_map_is_not_found(live: LiveFactory) -> None:
+    app = await live()
+    async with httpx.AsyncClient(base_url=app.base_url) as client:
+        r = await client.get("/api/maps/nowhere/stats")
+    assert r.status_code == 404
+    assert r.json()["detail"]["code"] == "map_not_found"
+
+
+async def test_map_stats_with_history_off_is_unavailable(live: LiveFactory) -> None:
+    app = await live()
+    app.runtime.recorder.enabled = False
+    async with httpx.AsyncClient(base_url=app.base_url) as client:
+        r = await client.get("/api/maps/stormkeep/stats")
+    assert r.status_code == 503
+    assert r.json()["detail"]["code"] == "players_unavailable"
+
+
+async def test_map_stats_for_a_name_that_needs_url_encoding(live: LiveFactory) -> None:
+    app = await live()
+    write_pk3(app.settings.userdir / "data" / "odd.pk3", {"my map": {"gametypes": ["dm"]}})
+    async with httpx.AsyncClient(base_url=app.base_url) as client:
+        names = {m["name"] for m in (await client.get("/api/maps")).json()["maps"]}
+        assert "my map" in names
+        r = await client.get("/api/maps/my%20map/stats")
+    assert r.status_code == 200 and r.json()["name"] == "my map"
+
+
+async def test_a_match_played_through_the_recorder_shows_in_the_map_list(
+    live: LiveFactory, tmp_path: Path
+) -> None:
+    """The recorder's map name is the catalogue's name (design risk: map name mismatch)."""
+    app = await live()
+    sup = app.runtime.supervisor
+    async with httpx.AsyncClient(base_url=app.base_url, timeout=30) as client:
+        await client.post("/api/lifecycle/start")
+        await wait_status(client, "state", "running")
+        playing = (await client.get("/api/status")).json()["map"]
+        assert playing in fake_maps()
+
+        await sup.send_command(f"fake_join 1 1 127.0.0.1 fp={FP} ^1Tester")
+        await sup.send_command("fake_join 2 2 bot [BOT]Eureka")
+        await until(lambda: app.runtime.recorder.store.is_open)
+        await sup.send_command("fake_kill frag 1 2")
+        await sup.send_command("fake_kill frag 1 2")
+        await sup.send_command("fake_kill frag 2 1")
+        report = write_report(tmp_path, current_match_id(app.runtime), finished=True)
+        await sup.send_command("fake_emit ^7:end")
+        await sup.send_command(f"fake_report {report}")
+        await sup.send_command("fake_emit ^7:gameover")
+
+        async def totals() -> tuple | None:
+            by_name = {m["name"]: m for m in (await client.get("/api/maps")).json()["maps"]}
+            m = by_name[playing]
+            return (m["played"], m["frags"]) if m["played"] else None
+
+        await until(totals)
+        assert await totals() == (1, 3)
+        last = {m["name"]: m for m in (await client.get("/api/maps")).json()["maps"]}[playing]
+        assert isinstance(last["last_played"], int)
+        stats = (await client.get(f"/api/maps/{playing}/stats")).json()
+        assert [(f["name"], f["frags"], f["is_bot"]) for f in stats["top_fraggers"]] == [
+            ("^1Tester", 2, False),
+            ("[BOT]Eureka", 1, True),
+        ]
         await client.post("/api/lifecycle/stop")

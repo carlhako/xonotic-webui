@@ -27,7 +27,7 @@ from xonotic_webui.logging import get_logger
 
 log = get_logger("players.store")
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 T = TypeVar("T")
 
@@ -139,8 +139,19 @@ CREATE TABLE player_totals (
 );
 """
 
+# The per-map totals group the match history by map name.
+_SCHEMA_V2 = """
+CREATE INDEX matches_map ON matches(map);
+"""
+
 # Forward-only migrations: ``_MIGRATIONS[n]`` takes the database from version n to n + 1.
-_MIGRATIONS: dict[int, str] = {0: _SCHEMA_V1}
+_MIGRATIONS: dict[int, str] = {0: _SCHEMA_V1, 1: _SCHEMA_V2}
+
+# The gametype shown for matches that were recorded without one.
+UNKNOWN_GAMETYPE = "unknown"
+
+# How many players the per-map details list.
+MAP_TOP_FRAGGERS = 10
 
 # Columns the list can be sorted by. The values are SQL expressions over the list query's
 # aliases; they are never taken from input.
@@ -537,6 +548,86 @@ class Ops:
         )
         return player
 
+    def map_totals(self) -> dict[str, tuple[int, int, int | None]]:
+        """``{map: (played, frags, last_played)}`` for every map with a recorded participant.
+
+        A match counts as played when it finished and has a participant; frags come from every
+        match on the map; the last played time is the latest start of any match that has a
+        participant (design D1).
+        """
+        rows = self._c.execute(
+            """
+            SELECT m.map,
+                   SUM(CASE WHEN m.finished = 1 THEN 1 ELSE 0 END),
+                   SUM(s.frags),
+                   MAX(m.started_at)
+            FROM matches m
+            JOIN (SELECT match_pk, SUM(frags) AS frags FROM match_players GROUP BY match_pk) s
+              ON s.match_pk = m.id
+            GROUP BY m.map
+            """
+        )
+        return {str(r[0]): (int(r[1]), int(r[2]), int(r[3])) for r in rows}
+
+    def map_detail(self, name: str) -> dict[str, Any]:
+        """The play details of one map (design D1); zeros and empty lists when never played."""
+        played, cut_short, frags, first, last = self._c.execute(
+            """
+            SELECT COALESCE(SUM(CASE WHEN m.finished = 1 THEN 1 ELSE 0 END), 0),
+                   COALESCE(SUM(CASE WHEN m.finished = 0 THEN 1 ELSE 0 END), 0),
+                   COALESCE(SUM(s.frags), 0),
+                   MIN(m.started_at),
+                   MAX(m.started_at)
+            FROM matches m
+            JOIN (
+                SELECT mp.match_pk, SUM(mp.frags) AS frags
+                FROM match_players mp
+                WHERE mp.match_pk IN (SELECT id FROM matches WHERE map = ?)
+                GROUP BY mp.match_pk
+            ) s ON s.match_pk = m.id
+            """,
+            (name,),
+        ).fetchone()
+        gametypes = [
+            {"gametype": r[0] or UNKNOWN_GAMETYPE, "played": int(r[1])}
+            for r in self._c.execute(
+                """
+                SELECT m.gametype, COUNT(*) AS n
+                FROM matches m
+                WHERE m.map = ? AND m.finished = 1
+                  AND EXISTS (SELECT 1 FROM match_players mp WHERE mp.match_pk = m.id)
+                GROUP BY m.gametype
+                ORDER BY n DESC, COALESCE(NULLIF(m.gametype, ''), ?)
+                """,
+                (name, UNKNOWN_GAMETYPE),
+            )
+        ]
+        top = [
+            {"player_id": int(r[0]), "name": r[1], "frags": int(r[2]), "is_bot": bool(r[3])}
+            for r in self._c.execute(
+                """
+                SELECT p.id, p.name, SUM(mp.frags) AS f, p.is_bot
+                FROM match_players mp
+                JOIN matches m ON m.id = mp.match_pk
+                JOIN players p ON p.id = mp.player_id
+                WHERE m.map = ?
+                GROUP BY p.id
+                ORDER BY f DESC, p.plain, p.id
+                LIMIT ?
+                """,
+                (name, MAP_TOP_FRAGGERS),
+            )
+        ]
+        return {
+            "played": int(played),
+            "cut_short": int(cut_short),
+            "frags": int(frags),
+            "first_played": None if first is None else int(first),
+            "last_played": None if last is None else int(last),
+            "gametypes": gametypes,
+            "top_fraggers": top,
+        }
+
 
 # The list query: the cached totals joined to players. An open session counts up to ``?1``
 # (the first parameter).
@@ -718,6 +809,12 @@ class PlayerStore:
     async def get_player(self, player_id: int, *, now: int | None = None) -> dict[str, Any] | None:
         moment = int(time.time()) if now is None else now
         return await self.transact(lambda ops: ops.get_player(player_id, now=moment), write=False)
+
+    async def map_totals(self) -> dict[str, tuple[int, int, int | None]]:
+        return await self.transact(lambda ops: ops.map_totals(), write=False)
+
+    async def map_detail(self, name: str) -> dict[str, Any]:
+        return await self.transact(lambda ops: ops.map_detail(name), write=False)
 
 
 def _split(script: str) -> list[str]:

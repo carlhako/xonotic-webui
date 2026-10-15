@@ -199,6 +199,9 @@ export function makeMap(overrides: Partial<MapInfo> = {}): MapInfo {
     package: "xonotic-data-maps.pk3",
     package_size: 41_943_040,
     pending_restart: false,
+    played: 0,
+    frags: 0,
+    last_played: null,
     ...overrides,
   };
 }
@@ -216,7 +219,7 @@ export function routeFetch(routes: Record<string, (init?: RequestInit) => Respon
 
 // -- fixtures for the players section ----------------------------------------------------
 
-import type { PlayerDetail, PlayerRow } from "../api/client";
+import type { MapStats, PlayerDetail, PlayerRow } from "../api/client";
 
 export function makePlayerRow(overrides: Partial<PlayerRow> = {}): PlayerRow {
   return {
@@ -237,6 +240,26 @@ export function makePlayerRow(overrides: Partial<PlayerRow> = {}): PlayerRow {
     accuracy: 0.42,
     first_seen: 1_790_000_000,
     last_seen: 1_790_100_000,
+    ...overrides,
+  };
+}
+
+export function makeMapStats(overrides: Partial<MapStats> = {}): MapStats {
+  return {
+    name: "boil",
+    played: 12,
+    cut_short: 3,
+    frags: 1380,
+    first_played: 1_790_000_000,
+    last_played: 1_790_900_000,
+    gametypes: [
+      { gametype: "dm", played: 9 },
+      { gametype: "unknown", played: 3 },
+    ],
+    top_fraggers: [
+      { player_id: 7, name: "^1Ann", frags: 500, is_bot: false },
+      { player_id: 8, name: "[BOT]Rex", frags: 400, is_bot: true },
+    ],
     ...overrides,
   };
 }
