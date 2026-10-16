@@ -5,6 +5,38 @@ publishes that section as the GitHub release notes, which the panel shows on its
 page before you upgrade. A tag without a section here is not published, so add the entry
 with the version bump.
 
+## 0.6.0 - 2026-10-16
+
+### What's new
+
+- **A Matches section.** Every past match that had a human in it, newest first, a page at a
+  time: when it started, map, gametype, duration, how it ended (finished, cut short, in
+  progress or no report), who took part, the winner and a **vs bots** tag for one human
+  against bots. Filter by map, gametype and *Hide vs bots*; the filters and the page are in
+  the address, and the list refreshes by itself when a match ends.
+- **The final scoreboard of each match.** Click a match for the game's own columns in the
+  game's order, with ping and time playing. Team games group the players under their team's
+  totals in the team's colour, and a player who left early or was spectating at the end is
+  listed last and marked *not at end*. Names are the ones used in that match. Click a player
+  to open their details.
+- **Matches played is now defined.** A match counts toward a player's **Matches** (and can
+  count as a win) only when it ran to its limit and they were on the final scoreboard when
+  it ended. When they joined does not matter. This is what the panel already counted; it is
+  now stated, and the player dialog shows **Matches played** beside **Wins**, with a
+  **View matches** link to that player's matches.
+- **Two new routes**, `GET /api/matches` and `GET /api/matches/{id}`.
+
+### Changes you should know about
+
+- **The player database moves to schema version 3 the first time this version starts.** It
+  takes a moment: it adds columns and tables and fills in each match's player counts, and
+  changes no figure that is already there. A panel older than 0.6.0 will refuse the
+  upgraded file and run with player history off; the guide's Upgrading section says how to
+  roll back with a copy of `players.db`.
+- **Older matches keep what they had.** Matches recorded before this version show their
+  players without team grouping or team scores, under each player's current name, and the
+  dialog says so. Full scoreboards are kept for matches from now on.
+
 ## 0.5.0 - 2026-10-15
 
 ### What's new

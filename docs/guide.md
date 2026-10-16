@@ -42,6 +42,12 @@ Options are environment variables that must reach `bash`, so put them after the 
 curl -fsSL https://github.com/carlhako/xonotic-webui/releases/latest/download/install.sh | RELEASE_TAG=v0.1.1 bash
 ```
 
+**Rolling back across 0.6.0.** 0.6.0 moves the player database (`players.db`) to a newer
+schema when it first starts, and an older panel refuses that file and runs with player
+history off. To go back to 0.5.x or earlier and keep the history, stop the panel, restore a
+copy of `players.db` taken before the upgrade (copy it first; the panel does not), and then
+roll back. Without a copy, move `players.db` aside and the older panel starts a new history.
+
 | variable | effect |
 | --- | --- |
 | `RELEASE_TAG=v0.1.1` | install that release instead of the latest |
