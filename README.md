@@ -19,6 +19,14 @@ service, built for a Proxmox LXC or any Debian 12/13 box on your LAN.
     <td align="center"><sub>Per-player stats and weapons</sub></td>
   </tr>
   <tr>
+    <td><img src="docs/screenshots/matches.png" alt="Match history" width="400"></td>
+    <td><img src="docs/screenshots/match-details.png" alt="A past match's final scoreboard" width="400"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Match history</sub></td>
+    <td align="center"><sub>A match's final scoreboard</sub></td>
+  </tr>
+  <tr>
     <td><img src="docs/screenshots/dashboard-team-deathmatch.png" alt="Team deathmatch scoreboard" width="400"></td>
     <td><img src="docs/screenshots/maps-cards.png" alt="Maps" width="400"></td>
   </tr>

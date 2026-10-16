@@ -399,6 +399,10 @@ match that ends appears without a reload, and it keeps your filters and page.
 - **Storage.** A match keeps about 10 to 20 small rows per player. History is kept forever
   like the rest, so a busy server's file grows by a few tens of megabytes per 10,000 matches.
 
+![The Matches section: past matches newest first, with outcome, players, winner and the vs-bots tag](screenshots/matches.png)
+
+![A team deathmatch's final scoreboard, grouped under each team's total](screenshots/match-details.png)
+
 The same data is served at `GET /api/matches` (filtered with `map`, `gametype`, `player`,
 `vs_bots`, `limit` and `offset`; the answer has an ETag) and `GET /api/matches/{id}`.
 
