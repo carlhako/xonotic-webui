@@ -494,7 +494,17 @@ def test_fake_kill_prints_a_kill_event(tmp_path: Path) -> None:
     assert any(line.endswith("type=522:items=2-1:victimitems=2-1") for line in lines)
 
 
-@pytest.mark.parametrize("fixture", ["report_finished.txt", "report_unfinished.txt"])
+@pytest.mark.parametrize(
+    "fixture",
+    [
+        "report_finished.txt",
+        "report_unfinished.txt",
+        "report_tdm_finished.txt",
+        "report_ctf_finished.txt",
+        "report_leaver.txt",
+        "report_spectator_at_end.txt",
+    ],
+)
 def test_fake_report_prints_the_captured_block_verbatim(tmp_path: Path, fixture: str) -> None:
     from xonotic_webui.players.report import ReportParser
 

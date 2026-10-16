@@ -170,7 +170,7 @@ describe("panel page (8.1)", () => {
       within(nav)
         .getAllByRole("link")
         .map((l) => l.textContent),
-    ).toEqual(["Dashboard", "Players", "Maps", "Settings", "Console"]);
+    ).toEqual(["Dashboard", "Players", "Matches", "Maps", "Settings", "Console"]);
   });
 
   it("is opened by the header version", async () => {

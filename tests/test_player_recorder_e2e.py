@@ -176,3 +176,65 @@ async def test_a_store_that_fails_to_write_does_not_disturb_the_server_or_the_st
     # and the server still answers
     reply = await runtime.console.query_line("sv_eventlog", lambda p: p.startswith('"sv_eventlog"'))
     assert '"sv_eventlog" is "1"' in reply
+
+
+# --- when a match counts as played (player-stats: matches played) ------------------------------
+
+
+async def _players(rt: Runtime, *, has: str) -> dict[str, list[dict[str, Any]]]:
+    """The totals grouped by name, once the report that names ``has`` has been written."""
+    grouped: dict[str, list[dict[str, Any]]] = {}
+
+    async def written() -> bool:
+        await rt.recorder.flush()
+        _, rows = await rt.players_store.list_players(bots=True, limit=200)
+        grouped.clear()
+        for row in rows:
+            grouped.setdefault(row["name"], []).append(row)
+        # a reported player has time playing; the figures arrive in the same transaction
+        return any(r["time_playing"] > 0 for r in grouped.get(has, []))
+
+    await until(written)
+    return grouped
+
+
+async def _replay(rt: Runtime, fixture: str) -> None:
+    await rt.supervisor.send_command(f"fake_report {fixture}")
+    await rt.recorder.flush()
+
+
+async def test_matches_played_counts_only_players_on_the_final_board_of_a_finished_match(
+    runtime: Runtime,
+) -> None:
+    # a human leaves before the end, another joins late into the freed slot, one stays
+    await _replay(runtime, "report_leaver.txt")
+    got = await _players(runtime, has="^1Leav^7er")
+    (stayer,) = got["^2Stay^7er"]
+    (late,) = got["^4Late^7Joiner"]
+    (leaver,) = got["^1Leav^7er"]
+    (winner,) = got["[BOT]Sensible"]
+    assert stayer["matches"] == 1
+    assert late["matches"] == 1  # joining late does not matter
+    assert leaver["matches"] == 0 and leaver["wins"] == 0
+    assert leaver["time_playing"] > 0  # what they did is still counted
+    assert winner["matches"] == 1 and winner["wins"] == 1
+
+    # a human who is spectating when the match reaches its limit
+    await _replay(runtime, "report_spectator_at_end.txt")
+    got = await _players(runtime, has="^5Watch^7er")
+    (watcher,) = got["^5Watch^7er"]
+    assert watcher["matches"] == 0 and watcher["time_playing"] > 0
+    assert sorted(p["matches"] for p in got["^2Stay^7er"]) == [1, 1]  # two captures, two keys
+
+    # a match against bots counts, a team game's losing side included
+    await _replay(runtime, "report_tdm_finished.txt")
+    got = await _players(runtime, has="^3Team^7Tester")
+    (tester,) = got["^3Team^7Tester"]
+    assert tester["matches"] == 1 and tester["wins"] == 0
+    assert got["[BOT]Scorcher"][0]["wins"] == 1
+
+    # a match cut short counts for nobody
+    await _replay(runtime, "report_unfinished.txt")
+    got = await _players(runtime, has="^2Map^7Changer")
+    (changer,) = got["^2Map^7Changer"]
+    assert changer["matches"] == 0 and changer["time_playing"] > 0

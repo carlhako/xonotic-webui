@@ -843,6 +843,268 @@
         "title": "MatchColumnModel",
         "type": "object"
       },
+      "MatchDetail": {
+        "properties": {
+          "board_kept": {
+            "description": "False for a match recorded before full scoreboards were kept: no teams.",
+            "title": "Board Kept",
+            "type": "boolean"
+          },
+          "bots": {
+            "description": "Bots who took part.",
+            "title": "Bots",
+            "type": "integer"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Seconds, once the match has a report.",
+            "title": "Duration"
+          },
+          "gametype": {
+            "description": "The gametype, or \"unknown\" when it was not recorded.",
+            "title": "Gametype",
+            "type": "string"
+          },
+          "humans": {
+            "description": "Humans who took part.",
+            "title": "Humans",
+            "type": "integer"
+          },
+          "id": {
+            "description": "The panel's id for the match, not the game's.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "map": {
+            "title": "Map",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "finished",
+              "cut_short",
+              "in_progress",
+              "no_report"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "scoreboard": {
+            "$ref": "#/components/schemas/MatchHistoryScoreboard"
+          },
+          "started_at": {
+            "description": "UTC epoch seconds.",
+            "title": "Started At",
+            "type": "integer"
+          },
+          "vs_bots": {
+            "description": "Exactly one human and at least one bot took part.",
+            "title": "Vs Bots",
+            "type": "boolean"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "player": "#/components/schemas/MatchWinnerPlayer",
+                    "team": "#/components/schemas/MatchWinnerTeam"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/MatchWinnerTeam"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MatchWinnerPlayer"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only a finished match has one, and not a draw.",
+            "title": "Winner"
+          }
+        },
+        "required": [
+          "id",
+          "started_at",
+          "map",
+          "gametype",
+          "duration",
+          "outcome",
+          "humans",
+          "bots",
+          "vs_bots",
+          "winner",
+          "board_kept",
+          "scoreboard"
+        ],
+        "title": "MatchDetail",
+        "type": "object"
+      },
+      "MatchHistoryPlayer": {
+        "properties": {
+          "at_end": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether they were playing when it ended; null without a report.",
+            "title": "At End"
+          },
+          "bot": {
+            "title": "Bot",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name used in the match, colour codes intact.",
+            "title": "Name",
+            "type": "string"
+          },
+          "ping": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average ping, when the match has a report.",
+            "title": "Ping"
+          },
+          "plain_name": {
+            "title": "Plain Name",
+            "type": "string"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "integer"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The game's team number, if teams were recorded.",
+            "title": "Team"
+          },
+          "time_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Seconds playing, when the match has a report.",
+            "title": "Time S"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Score column values by column key.",
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "player_id",
+          "name",
+          "plain_name",
+          "bot",
+          "team",
+          "ping",
+          "time_s",
+          "at_end",
+          "values"
+        ],
+        "title": "MatchHistoryPlayer",
+        "type": "object"
+      },
+      "MatchHistoryScoreboard": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/MatchColumnModel"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "players": {
+            "description": "In the game's board order, players not there at the end last.",
+            "items": {
+              "$ref": "#/components/schemas/MatchHistoryPlayer"
+            },
+            "title": "Players",
+            "type": "array"
+          },
+          "teams": {
+            "description": "Empty unless the match kept its board and was a team game.",
+            "items": {
+              "$ref": "#/components/schemas/MatchTeamModel"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "columns",
+          "players",
+          "teams"
+        ],
+        "title": "MatchHistoryScoreboard",
+        "type": "object"
+      },
+      "MatchList": {
+        "properties": {
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchSummary"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "revision": {
+            "description": "Changes whenever recorded data changes.",
+            "title": "Revision",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Matches matching the filters, across all pages.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "total",
+          "matches"
+        ],
+        "title": "MatchList",
+        "type": "object"
+      },
       "MatchModel": {
         "properties": {
           "clock": {
@@ -1079,6 +1341,106 @@
         "title": "MatchSpectatorModel",
         "type": "object"
       },
+      "MatchSummary": {
+        "properties": {
+          "bots": {
+            "description": "Bots who took part.",
+            "title": "Bots",
+            "type": "integer"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Seconds, once the match has a report.",
+            "title": "Duration"
+          },
+          "gametype": {
+            "description": "The gametype, or \"unknown\" when it was not recorded.",
+            "title": "Gametype",
+            "type": "string"
+          },
+          "humans": {
+            "description": "Humans who took part.",
+            "title": "Humans",
+            "type": "integer"
+          },
+          "id": {
+            "description": "The panel's id for the match, not the game's.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "map": {
+            "title": "Map",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "finished",
+              "cut_short",
+              "in_progress",
+              "no_report"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "started_at": {
+            "description": "UTC epoch seconds.",
+            "title": "Started At",
+            "type": "integer"
+          },
+          "vs_bots": {
+            "description": "Exactly one human and at least one bot took part.",
+            "title": "Vs Bots",
+            "type": "boolean"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "player": "#/components/schemas/MatchWinnerPlayer",
+                    "team": "#/components/schemas/MatchWinnerTeam"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/MatchWinnerTeam"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MatchWinnerPlayer"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only a finished match has one, and not a draw.",
+            "title": "Winner"
+          }
+        },
+        "required": [
+          "id",
+          "started_at",
+          "map",
+          "gametype",
+          "duration",
+          "outcome",
+          "humans",
+          "bots",
+          "vs_bots",
+          "winner"
+        ],
+        "title": "MatchSummary",
+        "type": "object"
+      },
       "MatchTeamModel": {
         "properties": {
           "color": {
@@ -1116,6 +1478,85 @@
           "values"
         ],
         "title": "MatchTeamModel",
+        "type": "object"
+      },
+      "MatchWinnerPlayer": {
+        "properties": {
+          "is_bot": {
+            "title": "Is Bot",
+            "type": "boolean"
+          },
+          "kind": {
+            "const": "player",
+            "default": "player",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name used in that match, colour codes intact.",
+            "title": "Name",
+            "type": "string"
+          },
+          "others": {
+            "description": "How many more players have a win in the match (a team game recorded before teams were kept names the first of them).",
+            "title": "Others",
+            "type": "integer"
+          },
+          "plain_name": {
+            "title": "Plain Name",
+            "type": "string"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "player_id",
+          "name",
+          "plain_name",
+          "is_bot",
+          "others"
+        ],
+        "title": "MatchWinnerPlayer",
+        "type": "object"
+      },
+      "MatchWinnerTeam": {
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "enum": [
+                  "red",
+                  "blue",
+                  "yellow",
+                  "pink"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "kind": {
+            "const": "team",
+            "default": "team",
+            "title": "Kind",
+            "type": "string"
+          },
+          "team": {
+            "description": "The game's team number (5 red, 14 blue).",
+            "title": "Team",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "team",
+          "color"
+        ],
+        "title": "MatchWinnerTeam",
         "type": "object"
       },
       "OverrideModel": {
@@ -1703,7 +2144,7 @@
             "type": "integer"
           },
           "matches": {
-            "description": "Finished matches played.",
+            "description": "Matches played: finished while the player was on the final scoreboard.",
             "title": "Matches",
             "type": "integer"
           },
@@ -1924,7 +2365,7 @@
             "type": "integer"
           },
           "matches": {
-            "description": "Finished matches played.",
+            "description": "Matches played: finished while the player was on the final scoreboard.",
             "title": "Matches",
             "type": "integer"
           },
@@ -3604,6 +4045,207 @@
         "summary": "Stream the live match state (server-sent events; each event is a Match)",
         "tags": [
           "match"
+        ]
+      }
+    },
+    "/api/matches": {
+      "get": {
+        "operationId": "list_matches_api_matches_get",
+        "parameters": [
+          {
+            "description": "Only this map.",
+            "in": "query",
+            "name": "map",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this map.",
+              "title": "Map"
+            }
+          },
+          {
+            "description": "Only this gametype (\"unknown\" for none).",
+            "in": "query",
+            "name": "gametype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this gametype (\"unknown\" for none).",
+              "title": "Gametype"
+            }
+          },
+          {
+            "description": "Only matches they took part in.",
+            "in": "query",
+            "name": "player",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only matches they took part in.",
+              "title": "Player"
+            }
+          },
+          {
+            "description": "False leaves out vs-bots matches.",
+            "in": "query",
+            "name": "vs_bots",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "False leaves out vs-bots matches.",
+              "title": "Vs Bots",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "At most 200 are returned.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "At most 200 are returned.",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Unchanged since If-None-Match."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Player history is not being recorded."
+          }
+        },
+        "summary": "Past matches with a human in them, newest first",
+        "tags": [
+          "matches"
+        ]
+      }
+    },
+    "/api/matches/{id}": {
+      "get": {
+        "operationId": "get_match_api_matches__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such match."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Player history is not being recorded."
+          }
+        },
+        "summary": "One match with its final scoreboard",
+        "tags": [
+          "matches"
         ]
       }
     },

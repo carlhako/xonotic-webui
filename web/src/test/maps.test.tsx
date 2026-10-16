@@ -1252,6 +1252,8 @@ describe("the map details dialog", () => {
     await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(1));
     const player = screen.getByRole("dialog");
     expect(await within(player).findByText("dRXbACYQ…")).toBeInTheDocument();
-    expect(within(player).queryByText("Matches played")).toBeNull();
+    // the map's own details are gone: this is the player's dialog
+    expect(within(player).queryByRole("table", { name: "Top fraggers" })).toBeNull();
+    expect(within(player).queryByText("Cut short")).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import closing
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -50,8 +51,21 @@ async def test_a_fresh_database_is_created_at_the_current_version(tmp_path: Path
     await s.close()
     assert path.is_file()
     with closing(sqlite3.connect(path)) as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 2
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 3
         assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+
+
+def _take_back_to_v2(conn: sqlite3.Connection) -> None:
+    """Remove what schema v3 added, leaving a database as a v2 panel wrote it."""
+    for index in ("matches_started",):
+        conn.execute(f"DROP INDEX {index}")
+    for table in ("match_scores", "match_teams"):
+        conn.execute(f"DROP TABLE {table}")
+    for column in ("team", "board_pos", "name"):
+        conn.execute(f"ALTER TABLE match_players DROP COLUMN {column}")
+    for column in ("board_kept", "humans", "bots"):
+        conn.execute(f"ALTER TABLE matches DROP COLUMN {column}")
+    conn.execute("PRAGMA user_version = 2")
 
 
 async def test_a_fresh_database_has_the_map_index(tmp_path: Path) -> None:
@@ -80,6 +94,7 @@ async def test_a_v1_database_is_migrated_in_place_with_every_row_intact(tmp_path
     await first.transact(work)
     await first.close()
     with closing(sqlite3.connect(path)) as conn:  # take it back to what v1 wrote
+        _take_back_to_v2(conn)
         conn.execute("DROP INDEX matches_map")
         conn.execute("PRAGMA user_version = 1")
 
@@ -91,9 +106,72 @@ async def test_a_v1_database_is_migrated_in_place_with_every_row_intact(tmp_path
     assert total == 1 and rows[0]["frags"] == 7 and rows[0]["matches"] == 1
     assert totals == {"boil": (1, 7, NOW)}
     with closing(sqlite3.connect(path)) as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
     assert "matches_map" in names
+
+
+async def test_a_fresh_database_has_the_match_history_tables(tmp_path: Path) -> None:
+    path = tmp_path / "players.db"
+    s = PlayerStore(path)
+    await s.open()
+    await s.close()
+    with closing(sqlite3.connect(path)) as conn:
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        indexes = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        player_cols = {r[1] for r in conn.execute("PRAGMA table_info(match_players)")}
+        match_cols = {r[1] for r in conn.execute("PRAGMA table_info(matches)")}
+    assert {"match_scores", "match_teams"} <= tables
+    assert "matches_started" in indexes
+    assert {"team", "board_pos", "name"} <= player_cols
+    assert {"board_kept", "humans", "bots"} <= match_cols
+
+
+async def test_a_v2_database_is_migrated_in_place_with_every_row_intact(tmp_path: Path) -> None:
+    path = tmp_path / "players.db"
+    first = PlayerStore(path)
+    await first.open()
+    ace = await add_player(first, "fp:ace", "^1Ace")
+    bot = await add_player(first, "bot:rex", "[BOT]Rex", is_bot=True)
+
+    def work(ops: Ops) -> None:
+        m = ops.upsert_match("m1", "boil", "dm", NOW)
+        ops.add_counters(m, ace, frags=7, deaths=2)
+        ops.add_counters(m, bot, frags=3)
+        ops.apply_report(
+            m,
+            finished=True,
+            duration=60,
+            players=[
+                (ace, ReportedPlayer(score=7, alivetime=55, wins=1, scoreboard_valid=True)),
+                (bot, ReportedPlayer(score=3, alivetime=60, scoreboard_valid=True)),
+            ],
+        )
+
+    await first.transact(work)
+    before = await first.list_players(bots=True, now=NOW)
+    await first.close()
+    with closing(sqlite3.connect(path)) as conn:  # what a v2 panel left behind
+        _take_back_to_v2(conn)
+
+    second = PlayerStore(path)
+    await second.open()
+    after = await second.list_players(bots=True, now=NOW)
+    totals = await second.map_totals()
+    await second.close()
+    assert after == before
+    assert totals == {"boil": (1, 10, NOW)}
+    with closing(sqlite3.connect(path)) as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
+        # nothing already stored was rewritten: no board, and no names, teams or positions
+        assert conn.execute("SELECT board_kept FROM matches").fetchall() == [(0,)]
+        # the participant counts are worked out for the matches already there
+        assert conn.execute("SELECT humans, bots FROM matches").fetchall() == [(1, 1)]
+        assert conn.execute(
+            "SELECT team, board_pos, name FROM match_players ORDER BY player_id"
+        ).fetchall() == [(None, None, None), (None, None, None)]
+        assert conn.execute("SELECT COUNT(*) FROM match_scores").fetchone() == (0,)
+        assert conn.execute("SELECT COUNT(*) FROM match_players").fetchone() == (2,)
 
 
 async def test_reopening_keeps_the_data(tmp_path: Path) -> None:
@@ -333,6 +411,228 @@ async def test_applying_the_same_report_twice_is_idempotent(store: PlayerStore) 
     after = await store.get_player(pid, now=NOW)
     assert before == after
     assert after is not None and after["wins"] == 1 and after["matches"] == 1
+
+
+def _rows_of(path: Path, sql: str) -> list[tuple[object, ...]]:
+    with closing(sqlite3.connect(path)) as conn:
+        return [tuple(r) for r in conn.execute(sql)]
+
+
+async def test_a_report_keeps_team_position_name_scores_and_team_scores(
+    store: PlayerStore,
+) -> None:
+    ace = await add_player(store, "fp:ace", "^1Ace")
+    rex = await add_player(store, "bot:rex", "[BOT]Rex", is_bot=True)
+
+    def work(ops: Ops) -> None:
+        m = ops.upsert_match("m1", "boil", "tdm", NOW)
+        ops.add_counters(m, ace, frags=4, name="^1Ace")
+        ops.apply_report(
+            m,
+            finished=True,
+            duration=90,
+            players=[
+                (
+                    ace,
+                    ReportedPlayer(
+                        score=12,
+                        wins=1,
+                        scoreboard_valid=True,
+                        team=5,
+                        board_pos=1,
+                        name="^1Ace",
+                        scores={"score": 12.0, "kills": 4.0, "caps": 2.0},
+                    ),
+                ),
+                (
+                    rex,
+                    ReportedPlayer(
+                        score=3, team=14, board_pos=2, name="[BOT]Rex", scores={"score": 3.0}
+                    ),
+                ),
+            ],
+            teams={5: {"score": 12.0, "caps": 2.0}, 14: {"score": 3.0}},
+        )
+
+    await store.transact(work)
+    path = store.path
+    assert _rows_of(
+        path,
+        "SELECT player_id, team, board_pos, name FROM match_players ORDER BY player_id",
+    ) == [(ace, 5, 1, "^1Ace"), (rex, 14, 2, "[BOT]Rex")]
+    assert _rows_of(
+        path, "SELECT player_id, label, value FROM match_scores ORDER BY player_id, label"
+    ) == [
+        (ace, "caps", 2.0),
+        (ace, "kills", 4.0),
+        (ace, "score", 12.0),
+        (rex, "score", 3.0),
+    ]
+    assert _rows_of(path, "SELECT team, label, value FROM match_teams ORDER BY team, label") == [
+        (5, "caps", 2.0),
+        (5, "score", 12.0),
+        (14, "score", 3.0),
+    ]
+    assert _rows_of(path, "SELECT board_kept FROM matches") == [(1,)]
+
+
+async def test_a_match_without_a_report_has_no_board_kept(store: PlayerStore) -> None:
+    pid = await add_player(store, "fp:a", "A")
+
+    def work(ops: Ops) -> None:
+        ops.add_counters(ops.upsert_match("m1", "atelier", "dm", NOW), pid, frags=1)
+
+    await store.transact(work)
+    assert _rows_of(store.path, "SELECT board_kept FROM matches") == [(0,)]
+
+
+async def test_applying_a_v3_report_twice_leaves_identical_rows(store: PlayerStore) -> None:
+    pid = await add_player(store, "fp:a", "A")
+    reported = ReportedPlayer(
+        score=5,
+        wins=1,
+        scoreboard_valid=True,
+        team=14,
+        board_pos=1,
+        name="A",
+        scores={"score": 5.0, "caps": 1.0},
+    )
+
+    def apply(ops: Ops) -> None:
+        m = ops.upsert_match("m1", "atelier", "ctf", NOW)
+        ops.apply_report(
+            m, finished=True, duration=60, players=[(pid, reported)], teams={14: {"score": 5.0}}
+        )
+
+    await store.transact(apply)
+    tables = (
+        "SELECT * FROM match_players ORDER BY player_id",
+        "SELECT * FROM match_scores ORDER BY label",
+        "SELECT * FROM match_teams ORDER BY team, label",
+        "SELECT * FROM matches",
+    )
+    before = [_rows_of(store.path, sql) for sql in tables]
+    await store.transact(apply)
+    assert [_rows_of(store.path, sql) for sql in tables] == before
+    assert len(before[1]) == 2 and len(before[2]) == 1
+
+
+async def test_a_second_report_replaces_a_players_scores_and_the_teams(
+    store: PlayerStore,
+) -> None:
+    pid = await add_player(store, "fp:a", "A")
+
+    def apply(scores: dict[str, float], teams: dict[int, dict[str, float]]) -> Any:
+        def work(ops: Ops) -> None:
+            m = ops.upsert_match("m1", "atelier", "tdm", NOW)
+            ops.apply_report(
+                m,
+                finished=True,
+                duration=60,
+                players=[(pid, ReportedPlayer(team=5, scores=scores))],
+                teams=teams,
+            )
+
+        return work
+
+    await store.transact(apply({"score": 5.0, "caps": 1.0}, {5: {"score": 5.0}}))
+    await store.transact(apply({"score": 8.0}, {5: {"score": 8.0}, 14: {"score": 1.0}}))
+    assert _rows_of(store.path, "SELECT label, value FROM match_scores") == [("score", 8.0)]
+    assert _rows_of(store.path, "SELECT team, value FROM match_teams ORDER BY team") == [
+        (5, 8.0),
+        (14, 1.0),
+    ]
+
+
+async def test_keeping_the_board_does_not_change_the_player_totals(
+    store: PlayerStore, tmp_path: Path
+) -> None:
+    plain = PlayerStore(tmp_path / "plain" / "players.db")
+    await plain.open()
+    try:
+        for target, kept in ((store, True), (plain, False)):
+            pid = await add_player(target, "fp:a", "A")
+            rex = await add_player(target, "bot:rex", "[BOT]Rex", is_bot=True)
+            extra = (
+                {"team": 5, "board_pos": 1, "name": "A", "scores": {"score": 9.0, "caps": 2.0}}
+                if kept
+                else {}
+            )
+
+            def work(
+                ops: Ops, pid: int = pid, rex: int = rex, extra: Any = extra, kept: bool = kept
+            ) -> None:
+                m = ops.upsert_match("m1", "atelier", "dm", NOW)
+                ops.add_counters(m, pid, frags=4, deaths=1, name="A")
+                ops.apply_report(
+                    m,
+                    finished=True,
+                    duration=60,
+                    players=[
+                        (
+                            pid,
+                            ReportedPlayer(
+                                score=9,
+                                kills=4,
+                                alivetime=55,
+                                dmg=100,
+                                wins=1,
+                                scoreboard_valid=True,
+                                weapons={"vortex": {"hit": 3, "fired": 6}},
+                                extra={"caps": 2},
+                                **extra,
+                            ),
+                        ),
+                        (rex, ReportedPlayer(score=2, alivetime=60, scoreboard_valid=True)),
+                    ],
+                    teams={5: {"score": 9.0}} if kept else None,
+                )
+
+            await target.transact(work)
+        assert await store.list_players(bots=True, now=NOW) == await plain.list_players(
+            bots=True, now=NOW
+        )
+        assert await store.map_totals() == await plain.map_totals()
+    finally:
+        await plain.close()
+
+
+async def test_a_counter_name_is_replaced_by_a_later_one_and_then_by_the_reports(
+    store: PlayerStore,
+) -> None:
+    pid = await add_player(store, "fp:a", "A")
+
+    def counters(name: str) -> Any:
+        def work(ops: Ops) -> None:
+            ops.add_counters(ops.upsert_match("m1", "atelier", "dm", NOW), pid, frags=1, name=name)
+
+        return work
+
+    def report(name: str | None) -> Any:
+        def work(ops: Ops) -> None:
+            m = ops.upsert_match("m1", "atelier", "dm", NOW)
+            ops.apply_report(
+                m,
+                finished=True,
+                duration=60,
+                players=[(pid, ReportedPlayer(scoreboard_valid=True, name=name))],
+            )
+
+        return work
+
+    sql = "SELECT name FROM match_players"
+    await store.transact(counters("^1Old"))
+    assert _rows_of(store.path, sql) == [("^1Old",)]
+    await store.transact(counters("^2New"))
+    assert _rows_of(store.path, sql) == [("^2New",)]
+    await store.transact(report("^3Report"))
+    assert _rows_of(store.path, sql) == [("^3Report",)]
+    # counts that arrive after the report do not take the name back, and a report with no
+    # name keeps the one already there
+    await store.transact(counters("^4Later"))
+    assert _rows_of(store.path, sql) == [("^3Report",)]
+    await store.transact(report(None))
+    assert _rows_of(store.path, sql) == [("^3Report",)]
 
 
 async def test_a_cut_short_match_is_not_a_finished_match_or_a_win(store: PlayerStore) -> None:

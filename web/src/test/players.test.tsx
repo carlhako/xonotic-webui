@@ -315,6 +315,25 @@ describe("the player dialog (7.3)", () => {
     expect(within(dialog).queryByText(/No match statistics recorded yet/)).toBeNull();
   });
 
+  it("shows matches played and wins, and links to that player's matches", async () => {
+    const user = userEvent.setup();
+    server({
+      detail: (id) =>
+        jsonResponse(makePlayerDetail({ id, name: "^1Ann", matches: 12, wins: 3 })),
+    });
+    open();
+    await user.click((await screen.findByText("Ann")).closest("tr") as HTMLElement);
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("dRXbACYQ…");
+    const field = (label: string) => within(dialog).getByText(label).nextElementSibling;
+    expect(field("Matches played")).toHaveTextContent("12");
+    expect(field("Wins")).toHaveTextContent("3");
+
+    await user.click(within(dialog).getByRole("link", { name: "View matches" }));
+    expect(screen.getByTestId("where")).toHaveTextContent("/matches?player=1");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("opens from the keyboard with Enter and with Space", async () => {
     const user = userEvent.setup();
     server();

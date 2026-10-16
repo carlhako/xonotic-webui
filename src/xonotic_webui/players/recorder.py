@@ -33,6 +33,7 @@ from xonotic_webui.logging import get_logger
 from xonotic_webui.players.report import (
     Report,
     ReportParser,
+    ReportPlayer,
     achievements,
     scoreboard,
     weapon_stats,
@@ -146,6 +147,7 @@ class _PlanCounter:
     player_db_id: int | None
     match_ref: int
     deltas: tuple[int, int, int, int]  # frags, deaths, suicides, teamkills
+    name: str  # the name the participant has now (match-history D8)
 
 
 @dataclass(frozen=True)
@@ -155,6 +157,7 @@ class _PlanReport:
     finished: bool
     duration: float
     rows: tuple[tuple[int, int | None, ReportedPlayer], ...]  # player ref, known db id, figures
+    teams: dict[int, dict[str, float]]  # each team's scoreboard values
 
 
 @dataclass
@@ -269,6 +272,12 @@ class PlayerRecorder:
     @property
     def store(self) -> PlayerStore:
         return self._store
+
+    @property
+    def current_match_id(self) -> str | None:
+        """The game's id of the match being played, or ``None`` when there is none (the
+        server is not running, or the panel has not learnt the id yet)."""
+        return self._match.match_id if self._match is not None else None
 
     # -- the line flow -----------------------------------------------------------------
     def on_line(self, raw_line: str) -> None:
@@ -509,7 +518,7 @@ class PlayerRecorder:
                     self._resolve(participant, "fp:" + rp.fingerprint)
                 else:
                     self._resolve(participant, name_key(participant.name))
-            rows.append((participant, _reported(rp.events)))
+            rows.append((participant, _reported(rp, participant.name)))
         match.reported = True
         if rows:
             self._pending_reports.append(_PendingReport(match, report, rows))
@@ -634,6 +643,7 @@ class PlayerRecorder:
                                 p.db_id,
                                 id(match),
                                 (p.frags, p.deaths, p.suicides, p.teamkills),
+                                p.name,
                             )
                         )
         for pending in self._pending_reports:
@@ -653,6 +663,7 @@ class PlayerRecorder:
                     pending.report.finished,
                     pending.report.duration,
                     tuple(rows),
+                    pending.report.teams,
                 )
             )
         for session in [*self._sessions.values(), *self._closed]:
@@ -722,7 +733,13 @@ class PlayerRecorder:
                 continue
             frags, deaths, suicides, teamkills = pc.deltas
             ops.add_counters(
-                pk, db_id, frags=frags, deaths=deaths, suicides=suicides, teamkills=teamkills
+                pk,
+                db_id,
+                frags=frags,
+                deaths=deaths,
+                suicides=suicides,
+                teamkills=teamkills,
+                name=pc.name,
             )
             result.counters_written.add(index)
 
@@ -735,7 +752,9 @@ class PlayerRecorder:
                 db_id = db_ids.get(player_ref, known)
                 if db_id is not None:
                     rows.append((db_id, reported))
-            ops.apply_report(pk, finished=pr.finished, duration=pr.duration, players=rows)
+            ops.apply_report(
+                pk, finished=pr.finished, duration=pr.duration, players=rows, teams=pr.teams
+            )
             result.reports_written.add(pr.ref)
         return result
 
@@ -795,9 +814,17 @@ class PlayerRecorder:
         self._retired = keep
 
 
-def _reported(events: dict[str, float]) -> ReportedPlayer:
+# Scoreboard labels the game keeps hidden, so the history does not keep them either.
+_HIDDEN_LABELS = frozenset({"elo", "rounds_pl"})
+
+
+def _reported(rp: ReportPlayer, fallback_name: str | None = None) -> ReportedPlayer:
+    """What a report says about one player. The name is the report's, else ``fallback_name``
+    (the name the recorder saw them use), else none."""
+    events = rp.events
     board = scoreboard(events)
     rank = events.get("rank")
+    pos = events.get("scoreboardpos")
     return ReportedPlayer(
         score=float(board.get("score", 0.0)),
         kills=float(board.get("kills", 0.0)),
@@ -812,4 +839,8 @@ def _reported(events: dict[str, float]) -> ReportedPlayer:
         weapons=weapon_stats(events) or None,
         achievements=achievements(events) or None,
         extra=extra_labels(board) or None,
+        team=rp.team,
+        board_pos=int(pos) if pos else None,
+        name=rp.name or fallback_name or None,
+        scores={k: float(v) for k, v in board.items() if k not in _HIDDEN_LABELS} or None,
     )

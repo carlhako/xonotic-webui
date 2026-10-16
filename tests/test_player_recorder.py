@@ -676,6 +676,133 @@ async def test_report_lines_do_not_disturb_event_parsing(rig: Callable[..., Rig]
     assert len(r.rows(f"SELECT * FROM sessions WHERE player_id = {human['id']}")) == 1
 
 
+# --- match history: what a report adds ------------------------------------------------------
+
+
+async def test_a_team_games_report_keeps_teams_positions_names_and_team_scores(
+    rig: Callable[..., Rig],
+) -> None:
+    r = await started(rig)
+    r.feed(*fixture_lines("report_tdm_finished.txt"))
+    await r.settle()
+    rows = r.rows(
+        "SELECT p.name AS who, mp.team, mp.board_pos, mp.name FROM match_players mp "
+        "JOIN players p ON p.id = mp.player_id ORDER BY mp.board_pos"
+    )
+    assert [(x["team"], x["board_pos"], x["name"]) for x in rows] == [
+        (14, 1, "[BOT]Scorcher"),
+        (14, 2, "[BOT]Thunderstorm"),
+        (5, 3, "[BOT]Death"),
+        (5, 4, "^3Team^7Tester"),
+        (5, 5, "[BOT]Necrotic"),
+    ]
+    assert r.rows("SELECT team, label, value FROM match_teams") == [
+        {"team": 14, "label": "score", "value": 3.0}
+    ]
+    assert r.rows("SELECT board_kept FROM matches") == [{"board_kept": 1}]
+    scores = r.rows(
+        "SELECT p.name, ms.value FROM match_scores ms JOIN players p ON p.id = ms.player_id "
+        "WHERE ms.label = 'score' ORDER BY ms.value DESC"
+    )
+    assert [(x["name"], x["value"]) for x in scores] == [
+        ("[BOT]Scorcher", 2.0),
+        ("[BOT]Thunderstorm", 1.0),
+    ]
+    assert r.rows("SELECT * FROM match_scores WHERE label IN ('elo', 'rounds_pl')") == []
+
+
+async def test_a_player_who_left_has_a_row_without_a_position(rig: Callable[..., Rig]) -> None:
+    r = await started(rig)
+    r.feed(*fixture_lines("report_leaver.txt"))
+    await r.settle()
+    (leaver,) = r.rows("SELECT * FROM match_players WHERE name = '^1Leav^7er'")
+    assert leaver["board_pos"] is None and leaver["team"] is None
+    assert leaver["scoreboard_valid"] == 0 and leaver["alivetime"] > 0
+    others = r.rows("SELECT board_pos FROM match_players WHERE board_pos IS NOT NULL")
+    assert sorted(x["board_pos"] for x in others) == [1, 2, 3, 4]
+
+
+async def test_a_rename_in_the_middle_of_a_match_records_the_later_name(
+    rig: Callable[..., Rig],
+) -> None:
+    r = await started(rig)
+    r.console.fingerprints = {1: FP_A}
+    r.feed(MATCH, join(1, 1, "^1Before"), join(2, 2, "[BOT]x", bot=True))
+    r.feed("^7:kill:frag:1:2:type=1:items=2-1")
+    await r.settle()
+    human_rows = (
+        "SELECT mp.name, mp.frags FROM match_players mp JOIN players p ON p.id = mp.player_id "
+        "WHERE p.is_bot = 0"
+    )
+    assert r.rows(human_rows) == [{"name": "^1Before", "frags": 1}]
+    r.feed("^7:name:1:^4After", "^7:kill:frag:1:2:type=1:items=2-1")
+    await r.settle()
+    assert r.rows(human_rows) == [{"name": "^4After", "frags": 2}]
+
+
+async def test_the_reports_name_overwrites_the_name_the_counters_had(
+    rig: Callable[..., Rig],
+) -> None:
+    r = await started(rig)
+    r.console.fingerprints = {1: FP_SPIKE}
+    r.feed(REPORT_MATCH, join(1, 1, "^9Joined^7As"), join(2, 2, "[BOT]Death", bot=True))
+    r.feed("^7:kill:frag:1:2:type=1:items=2-1")
+    await r.settle()
+    human = next(p for p in r.players() if not p["is_bot"])
+    sql = f"SELECT name FROM match_players WHERE player_id = {human['id']}"
+    assert r.rows(sql) == [{"name": "^9Joined^7As"}]
+    r.feed(*fixture_lines("report_finished.txt"))
+    await r.settle()
+    assert r.rows(sql) == [{"name": "^1Spike^7Tester"}]
+
+
+async def test_a_name_used_in_a_match_stays_after_the_player_is_renamed(
+    rig: Callable[..., Rig],
+) -> None:
+    r = await started(rig)
+    r.console.fingerprints = {1: FP_SPIKE}
+    r.feed(*report_session(r))
+    await r.settle()
+    r.feed("^7:gamestart:dm_boil:0.5.5", join(1, 1, "^4Renamed"), "^7:name:1:^5Again")
+    await r.settle()
+    human = next(p for p in r.players() if not p["is_bot"])
+    assert human["name"] == "^5Again"
+    (row,) = r.rows(
+        f"SELECT name FROM match_players WHERE player_id = {human['id']} AND reported = 1"
+    )
+    assert row["name"] == "^1Spike^7Tester"
+
+
+# --- the match being played ------------------------------------------------------------------
+
+
+async def test_the_current_match_id_follows_the_game_start_and_clears_on_stop(
+    rig: Callable[..., Rig],
+) -> None:
+    r = await started(rig)
+    assert r.recorder.current_match_id is None
+    r.feed("^7:gamestart:dm_atelier:0.100.1")
+    assert r.recorder.current_match_id == "0.100.1"
+    r.feed("^7:gamestart:dm_boil:0.200.2")
+    assert r.recorder.current_match_id == "0.200.2"
+    r.sup.set_state(RunState.STOPPED)
+    assert r.recorder.current_match_id is None
+    r.sup.set_state(RunState.STARTING)
+    assert r.recorder.current_match_id is None
+    r.feed("^7:gamestart:dm_boil:0.300.3")
+    assert r.recorder.current_match_id == "0.300.3"
+
+
+async def test_the_current_match_id_is_unknown_for_a_match_joined_part_way(
+    rig: Callable[..., Rig],
+) -> None:
+    r = await started(rig)
+    r.feed(join(1, 1, "Early"))  # the panel never saw this match start
+    assert r.recorder.current_match_id is None
+    r.feed(*fixture_lines("report_finished.txt"))
+    assert r.recorder.current_match_id == "0.1791950428.917818"
+
+
 # --- 5.5 flushing ----------------------------------------------------------------------------
 
 

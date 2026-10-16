@@ -1098,3 +1098,98 @@ th[aria-sort="descending"] .sort-button {
 .team-pink {
   --team: #d65fa5;
 }
+
+/* -- match history -- */
+.field-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.3rem 0.15rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  max-width: 100%;
+}
+.chip-remove {
+  font: inherit;
+  line-height: 1;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.chip-remove:hover {
+  background: var(--border);
+}
+.chip-remove:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.badge-outcome {
+  white-space: nowrap;
+}
+.badge-finished {
+  background: var(--ok-weak);
+  color: var(--ok);
+}
+.badge-cut_short {
+  background: var(--warn-weak);
+  color: var(--warn);
+}
+.badge-in_progress {
+  background: var(--brand);
+  color: var(--surface);
+}
+.badge-no_report {
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+.badge-vs-bots,
+.badge-away {
+  margin-left: 0.4rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+}
+.winner-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.team-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 3px;
+  background: var(--team, var(--text-dim));
+}
+.matches-table td:nth-child(7) {
+  white-space: normal;
+}
+.not-at-end td {
+  color: var(--text-dim);
+}
+.dialog-actions {
+  margin: 1rem 0 0;
+}
+.dialog-wide {
+  width: min(60rem, 100vw - 2rem);
+}
+.dialog-body .scoreboard {
+  margin-top: 0.25rem;
+}
+.dialog-body .scoreboard .data-table td:nth-child(2) {
+  white-space: nowrap;
+}
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+}

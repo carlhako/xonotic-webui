@@ -37,6 +37,12 @@ export type MatchColumn = Schemas["MatchColumnModel"];
 export type MatchPlayer = Schemas["MatchPlayerModel"];
 export type MatchTeam = Schemas["MatchTeamModel"];
 export type PlayerWeapon = Schemas["PlayerWeapon"];
+export type MatchList = Schemas["MatchList"];
+export type MatchSummary = Schemas["MatchSummary"];
+export type MatchDetail = Schemas["MatchDetail"];
+export type MatchHistoryPlayer = Schemas["MatchHistoryPlayer"];
+export type MatchWinner = NonNullable<MatchSummary["winner"]>;
+export type MatchOutcome = MatchSummary["outcome"];
 
 /** The columns the players table can be sorted by (the API's fixed list). */
 export type PlayerSort =
@@ -60,6 +66,23 @@ export interface PlayersQuery {
   limit: number;
   offset: number;
 }
+
+export interface MatchesQuery {
+  /** Empty for every map / gametype. */
+  map: string;
+  gametype: string;
+  /** Only matches this player took part in. */
+  player: number | null;
+  /** False leaves out the matches played against bots. */
+  vsBots: boolean;
+  limit: number;
+  offset: number;
+}
+
+/** A matches request answers either a fresh list or "unchanged since `etag`". */
+export type MatchesResult =
+  | { notModified: true; etag: string | null }
+  | { notModified: false; etag: string | null; list: MatchList };
 
 /** A players request answers either a fresh list or "unchanged since `etag`". */
 export type PlayersResult =
@@ -153,6 +176,32 @@ async function requestPlayers(
   };
 }
 
+/** The match history, conditional on the last answer's ETag (the section polls this). */
+async function requestMatches(
+  query: MatchesQuery,
+  etag: string | null,
+): Promise<MatchesResult> {
+  const params = new URLSearchParams({
+    limit: String(query.limit),
+    offset: String(query.offset),
+  });
+  if (query.map) params.set("map", query.map);
+  if (query.gametype) params.set("gametype", query.gametype);
+  if (query.player !== null) params.set("player", String(query.player));
+  if (!query.vsBots) params.set("vs_bots", "false");
+  const response = await fetchOrThrow(
+    `/api/matches?${params}`,
+    etag ? { headers: { "If-None-Match": etag } } : undefined,
+  );
+  if (response.status === 304) return { notModified: true, etag };
+  if (!response.ok) throw await errorFrom(response);
+  return {
+    notModified: false,
+    etag: response.headers.get("ETag"),
+    list: (await response.json()) as MatchList,
+  };
+}
+
 const send = <T>(method: string, path: string, body?: unknown) =>
   request<T>(path, {
     method,
@@ -222,6 +271,11 @@ export const api = {
   players: (query: PlayersQuery, etag: string | null = null) =>
     requestPlayers(query, etag),
   player: (id: number) => request<PlayerDetail>(`/api/players/${id}`),
+
+  // past matches
+  matches: (query: MatchesQuery, etag: string | null = null) =>
+    requestMatches(query, etag),
+  match: (id: number) => request<MatchDetail>(`/api/matches/${id}`),
 
   // the panel's own version and upgrade
   panelVersion: () => request<PanelVersion>("/api/panel/version"),

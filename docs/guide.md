@@ -333,15 +333,68 @@ is purged.
   live. The rest (score, wins, finished matches, damage, per-weapon accuracy, achievements,
   average ping) is added when a match ends, including one cut short by a map change or a
   clean stop. A crash loses that match's report but nothing already counted.
+- **Matches played.** A match counts toward a player's **Matches** (and can count as a win)
+  only when it ran to its limit *and* the player was on the final scoreboard, playing, when
+  it ended. When they joined does not matter, so someone who came in half way and was still
+  playing at the end gets it. A player who left early, was spectating at the end, or whose
+  match was cut short does not, though their frags, time and damage from that match still
+  count. A match against bots counts like any other.
 - **The table.** Click a column to sort by it and again to reverse it; the search, sort and
   page are kept in the address, so a link restores the view. It refreshes by itself every
   few seconds while open. Click a row for a player's details: names used, first and last
-  seen, sessions, a per-weapon table and achievements.
+  seen, sessions, matches played and wins, a per-weapon table and achievements. **View
+  matches** in that dialog opens the Matches section for that player.
 - **What is not kept.** No IP addresses are stored, and only the first eight characters of
   a key fingerprint are ever shown.
 
 The report lines are not shown in the **Console** tab. They are the reason XonStat
 submission stops (see Server settings).
+
+## Matches
+
+The **Matches** section lists every past match, newest first, a page at a time, from the same
+player history (`players.db`). It refreshes by itself every few seconds while open, so a
+match that ends appears without a reload, and it keeps your filters and page.
+
+- **What is listed.** Every match that at least one human took part in. A human took part
+  when they have a recorded frag, death, suicide or team kill in it, or appear in its
+  end-of-match report. A match with only bots, or nobody, is not listed. Someone who joined,
+  did nothing and left before the match ended is never recorded, so a match like that can
+  show one human and still be tagged **vs bots**.
+- **The columns.** When it started, map, gametype, duration, how it ended, who took part
+  (`1 + 3 bots`), the winner and the **vs bots** tag.
+- **How it ended.**
+  - **Finished**: it ran to its limit.
+  - **Cut short**: ended early by a skip, a vote, a map change or a clean server stop.
+  - **In progress**: it is the match being played now.
+  - **No report**: it ended without an end-of-match report, which is what a crash does. Only
+    frags, deaths, suicides and team kills are known for it.
+- **The winner.** The winning team in a team game, with its colour, otherwise the winning
+  player (`Ace +2` when more players share a win). A match that was cut short, has no report
+  or was drawn has none, shown as a dash.
+- **vs bots.** Exactly one human and at least one bot took part. It is worked out from who
+  is recorded in the match, so matches from before this section existed are tagged too, and
+  they count toward player totals like any other match.
+- **Filters.** Map, gametype and **Hide vs bots**, which combine. They and the page are kept
+  in the address, so a reload or a shared link restores the view. A **Player** chip, which
+  you get from **View matches** in a player's dialog, narrows the list to the matches that
+  player took part in, including ones they left early; remove it to see everything again.
+  The unknown gametype is offered for matches recorded without one.
+- **Details.** Click a match for a dialog with its summary and final scoreboard: the game's
+  own columns in the game's order (score, kills, deaths and suicides always, then any other
+  value someone scored, such as captures), with ping and time playing. Team games group the
+  players under their team's totals in the team's colour. A player who left early, or was
+  spectating when the match ended, is listed last and marked **not at end**. Names are the
+  ones used in that match, with colours. Click a player to open their details.
+- **Older matches.** A match recorded before the panel kept full scoreboards (that is, before this section
+  existed) shows the figures that were kept for it, without team grouping or team scores, under
+  each player's current name. The dialog says so. Nothing is rebuilt for them.
+- **Not recorded.** When player history is off or cannot be read, the section says so.
+- **Storage.** A match keeps about 10 to 20 small rows per player. History is kept forever
+  like the rest, so a busy server's file grows by a few tens of megabytes per 10,000 matches.
+
+The same data is served at `GET /api/matches` (filtered with `map`, `gametype`, `player`,
+`vs_bots`, `limit` and `offset`; the answer has an ETag) and `GET /api/matches/{id}`.
 
 ## Settings
 

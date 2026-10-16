@@ -22,6 +22,7 @@ describe("shell (8.2)", () => {
     expect(links.map((l) => l.textContent)).toEqual([
       "Dashboard",
       "Players",
+      "Matches",
       "Maps",
       "Settings",
       "Console",

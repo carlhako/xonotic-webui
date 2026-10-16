@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -411,7 +411,9 @@ class PlayerRow(BaseModel):
     teamkills: int
     score: float
     wins: int
-    matches: int = Field(description="Finished matches played.")
+    matches: int = Field(
+        description="Matches played: finished while the player was on the final scoreboard."
+    )
     time_playing: float = Field(description="Seconds alive in matches (from the match report).")
     time_on_server: float = Field(description="Seconds connected, spectating included.")
     accuracy: float | None = Field(description="Hits over shots, or null when nothing was fired.")
@@ -530,3 +532,77 @@ class MatchModel(BaseModel):
     clock: MatchClockModel
     score_limit: MatchScoreLimitModel
     scoreboard: MatchScoreboardModel
+
+
+# --- match history (match-history) -----------------------------------------------------
+
+
+class MatchWinnerTeam(BaseModel):
+    kind: Literal["team"] = "team"
+    team: int = Field(description="The game's team number (5 red, 14 blue).")
+    color: Literal["red", "blue", "yellow", "pink"] | None
+
+
+class MatchWinnerPlayer(BaseModel):
+    kind: Literal["player"] = "player"
+    player_id: int
+    name: str = Field(description="The name used in that match, colour codes intact.")
+    plain_name: str
+    is_bot: bool
+    others: int = Field(
+        description="How many more players have a win in the match (a team game recorded "
+        "before teams were kept names the first of them)."
+    )
+
+
+MatchWinner = Annotated[MatchWinnerTeam | MatchWinnerPlayer, Field(discriminator="kind")]
+
+
+class MatchSummary(BaseModel):
+    id: int = Field(description="The panel's id for the match, not the game's.")
+    started_at: int = Field(description="UTC epoch seconds.")
+    map: str
+    gametype: str = Field(description='The gametype, or "unknown" when it was not recorded.')
+    duration: float | None = Field(description="Seconds, once the match has a report.")
+    outcome: Literal["finished", "cut_short", "in_progress", "no_report"]
+    humans: int = Field(description="Humans who took part.")
+    bots: int = Field(description="Bots who took part.")
+    vs_bots: bool = Field(description="Exactly one human and at least one bot took part.")
+    winner: MatchWinner | None = Field(description="Only a finished match has one, and not a draw.")
+
+
+class MatchList(BaseModel):
+    revision: int = Field(description="Changes whenever recorded data changes.")
+    total: int = Field(description="Matches matching the filters, across all pages.")
+    matches: list[MatchSummary]
+
+
+class MatchHistoryPlayer(BaseModel):
+    player_id: int
+    name: str = Field(description="The name used in the match, colour codes intact.")
+    plain_name: str
+    bot: bool
+    team: int | None = Field(description="The game's team number, if teams were recorded.")
+    ping: int | None = Field(description="Average ping, when the match has a report.")
+    time_s: int | None = Field(description="Seconds playing, when the match has a report.")
+    at_end: bool | None = Field(
+        description="Whether they were playing when it ended; null without a report."
+    )
+    values: dict[str, float] = Field(description="Score column values by column key.")
+
+
+class MatchHistoryScoreboard(BaseModel):
+    columns: list[MatchColumnModel]
+    players: list[MatchHistoryPlayer] = Field(
+        description="In the game's board order, players not there at the end last."
+    )
+    teams: list[MatchTeamModel] = Field(
+        description="Empty unless the match kept its board and was a team game."
+    )
+
+
+class MatchDetail(MatchSummary):
+    board_kept: bool = Field(
+        description="False for a match recorded before full scoreboards were kept: no teams."
+    )
+    scoreboard: MatchHistoryScoreboard

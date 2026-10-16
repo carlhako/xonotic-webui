@@ -8,6 +8,7 @@ export function Dialog({
   title,
   onClose,
   returnFocusTo,
+  wide = false,
   children,
 }: {
   title: ReactNode;
@@ -15,6 +16,8 @@ export function Dialog({
   /** The element to focus again when the dialog closes (the native default is the
    *  element focused when it opened, which a mouse click on a row would not be). */
   returnFocusTo?: HTMLElement | null;
+  /** A wider dialog, for a table. */
+  wide?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -36,7 +39,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className="dialog"
+      className={wide ? "dialog dialog-wide" : "dialog"}
       aria-labelledby="dialog-title"
       onCancel={(e) => {
         // Escape: let React unmount us (which closes the dialog) instead of the browser.

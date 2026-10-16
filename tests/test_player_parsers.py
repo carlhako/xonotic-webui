@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from xonotic_webui.players.recorder import _reported
 from xonotic_webui.players.report import (
     ReportParser,
     StatsReportFilter,
@@ -11,6 +12,7 @@ from xonotic_webui.players.report import (
     scoreboard,
     weapon_stats,
 )
+from xonotic_webui.players.store import ReportedPlayer
 from xonotic_webui.players.who import WhoReplyCollector
 
 FIXTURES = Path(__file__).parent / "fixtures" / "xonotic"
@@ -168,6 +170,73 @@ def test_team_lines_and_team_ids_are_understood() -> None:
     assert report.team_ids == [14, 5]
     assert report.players[0].team == 5
     assert report.players[0].events == {"total-score": 2.0}
+    # the team's own ``e`` lines are kept apart from the players'; a team with none is empty
+    assert report.teams == {14: {"score": 3.0}, 5: {}}
+
+
+def test_a_team_deathmatch_report_gives_each_teams_score() -> None:
+    parser = ReportParser()
+    leftover = feed_all(parser, fixture_lines("report_tdm_finished.txt"))
+    report = parser.report
+    assert report is not None and report.finished
+    assert report.gametype == "tdm"
+    assert report.team_ids == [14, 5]
+    # red (5) scored nothing, so the game wrote no line for it
+    assert report.teams == {14: {"score": 3.0}, 5: {}}
+    assert {p.team for p in report.players} == {5, 14}
+    assert not any(line.startswith("^7e ") for line in leftover)
+    winners = {p.team for p in report.players if p.events.get("wins")}
+    assert winners == {14}
+
+
+def test_a_ctf_report_gives_team_captures_and_scores() -> None:
+    parser = ReportParser()
+    feed_all(parser, fixture_lines("report_ctf_finished.txt"))
+    report = parser.report
+    assert report is not None
+    assert report.teams == {14: {"caps": 1.0, "score": 45.0}, 5: {"caps": 1.0, "score": 74.0}}
+    # a drawn match: nobody has ``wins``
+    assert not any(p.events.get("wins") for p in report.players)
+    assert scoreboard(report.players[0].events).get("caps", 0.0) == 0.0
+    labels = set().union(*(scoreboard(p.events) for p in report.players))
+    assert {"caps", "fckills", "returns", "drops", "pickups", "captime"} <= labels
+
+
+def test_a_deathmatch_report_has_no_teams() -> None:
+    parser = ReportParser()
+    feed_all(parser, fixture_lines("report_finished.txt"))
+    assert parser.report is not None
+    assert parser.report.teams == {}
+    assert all(p.team is None for p in parser.report.players)
+
+
+def test_a_player_who_left_has_figures_but_is_not_on_the_final_board() -> None:
+    parser = ReportParser()
+    feed_all(parser, fixture_lines("report_leaver.txt"))
+    report = parser.report
+    assert report is not None and report.finished
+    by_name = {p.name: p for p in report.players}
+    leaver = by_name["^1Leav^7er"]
+    assert leaver.events["alivetime"] > 0 and leaver.events["joins"] == 1
+    assert not any(
+        leaver.events.get(e) for e in ("scoreboardvalid", "scoreboardpos", "rank", "matches")
+    )
+    for name in ("^2Stay^7er", "^4Late^7Joiner"):
+        assert by_name[name].events["scoreboardvalid"] == 1
+        assert by_name[name].events["matches"] == 1
+
+
+def test_a_player_spectating_at_the_end_is_not_on_the_final_board() -> None:
+    parser = ReportParser()
+    feed_all(parser, fixture_lines("report_spectator_at_end.txt"))
+    report = parser.report
+    assert report is not None and report.finished
+    by_name = {p.name: p for p in report.players}
+    watcher = by_name["^5Watch^7er"]
+    assert watcher.events["alivetime"] > 0
+    assert "rank" in watcher.events  # rank alone does not mean they were on the board
+    assert not any(watcher.events.get(e) for e in ("scoreboardvalid", "scoreboardpos", "matches"))
+    assert by_name["^2Stay^7er"].events["scoreboardvalid"] == 1
 
 
 def test_a_block_interrupted_by_an_unrelated_line_passes_it_through() -> None:
@@ -224,3 +293,69 @@ def test_the_console_filter_consumes_exactly_the_block() -> None:
     assert all(not line.startswith(("^7V ", "^7P ", "^7e ", "^7i ", "^7n ")) for line in kept)
     assert kept[0].startswith("^7:scores:") and kept[-1] == "^7:gameover"
     assert "^7:end" in kept
+
+
+# --- what a report says about each player (match-history D8) --------------------------------
+
+
+def reported_by_name(fixture: str) -> dict[str | None, ReportedPlayer]:
+    parser = ReportParser()
+    feed_all(parser, fixture_lines(fixture))
+    assert parser.report is not None
+    return {p.name: _reported(p) for p in parser.report.players}
+
+
+def test_a_ctf_players_captures_are_kept_without_knowing_ctf() -> None:
+    parser = ReportParser()
+    feed_all(parser, fixture_lines("report_ctf_finished.txt"))
+    assert parser.report is not None
+    capper = next(p for p in parser.report.players if p.name == "[BOT]Lion")
+    r = _reported(capper)
+    assert r.scores is not None
+    assert r.scores["caps"] == 1 and r.scores["captime"] == 2543
+    assert r.scores["score"] == 23 and r.scores["kills"] == 2 and r.scores["pickups"] == 1
+    assert r.team == 5 and r.board_pos == 2
+    # the hidden labels are never kept, and the counters stay as they were
+    assert "elo" not in r.scores and "rounds_pl" not in r.scores
+    assert r.extra is not None and r.extra["caps"] == 1
+
+
+def test_a_team_games_players_have_their_team_and_board_position() -> None:
+    got = reported_by_name("report_tdm_finished.txt")
+    assert got["[BOT]Scorcher"].team == 14 and got["[BOT]Scorcher"].board_pos == 1
+    assert got["^3Team^7Tester"].team == 5 and got["^3Team^7Tester"].board_pos == 4
+    assert got["^3Team^7Tester"].name == "^3Team^7Tester"
+
+
+def test_a_deathmatch_player_has_no_team() -> None:
+    got = reported_by_name("report_finished.txt")
+    assert all(r.team is None for r in got.values())
+    assert [r.board_pos for r in got.values()] == [3, 1, 2]
+
+
+def test_a_leaver_has_no_board_position_and_is_not_valid() -> None:
+    leaver = reported_by_name("report_leaver.txt")["^1Leav^7er"]
+    assert leaver.board_pos is None
+    assert leaver.scoreboard_valid is False
+    assert leaver.alivetime > 0 and leaver.avglatency > 0
+    assert leaver.name == "^1Leav^7er"
+
+
+def test_a_spectator_at_the_end_is_not_valid_and_has_no_position() -> None:
+    watcher = reported_by_name("report_spectator_at_end.txt")["^5Watch^7er"]
+    assert watcher.board_pos is None and watcher.scoreboard_valid is False
+    assert watcher.rank is not None  # rank is written, but does not put them on the board
+
+
+def test_a_player_with_no_report_name_has_none_unless_a_fallback_is_given() -> None:
+    parser = ReportParser()
+    feed_all(parser, fixture_lines("report_privacy_optout.txt"))
+    assert parser.report is not None
+    human = parser.report.players[0]
+    assert _reported(human).name is None
+    assert _reported(human, "^2Seen^7Name").name == "^2Seen^7Name"
+    # the report's own name wins over the fallback
+    parser = ReportParser()
+    feed_all(parser, fixture_lines("report_finished.txt"))
+    assert parser.report is not None
+    assert _reported(parser.report.players[0], "other").name == "^1Spike^7Tester"

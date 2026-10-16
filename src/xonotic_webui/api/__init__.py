@@ -14,6 +14,7 @@ __all__ = ["build_api_router"]
 
 def build_api_router(runtime: Runtime) -> APIRouter:
     from xonotic_webui.api.console import build_console_router
+    from xonotic_webui.api.history import build_history_router
     from xonotic_webui.api.lifecycle import build_lifecycle_router
     from xonotic_webui.api.maps import build_maps_router
     from xonotic_webui.api.match import build_match_router
@@ -31,4 +32,5 @@ def build_api_router(runtime: Runtime) -> APIRouter:
     router.include_router(build_maps_router(runtime))
     router.include_router(build_panel_router(runtime))
     router.include_router(build_players_router(runtime))
+    router.include_router(build_history_router(runtime))
     return router

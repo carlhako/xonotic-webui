@@ -27,7 +27,7 @@ from xonotic_webui.logging import get_logger
 
 log = get_logger("players.store")
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 T = TypeVar("T")
 
@@ -144,8 +144,42 @@ _SCHEMA_V2 = """
 CREATE INDEX matches_map ON matches(map);
 """
 
+# The match history (match-history D2, D6): what the report said about teams, board order,
+# every scoreboard value and the name used. ``board_kept`` marks the matches that have it.
+# ``humans`` and ``bots`` count a match's participants so the list needs no aggregation over
+# ``match_players``; they are filled in for the matches already stored and kept up to date
+# where ``match_players`` rows are written. No other stored row is rewritten.
+_SCHEMA_V3 = """
+ALTER TABLE match_players ADD COLUMN team INTEGER;
+ALTER TABLE match_players ADD COLUMN board_pos INTEGER;
+ALTER TABLE match_players ADD COLUMN name TEXT;
+ALTER TABLE matches ADD COLUMN board_kept INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE matches ADD COLUMN humans INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE matches ADD COLUMN bots INTEGER NOT NULL DEFAULT 0;
+UPDATE matches SET
+    humans = (SELECT COUNT(*) FROM match_players mp JOIN players p ON p.id = mp.player_id
+              WHERE mp.match_pk = matches.id AND p.is_bot = 0),
+    bots = (SELECT COUNT(*) FROM match_players mp JOIN players p ON p.id = mp.player_id
+            WHERE mp.match_pk = matches.id AND p.is_bot = 1);
+CREATE TABLE match_scores (
+    match_pk    INTEGER NOT NULL,
+    player_id   INTEGER NOT NULL,
+    label       TEXT NOT NULL,
+    value       REAL NOT NULL,
+    PRIMARY KEY (match_pk, player_id, label)
+);
+CREATE TABLE match_teams (
+    match_pk    INTEGER NOT NULL,
+    team        INTEGER NOT NULL,
+    label       TEXT NOT NULL,
+    value       REAL NOT NULL,
+    PRIMARY KEY (match_pk, team, label)
+);
+CREATE INDEX matches_started ON matches(started_at);
+"""
+
 # Forward-only migrations: ``_MIGRATIONS[n]`` takes the database from version n to n + 1.
-_MIGRATIONS: dict[int, str] = {0: _SCHEMA_V1, 1: _SCHEMA_V2}
+_MIGRATIONS: dict[int, str] = {0: _SCHEMA_V1, 1: _SCHEMA_V2, 2: _SCHEMA_V3}
 
 # The gametype shown for matches that were recorded without one.
 UNKNOWN_GAMETYPE = "unknown"
@@ -200,6 +234,11 @@ class ReportedPlayer:
     weapons: dict[str, dict[str, float]] | None = None
     achievements: dict[str, int] | None = None
     extra: dict[str, float] | None = None
+    # What the match history keeps (match-history D2, D8).
+    team: int | None = None  # the report's ``t``
+    board_pos: int | None = None  # ``scoreboardpos``: the final board's order
+    name: str | None = None  # the name used in this match, raw with colour codes
+    scores: dict[str, float] | None = None  # every scoreboard label but the hidden ones
 
 
 def like_escape(text: str) -> str:
@@ -360,16 +399,37 @@ class Ops:
         deaths: int = 0,
         suicides: int = 0,
         teamkills: int = 0,
+        name: str | None = None,
     ) -> None:
+        """Add live counts. ``name`` is the name the player has now; the report's name, once
+        stored, is not replaced by it."""
+        self._count_participant(match_pk, player_id)
         self._c.execute(
-            "INSERT INTO match_players(match_pk, player_id, frags, deaths, suicides, teamkills) "
-            "VALUES(?,?,?,?,?,?) "
+            "INSERT INTO match_players(match_pk, player_id, frags, deaths, suicides, teamkills, "
+            "name) VALUES(?,?,?,?,?,?,?) "
             "ON CONFLICT(match_pk, player_id) DO UPDATE SET "
             "frags = frags + excluded.frags, deaths = deaths + excluded.deaths, "
-            "suicides = suicides + excluded.suicides, teamkills = teamkills + excluded.teamkills",
-            (match_pk, player_id, frags, deaths, suicides, teamkills),
+            "suicides = suicides + excluded.suicides, teamkills = teamkills + excluded.teamkills, "
+            "name = CASE WHEN match_players.reported = 1 THEN match_players.name "
+            "ELSE COALESCE(excluded.name, match_players.name) END",
+            (match_pk, player_id, frags, deaths, suicides, teamkills, name or None),
         )
         self.refresh_totals([player_id])
+
+    def _count_participant(self, match_pk: int, player_id: int) -> None:
+        """Count a player into the match's humans or bots the first time they get a row there
+        (the list reads these counts, design D6). Call it before writing the row."""
+        if self._c.execute(
+            "SELECT 1 FROM match_players WHERE match_pk = ? AND player_id = ?",
+            (match_pk, player_id),
+        ).fetchone():
+            return
+        self._c.execute(
+            "UPDATE matches SET "
+            "humans = humans + (SELECT 1 - is_bot FROM players WHERE id = ?1), "
+            "bots = bots + (SELECT is_bot FROM players WHERE id = ?1) WHERE id = ?2",
+            (player_id, match_pk),
+        )
 
     def apply_report(
         self,
@@ -378,12 +438,25 @@ class Ops:
         finished: bool,
         duration: float,
         players: Iterable[tuple[int, ReportedPlayer]],
+        teams: dict[int, dict[str, float]] | None = None,
     ) -> None:
-        """Store a report's figures. Applying the same report again changes nothing."""
+        """Store a report's figures. Applying the same report again changes nothing.
+
+        ``teams`` are the team scores by team number. The match is marked as having its board
+        kept, which is how the history tells it from one recorded before schema v3.
+        """
         self._c.execute(
-            "UPDATE matches SET finished = ?, duration = ?, reported = 1 WHERE id = ?",
+            "UPDATE matches SET finished = ?, duration = ?, reported = 1, board_kept = 1 "
+            "WHERE id = ?",
             (1 if finished else 0, duration, match_pk),
         )
+        self._c.execute("DELETE FROM match_teams WHERE match_pk = ?", (match_pk,))
+        for team, values in (teams or {}).items():
+            for label, value in values.items():
+                self._c.execute(
+                    "INSERT INTO match_teams(match_pk, team, label, value) VALUES(?,?,?,?)",
+                    (match_pk, team, label, value),
+                )
         touched: list[int] = [
             int(r[0])
             for r in self._c.execute(
@@ -392,15 +465,19 @@ class Ops:
         ]  # the match's finished flag changes what every participant's totals say
         for player_id, p in players:
             touched.append(player_id)
+            self._count_participant(match_pk, player_id)
             self._c.execute(
                 "INSERT INTO match_players(match_pk, player_id, score, kills, alivetime, dmg, "
-                "dmgtaken, wins, rank, avglatency, scoreboard_valid, joined, reported) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1) "
+                "dmgtaken, wins, rank, avglatency, scoreboard_valid, joined, team, board_pos, "
+                "name, reported) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1) "
                 "ON CONFLICT(match_pk, player_id) DO UPDATE SET score = excluded.score, "
                 "kills = excluded.kills, alivetime = excluded.alivetime, dmg = excluded.dmg, "
                 "dmgtaken = excluded.dmgtaken, wins = excluded.wins, rank = excluded.rank, "
                 "avglatency = excluded.avglatency, "
                 "scoreboard_valid = excluded.scoreboard_valid, joined = excluded.joined, "
+                "team = excluded.team, board_pos = excluded.board_pos, "
+                "name = COALESCE(excluded.name, match_players.name), "
                 "reported = 1",
                 (
                     match_pk,
@@ -415,9 +492,12 @@ class Ops:
                     p.avglatency,
                     1 if p.scoreboard_valid else 0,
                     p.joined,
+                    p.team,
+                    p.board_pos,
+                    p.name,
                 ),
             )
-            for table in ("weapon_stats", "achievements", "extra_stats"):
+            for table in ("weapon_stats", "achievements", "extra_stats", "match_scores"):
                 self._c.execute(
                     f"DELETE FROM {table} WHERE match_pk = ? AND player_id = ?",
                     (match_pk, player_id),
@@ -446,6 +526,11 @@ class Ops:
                 self._c.execute(
                     "INSERT INTO extra_stats(match_pk, player_id, name, value) VALUES(?,?,?,?)",
                     (match_pk, player_id, name, value),
+                )
+            for label, value in (p.scores or {}).items():
+                self._c.execute(
+                    "INSERT INTO match_scores(match_pk, player_id, label, value) VALUES(?,?,?,?)",
+                    (match_pk, player_id, label, value),
                 )
         self.refresh_totals(touched)
 
@@ -548,6 +633,188 @@ class Ops:
         )
         return player
 
+    # -- the match history (match-history D5, D6) ---------------------------------------------
+    def list_matches(
+        self,
+        *,
+        map_name: str | None = None,
+        gametype: str | None = None,
+        player_id: int | None = None,
+        hide_vs_bots: bool = False,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[int, list[dict[str, Any]]]:
+        """Matches with a human, newest first, and how many match the filters.
+
+        A row has the summary fields; ``finished`` is None for a match with no report so far.
+        Whether a match is in progress is the caller's to say (it knows the current match).
+        """
+        where, args = _match_filter(
+            map_name=map_name, gametype=gametype, player_id=player_id, hide_vs_bots=hide_vs_bots
+        )
+        total = self._c.execute(f"SELECT COUNT(*) FROM matches m WHERE {where}", args).fetchone()[0]
+        rows = self._c.execute(
+            f"SELECT {_MATCH_COLUMNS} FROM matches m WHERE {where} "
+            "ORDER BY m.started_at DESC, m.id DESC LIMIT ? OFFSET ?",
+            [*args, limit, offset],
+        ).fetchall()
+        matches = [_match_row(r) for r in rows]
+        self._attach_winners(matches)
+        return int(total), matches
+
+    def _attach_winners(self, matches: list[dict[str, Any]]) -> None:
+        """Set ``winner`` on the finished matches: the winning team in a team game, else the
+        player (with a count of others who also have a win)."""
+        finished = [m for m in matches if m["finished"]]
+        if not finished:
+            return
+        by_pk = {m["id"]: m for m in finished}
+        marks = ",".join("?" for _ in by_pk)
+        rows = self._c.execute(
+            "SELECT mp.match_pk, mp.player_id, COALESCE(mp.name, p.name), p.is_bot, "
+            f"mp.team FROM match_players mp JOIN players p ON p.id = mp.player_id "
+            f"WHERE mp.match_pk IN ({marks}) AND mp.wins = 1 "
+            "ORDER BY mp.match_pk, (mp.board_pos IS NULL), mp.board_pos, mp.score DESC, "
+            "p.plain, p.id",
+            list(by_pk),
+        ).fetchall()
+        first: dict[int, tuple[Any, ...]] = {}
+        count: dict[int, int] = {}
+        for r in rows:
+            first.setdefault(int(r[0]), r)
+            count[int(r[0])] = count.get(int(r[0]), 0) + 1
+        for pk, r in first.items():
+            match = by_pk[pk]
+            if r[4] is not None:
+                match["winner"] = {"kind": "team", "team": int(r[4])}
+            else:
+                match["winner"] = {
+                    "kind": "player",
+                    "player_id": int(r[1]),
+                    "name": str(r[2]),
+                    "is_bot": bool(r[3]),
+                    "others": count[pk] - 1,
+                }
+
+    def get_match(self, match_pk: int) -> dict[str, Any] | None:
+        """One match: the summary and the final scoreboard (design D3, D4).
+
+        ``players`` are in board order, each with ``values`` by label, ``at_end`` (None when
+        there is no report), and ``ping`` and ``time_s`` (None when there is no report).
+        ``teams`` are the teams of a kept board with their values. The caller turns the
+        label values into columns.
+        """
+        row = self._c.execute(
+            f"SELECT {_MATCH_COLUMNS} FROM matches m WHERE m.id = ?", (match_pk,)
+        ).fetchone()
+        if row is None:
+            return None
+        match = _match_row(row)
+        self._attach_winners([match])
+
+        kept = match["board_kept"]
+        scores: dict[int, dict[str, float]] = {}
+        if kept:
+            for pid, label, value in self._c.execute(
+                "SELECT player_id, label, value FROM match_scores WHERE match_pk = ?",
+                (match_pk,),
+            ):
+                scores.setdefault(int(pid), {})[str(label)] = float(value)
+        extras: dict[int, dict[str, float]] = {}
+        if not kept:
+            for pid, label, value in self._c.execute(
+                "SELECT player_id, name, value FROM extra_stats WHERE match_pk = ?", (match_pk,)
+            ):
+                extras.setdefault(int(pid), {})[str(label)] = float(value)
+
+        players: list[dict[str, Any]] = []
+        for (
+            pid,
+            shown_name,
+            is_bot,
+            team,
+            board_pos,
+            frags,
+            deaths,
+            suicides,
+            teamkills,
+            score,
+            kills,
+            dmg,
+            dmgtaken,
+            alivetime,
+            avglatency,
+            valid,
+            reported,
+        ) in self._c.execute(
+            "SELECT mp.player_id, COALESCE(mp.name, p.name), p.is_bot, mp.team, mp.board_pos, "
+            "mp.frags, mp.deaths, mp.suicides, mp.teamkills, mp.score, mp.kills, mp.dmg, "
+            "mp.dmgtaken, mp.alivetime, mp.avglatency, mp.scoreboard_valid, mp.reported "
+            "FROM match_players mp JOIN players p ON p.id = mp.player_id WHERE mp.match_pk = ?",
+            (match_pk,),
+        ):
+            pid = int(pid)
+            if kept and (pid in scores or reported):
+                values = dict(scores.get(pid, {}))
+            elif reported:  # recorded before the board was kept
+                values = {
+                    "score": float(score),
+                    "kills": float(kills),
+                    "deaths": float(deaths),
+                    "suicides": float(suicides),
+                    "teamkills": float(teamkills),
+                    "dmg": float(dmg),
+                    "dmgtaken": float(dmgtaken),
+                    **extras.get(pid, {}),
+                }
+            else:  # no report: only what the live events said
+                values = {
+                    "kills": float(frags),
+                    "deaths": float(deaths),
+                    "suicides": float(suicides),
+                    "teamkills": float(teamkills),
+                }
+            players.append(
+                {
+                    "player_id": pid,
+                    "name": str(shown_name),
+                    "is_bot": bool(is_bot),
+                    "team": None if team is None else int(team),
+                    "board_pos": None if board_pos is None else int(board_pos),
+                    "values": values,
+                    "ping": round(avglatency) if reported and avglatency > 0 else None,
+                    "time_s": round(alivetime) if reported else None,
+                    "at_end": bool(valid) if reported else None,
+                }
+            )
+
+        def order(p: dict[str, Any]) -> tuple[Any, ...]:
+            if kept and p["board_pos"] is not None:
+                return (0, p["board_pos"], 0.0, "", p["player_id"])
+            if kept:
+                return (1, 0, -p["values"].get("score", 0.0), plain_key(p["name"]), p["player_id"])
+            frags = p["values"].get("kills", 0.0)
+            return (0, 0, -frags, plain_key(p["name"]), p["player_id"])
+
+        players.sort(key=order)
+        teams: dict[int, dict[str, float]] = {}
+        if kept:
+            for team, label, value in self._c.execute(
+                "SELECT team, label, value FROM match_teams WHERE match_pk = ?", (match_pk,)
+            ):
+                teams.setdefault(int(team), {})[str(label)] = float(value)
+            for p in players:
+                if p["team"] is not None:
+                    teams.setdefault(p["team"], {})
+        match["players"] = players
+        match["teams"] = [
+            {"team": team, "values": values}
+            for team, values in sorted(
+                teams.items(), key=lambda kv: (-kv[1].get("score", 0.0), kv[0])
+            )
+        ]
+        return match
+
     def map_totals(self) -> dict[str, tuple[int, int, int | None]]:
         """``{map: (played, frags, last_played)}`` for every map with a recorded participant.
 
@@ -627,6 +894,60 @@ class Ops:
             "gametypes": gametypes,
             "top_fraggers": top,
         }
+
+
+def _match_filter(
+    *,
+    map_name: str | None,
+    gametype: str | None,
+    player_id: int | None,
+    hide_vs_bots: bool,
+) -> tuple[str, list[Any]]:
+    """The WHERE terms of the match list over ``matches m``."""
+    where = ["m.humans >= 1"]
+    args: list[Any] = []
+    if map_name:
+        where.append("m.map = ?")
+        args.append(map_name)
+    if gametype:
+        if gametype == UNKNOWN_GAMETYPE:
+            where.append("m.gametype = ''")
+        else:
+            where.append("m.gametype = ?")
+            args.append(gametype)
+    if player_id is not None:
+        where.append(
+            "EXISTS (SELECT 1 FROM match_players x WHERE x.match_pk = m.id AND x.player_id = ?)"
+        )
+        args.append(player_id)
+    if hide_vs_bots:
+        where.append("NOT (m.humans = 1 AND m.bots >= 1)")
+    return " AND ".join(where), args
+
+
+_MATCH_COLUMNS = (
+    "m.id, m.match_id, m.started_at, m.map, m.gametype, m.duration, m.finished, m.reported, "
+    "m.board_kept, m.humans, m.bots"
+)
+
+
+def _match_row(r: tuple[Any, ...]) -> dict[str, Any]:
+    humans, bots = int(r[9]), int(r[10])
+    return {
+        "id": int(r[0]),
+        "match_id": str(r[1]),
+        "started_at": int(r[2]),
+        "map": str(r[3]),
+        "gametype": str(r[4]) or UNKNOWN_GAMETYPE,
+        "duration": None if r[5] is None else float(r[5]),
+        "finished": None if r[6] is None else bool(r[6]),
+        "reported": bool(r[7]),
+        "board_kept": bool(r[8]),
+        "humans": humans,
+        "bots": bots,
+        "vs_bots": humans == 1 and bots >= 1,
+        "winner": None,
+    }
 
 
 # The list query: the cached totals joined to players. An open session counts up to ``?1``
@@ -809,6 +1130,31 @@ class PlayerStore:
     async def get_player(self, player_id: int, *, now: int | None = None) -> dict[str, Any] | None:
         moment = int(time.time()) if now is None else now
         return await self.transact(lambda ops: ops.get_player(player_id, now=moment), write=False)
+
+    async def list_matches(
+        self,
+        *,
+        map_name: str | None = None,
+        gametype: str | None = None,
+        player_id: int | None = None,
+        hide_vs_bots: bool = False,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[int, list[dict[str, Any]]]:
+        return await self.transact(
+            lambda ops: ops.list_matches(
+                map_name=map_name,
+                gametype=gametype,
+                player_id=player_id,
+                hide_vs_bots=hide_vs_bots,
+                limit=limit,
+                offset=offset,
+            ),
+            write=False,
+        )
+
+    async def get_match(self, match_pk: int) -> dict[str, Any] | None:
+        return await self.transact(lambda ops: ops.get_match(match_pk), write=False)
 
     async def map_totals(self) -> dict[str, tuple[int, int, int | None]]:
         return await self.transact(lambda ops: ops.map_totals(), write=False)

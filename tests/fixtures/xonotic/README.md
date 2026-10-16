@@ -30,6 +30,10 @@ D3). Each line is exactly as the server printed it (including the leading `^7`).
 | `report_finished.txt` | the end of a match (`:scores` to `:gameover`) with `g_playerstats_gamereport_uri -`: a human who fired two weapons, two bots, `wins`, `matches`, achievements |
 | `report_unfinished.txt` | the report printed by `changelevel` (a match cut short): no `:end`, no `matches`, no `wins`, and the next `:gamestart:` straight after the blank line |
 | `report_privacy_optout.txt` | a finished-match report for a human who allows neither uidtracking nor uid2name: `P player#1`, no `n` line |
+| `report_tdm_finished.txt` | a finished `tdm` match on `afterslime` (`endmatch`) with a human and four bots: `Q team#14` and `Q team#5` headers, each followed by that team's `scoreboard-score` (a team on 0 has no `e` line), a `t` team on every player, `scoreboardpos` 1-5, `wins` on both members of the winning team |
+| `report_ctf_finished.txt` | a finished `ctf` match on `catharsis` (`endmatch`) with a human and eight bots: team `e` lines `scoreboard-caps` and `scoreboard-score`, player labels `caps`, `fckills`, `returns`, `drops`, `pickups`, `captime`; one capture each and no `wins` on anyone (a draw on captures) |
+| `report_leaver.txt` | a finished `dm` match with two bots and three humans: one stays, one leaves 30 s in (`:part:` before the end) and one joins late in the freed slot. The leaver has `alivetime` and `avglatency` but no `scoreboardvalid`, `scoreboardpos`, `rank` or `matches`; the late joiner has all of them |
+| `report_spectator_at_end.txt` | a finished `dm` match with two bots and two humans, one of whom plays, then runs `cmd spectate` (`sv_spectate 1`): the spectator has `rank`, `joins` and `alivetime` but no `scoreboardvalid`, `scoreboardpos` or `matches`, and `:player:` gives them the team `spectator` |
 | `session_map_change_rejoin.txt` | whole run: a human and a bot, `who`, a `changelevel` with the human connected (every client re-joins with a new id, no `:part`), `who` again, an accident, quit |
 | `session_leave_during_map_change.txt` | whole run: a `gotomap` match end, and the human's client closed while the next map loads: `Client ... dropped` and no `:part` for it |
 | `cvarlist.txt` | full `cvarlist` reply (6,097 cvars: `name is "value" ["default"] description`), source of the bundled cvar catalogue |
@@ -38,8 +42,13 @@ The player-statistics files (`who_reply.txt` onwards) were captured for the `add
 change with `g_playerstats_gamereport_uri "-"`, `sv_spectate 0` (a joining client plays at once)
 and `bot_number` set, with a headless client whose `autoexec.cfg` set `cl_allow_uid2name 1` and
 `cl_welcome 0` (otherwise a dialog takes the keyboard) and used `defer` to hold `+fire`, `+left`
-and `+forward` and to `kill` itself. Team kills needed real friendly fire (`teamplay_mode 2`,
-`g_friendlyfire_virtual 0`) in `tdm`, and accidents came from bots on `afterslime`.
+and `+forward` and to `kill` itself. The four `report_*` files for `add-match-history` came
+from a local dedicated server with one to three such clients and `bot_number` set; clients
+are started one at a time, because several starting together can fail to connect (the key
+server answers "Not allowed" and the client never connects). A spectator needs `sv_spectate 1`
+and `cmd join`; with `sv_spectate 0` the `spectate` command is refused.
+Team kills needed real friendly fire (`teamplay_mode 2`, `g_friendlyfire_virtual 0`) in `tdm`,
+and accidents came from bots on `afterslime`.
 
 ## Transcripts (`transcripts/`)
 

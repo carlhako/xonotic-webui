@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { Dashboard } from "./sections/Dashboard";
 import { Console } from "./sections/Console";
 import { Maps } from "./sections/Maps";
+import { Matches } from "./sections/Matches";
 import { Players } from "./sections/Players";
 import { Settings } from "./sections/Settings";
 import { Panel } from "./sections/Panel";
@@ -19,6 +20,7 @@ export interface Section {
 export const sections: Section[] = [
   { path: "/", label: "Dashboard", element: <Dashboard /> },
   { path: "/players", label: "Players", element: <Players /> },
+  { path: "/matches", label: "Matches", element: <Matches /> },
   { path: "/maps", label: "Maps", element: <Maps /> },
   { path: "/settings", label: "Settings", element: <Settings /> },
   { path: "/console", label: "Console", element: <Console /> },

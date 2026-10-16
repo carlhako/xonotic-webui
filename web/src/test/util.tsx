@@ -382,3 +382,100 @@ export async function pushMatch(match: Match) {
   await waitFor(() => expect(FakeEventSource.byUrl(MATCH_URL)).toBeTruthy());
   act(() => FakeEventSource.byUrl(MATCH_URL)!.emit(match));
 }
+
+// -- fixtures for the match history ---------------------------------------------------------
+
+import type { MatchDetail, MatchSummary } from "../api/client";
+
+export function makeMatchSummary(overrides: Partial<MatchSummary> = {}): MatchSummary {
+  return {
+    id: 1,
+    started_at: 1_790_000_000,
+    map: "boil",
+    gametype: "dm",
+    duration: 600,
+    outcome: "finished",
+    humans: 2,
+    bots: 1,
+    vs_bots: false,
+    winner: {
+      kind: "player",
+      player_id: 7,
+      name: "^1Ace",
+      plain_name: "Ace",
+      is_bot: false,
+      others: 0,
+    },
+    ...overrides,
+  };
+}
+
+const HISTORY_COLUMNS: MatchDetail["scoreboard"]["columns"] = [
+  {
+    key: "score",
+    label: "Score",
+    primary: true,
+    secondary: false,
+    lower_is_better: false,
+  },
+  {
+    key: "kills",
+    label: "Kills",
+    primary: false,
+    secondary: false,
+    lower_is_better: false,
+  },
+  {
+    key: "deaths",
+    label: "Deaths",
+    primary: false,
+    secondary: false,
+    lower_is_better: false,
+  },
+  {
+    key: "suicides",
+    label: "Suicides",
+    primary: false,
+    secondary: false,
+    lower_is_better: false,
+  },
+];
+
+export function makeHistoryPlayer(
+  name: string,
+  values: Record<string, number>,
+  extra: Partial<MatchDetail["scoreboard"]["players"][number]> = {},
+): MatchDetail["scoreboard"]["players"][number] {
+  return {
+    player_id: 1,
+    name,
+    plain_name: name.replace(/\^\d/g, ""),
+    bot: false,
+    team: null,
+    ping: 20,
+    time_s: 300,
+    at_end: true,
+    values: { score: 0, kills: 0, deaths: 0, suicides: 0, ...values },
+    ...extra,
+  };
+}
+
+export function makeMatchDetail(overrides: Partial<MatchDetail> = {}): MatchDetail {
+  return {
+    ...makeMatchSummary(),
+    board_kept: true,
+    scoreboard: {
+      columns: HISTORY_COLUMNS,
+      players: [
+        makeHistoryPlayer("^1Ace", { score: 9, kills: 9, deaths: 2 }, { player_id: 7 }),
+        makeHistoryPlayer(
+          "[BOT]Rex",
+          { score: 3, kills: 3, deaths: 5 },
+          { player_id: 8, bot: true },
+        ),
+      ],
+      teams: [],
+    },
+    ...overrides,
+  };
+}

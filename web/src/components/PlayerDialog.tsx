@@ -4,13 +4,14 @@ import { useResource } from "../api/useResource";
 import { formatDuration, formatEpoch } from "../lib/time";
 import { ColoredText } from "./ColoredText";
 import { Dialog } from "./Dialog";
+import { MatchesLink } from "./MatchDialog";
 
 const percent = (value: number | null) =>
   value === null ? "–" : `${(value * 100).toFixed(1)}%`;
 const number = (value: number) =>
   Number.isInteger(value) ? String(value) : value.toFixed(1);
 
-function Details({ player }: { player: PlayerDetail }) {
+function Details({ player, onClose }: { player: PlayerDetail; onClose: () => void }) {
   const aliases = player.aliases.filter((a) => a.name !== player.name);
   return (
     <>
@@ -52,10 +53,10 @@ function Details({ player }: { player: PlayerDetail }) {
         <dd>{player.teamkills}</dd>
         <dt>Score</dt>
         <dd>{number(player.score)}</dd>
+        <dt>Matches played</dt>
+        <dd>{player.matches}</dd>
         <dt>Wins</dt>
-        <dd>
-          {player.wins} of {player.matches} matches
-        </dd>
+        <dd>{player.wins}</dd>
         <dt>Accuracy</dt>
         <dd>{percent(player.accuracy)}</dd>
         <dt>Damage dealt</dt>
@@ -67,6 +68,10 @@ function Details({ player }: { player: PlayerDetail }) {
           {player.avg_latency === null ? "–" : `${Math.round(player.avg_latency)} ms`}
         </dd>
       </dl>
+
+      <p className="dialog-actions">
+        <MatchesLink playerId={player.id} onClick={onClose} />
+      </p>
 
       {!player.has_match_stats && (
         <p className="muted">
@@ -166,7 +171,7 @@ export function PlayerDialog({
         </p>
       )}
       {!data && !error && loading && <p className="muted">Loading…</p>}
-      {data && <Details player={data} />}
+      {data && <Details player={data} onClose={onClose} />}
     </Dialog>
   );
 }

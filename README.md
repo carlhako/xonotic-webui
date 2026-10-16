@@ -41,6 +41,7 @@ service, built for a Proxmox LXC or any Debian 12/13 box on your LAN.
 - **Dashboard**: start, stop and restart; live match clock and scoreboard
 - **Console**: live server output in colour, with a command line
 - **Players**: a permanent history with frags, accuracy, wins and per-weapon stats
+- **Matches**: every past match with its winner and final scoreboard
 - **Maps**: upload `.pk3` packages, set the rotation, star favourites, see what gets played
 - **Settings**: change the server without touching `server.cfg`
 - **Looks after itself**: restarts after a crash and upgrades itself in one click

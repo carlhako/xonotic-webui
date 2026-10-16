@@ -311,6 +311,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Past matches with a human in them, newest first */
+        get: operations["list_matches_api_matches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/matches/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One match with its final scoreboard */
+        get: operations["get_match_api_matches__id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/packages/{filename}": {
         parameters: {
             query?: never;
@@ -934,6 +968,133 @@ export interface components {
              */
             secondary: boolean;
         };
+        /** MatchDetail */
+        MatchDetail: {
+            /**
+             * Board Kept
+             * @description False for a match recorded before full scoreboards were kept: no teams.
+             */
+            board_kept: boolean;
+            /**
+             * Bots
+             * @description Bots who took part.
+             */
+            bots: number;
+            /**
+             * Duration
+             * @description Seconds, once the match has a report.
+             */
+            duration: number | null;
+            /**
+             * Gametype
+             * @description The gametype, or "unknown" when it was not recorded.
+             */
+            gametype: string;
+            /**
+             * Humans
+             * @description Humans who took part.
+             */
+            humans: number;
+            /**
+             * Id
+             * @description The panel's id for the match, not the game's.
+             */
+            id: number;
+            /** Map */
+            map: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "finished" | "cut_short" | "in_progress" | "no_report";
+            scoreboard: components["schemas"]["MatchHistoryScoreboard"];
+            /**
+             * Started At
+             * @description UTC epoch seconds.
+             */
+            started_at: number;
+            /**
+             * Vs Bots
+             * @description Exactly one human and at least one bot took part.
+             */
+            vs_bots: boolean;
+            /**
+             * Winner
+             * @description Only a finished match has one, and not a draw.
+             */
+            winner: (components["schemas"]["MatchWinnerTeam"] | components["schemas"]["MatchWinnerPlayer"]) | null;
+        };
+        /** MatchHistoryPlayer */
+        MatchHistoryPlayer: {
+            /**
+             * At End
+             * @description Whether they were playing when it ended; null without a report.
+             */
+            at_end: boolean | null;
+            /** Bot */
+            bot: boolean;
+            /**
+             * Name
+             * @description The name used in the match, colour codes intact.
+             */
+            name: string;
+            /**
+             * Ping
+             * @description Average ping, when the match has a report.
+             */
+            ping: number | null;
+            /** Plain Name */
+            plain_name: string;
+            /** Player Id */
+            player_id: number;
+            /**
+             * Team
+             * @description The game's team number, if teams were recorded.
+             */
+            team: number | null;
+            /**
+             * Time S
+             * @description Seconds playing, when the match has a report.
+             */
+            time_s: number | null;
+            /**
+             * Values
+             * @description Score column values by column key.
+             */
+            values: {
+                [key: string]: number;
+            };
+        };
+        /** MatchHistoryScoreboard */
+        MatchHistoryScoreboard: {
+            /** Columns */
+            columns: components["schemas"]["MatchColumnModel"][];
+            /**
+             * Players
+             * @description In the game's board order, players not there at the end last.
+             */
+            players: components["schemas"]["MatchHistoryPlayer"][];
+            /**
+             * Teams
+             * @description Empty unless the match kept its board and was a team game.
+             */
+            teams: components["schemas"]["MatchTeamModel"][];
+        };
+        /** MatchList */
+        MatchList: {
+            /** Matches */
+            matches: components["schemas"]["MatchSummary"][];
+            /**
+             * Revision
+             * @description Changes whenever recorded data changes.
+             */
+            revision: number;
+            /**
+             * Total
+             * @description Matches matching the filters, across all pages.
+             */
+            total: number;
+        };
         /** MatchModel */
         MatchModel: {
             clock: components["schemas"]["MatchClockModel"];
@@ -1028,6 +1189,56 @@ export interface components {
             /** Plain Name */
             plain_name: string;
         };
+        /** MatchSummary */
+        MatchSummary: {
+            /**
+             * Bots
+             * @description Bots who took part.
+             */
+            bots: number;
+            /**
+             * Duration
+             * @description Seconds, once the match has a report.
+             */
+            duration: number | null;
+            /**
+             * Gametype
+             * @description The gametype, or "unknown" when it was not recorded.
+             */
+            gametype: string;
+            /**
+             * Humans
+             * @description Humans who took part.
+             */
+            humans: number;
+            /**
+             * Id
+             * @description The panel's id for the match, not the game's.
+             */
+            id: number;
+            /** Map */
+            map: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "finished" | "cut_short" | "in_progress" | "no_report";
+            /**
+             * Started At
+             * @description UTC epoch seconds.
+             */
+            started_at: number;
+            /**
+             * Vs Bots
+             * @description Exactly one human and at least one bot took part.
+             */
+            vs_bots: boolean;
+            /**
+             * Winner
+             * @description Only a finished match has one, and not a draw.
+             */
+            winner: (components["schemas"]["MatchWinnerTeam"] | components["schemas"]["MatchWinnerPlayer"]) | null;
+        };
         /** MatchTeamModel */
         MatchTeamModel: {
             /** Color */
@@ -1038,6 +1249,45 @@ export interface components {
             values: {
                 [key: string]: number;
             };
+        };
+        /** MatchWinnerPlayer */
+        MatchWinnerPlayer: {
+            /** Is Bot */
+            is_bot: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "player";
+            /**
+             * Name
+             * @description The name used in that match, colour codes intact.
+             */
+            name: string;
+            /**
+             * Others
+             * @description How many more players have a win in the match (a team game recorded before teams were kept names the first of them).
+             */
+            others: number;
+            /** Plain Name */
+            plain_name: string;
+            /** Player Id */
+            player_id: number;
+        };
+        /** MatchWinnerTeam */
+        MatchWinnerTeam: {
+            /** Color */
+            color: ("red" | "blue" | "yellow" | "pink") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "team";
+            /**
+             * Team
+             * @description The game's team number (5 red, 14 blue).
+             */
+            team: number;
         };
         /** OverrideModel */
         OverrideModel: {
@@ -1304,7 +1554,7 @@ export interface components {
             last_seen: number;
             /**
              * Matches
-             * @description Finished matches played.
+             * @description Matches played: finished while the player was on the final scoreboard.
              */
             matches: number;
             /**
@@ -1422,7 +1672,7 @@ export interface components {
             last_seen: number;
             /**
              * Matches
-             * @description Finished matches played.
+             * @description Matches played: finished while the player was on the final scoreboard.
              */
             matches: number;
             /**
@@ -2462,6 +2712,112 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": components["schemas"]["MatchModel"];
+                };
+            };
+        };
+    };
+    list_matches_api_matches_get: {
+        parameters: {
+            query?: {
+                /** @description Only this map. */
+                map?: string | null;
+                /** @description Only this gametype ("unknown" for none). */
+                gametype?: string | null;
+                /** @description Only matches they took part in. */
+                player?: number | null;
+                /** @description False leaves out vs-bots matches. */
+                vs_bots?: boolean;
+                /** @description At most 200 are returned. */
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchList"];
+                };
+            };
+            /** @description Unchanged since If-None-Match. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Player history is not being recorded. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_match_api_matches__id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchDetail"];
+                };
+            };
+            /** @description No such match. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Player history is not being recorded. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

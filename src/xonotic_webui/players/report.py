@@ -11,7 +11,8 @@ dedicated server (``tests/fixtures/xonotic/report_*.txt``)::
     I 0.1791948418.826593         the match id, as in ``:gamestart:``
     S Xonotic 0.8.6 Server
     D 104.666656                  the match's duration in seconds
-    Q team#14                     a team (team games), followed by its ``e`` lines
+    Q team#14                     a team (team games), followed by its ``e`` lines: the
+                                  team's ``scoreboard-*`` values, none when it has none
     P <key | bot#<skill>#<name> | player#<id>>
     i 1                           the match's player id
     n ^1Name                      only if the player allows it; bots always have it
@@ -71,6 +72,9 @@ class Report:
     duration: float = 0.0
     players: list[ReportPlayer] = field(default_factory=list)
     team_ids: list[int] = field(default_factory=list)
+    # Each team's scoreboard values by label (match-history D8); a team with no non-zero
+    # value is present with an empty dict.
+    teams: dict[int, dict[str, float]] = field(default_factory=dict)
 
     @property
     def finished(self) -> bool:
@@ -128,6 +132,8 @@ class ReportParser:
         self._current: ReportPlayer | None = None
         self._building: Report | None = None
         self._in_team = False
+        self._team: int | None = None  # the team whose ``e`` lines are being read
+        self._team_events: dict[int, dict[str, float]] = {}
 
     @property
     def in_block(self) -> bool:
@@ -142,6 +148,10 @@ class ReportParser:
             return False
         self._lines += 1
         if plain.strip() == "":
+            if self._building is not None:
+                self._building.teams = {
+                    team: scoreboard(events) for team, events in self._team_events.items()
+                }
             self.report = self._building
             self._reset()
             return True
@@ -158,12 +168,16 @@ class ReportParser:
         self._lines = 0
         self._current = None
         self._in_team = False
+        self._team = None
+        self._team_events = {}
         self._building = Report()
 
     def _reset(self) -> None:
         self._active = False
         self._current = None
         self._in_team = False
+        self._team = None
+        self._team_events = {}
         self._building = None
         self._lines = 0
 
@@ -178,9 +192,12 @@ class ReportParser:
         if letter == "Q":
             self._current = None
             self._in_team = True
+            self._team = None
             _, _, tid = value.partition("#")
             if tid.lstrip("-").isdigit():
-                report.team_ids.append(int(tid))
+                self._team = int(tid)
+                report.team_ids.append(self._team)
+                self._team_events.setdefault(self._team, {})
             return True
         if letter == "P":
             self._current = ReportPlayer(key=value.strip())
@@ -237,6 +254,8 @@ class ReportParser:
             self._current.events[name] = amount
         elif not self._in_team:
             return False
+        elif self._team is not None:
+            self._team_events[self._team][name] = amount
         return True
 
 
